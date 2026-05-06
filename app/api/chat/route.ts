@@ -28,7 +28,10 @@ Each cell group holds multiple sessions over time — one row per session.
 Cell meetings are completely separate from Sunday/midweek services.
 
 ## PEOPLE PROFILE DATA (from Breeze sync)
-Each person may have enriched fields: designation (First timer/Member/Worker), group_name, pastor, cell_name, baptized, who_invited, joined_oasis, foundation_school, phone, email, gender, profession.
+Each person has these fields: designation (First timer/Member/Worker), group_name, pastor, cell_name, fellowship, baptized, who_invited, joined_oasis, foundation_school, phone, email, birthdate, gender, profession, school, major, marital_status, state.
+
+## CAMPUSES / FELLOWSHIPS
+The church has multiple campuses/fellowships stored in the fellowship field (e.g. "Charm City", "DC", "Howard", "Coppin"). The group_name field contains the overall congregation group. The pastor field stores the assigned pastor's name.
 
 ## TOOL SELECTION GUIDE
 
@@ -39,6 +42,7 @@ Each person may have enriched fields: designation (First timer/Member/Worker), g
 | Cell meeting attendance per date | get_attendance (service_type: "cell") |
 | Top cells / cell group rankings / cell stats | get_cell_stats |
 | Who attends a specific cell / top people in a cell | get_cell_attendees |
+| How many [fellowship/group/pastor's] people attended [service] | get_group_service_attendance |
 | People who attend X but NOT Y / both X and Y | cross_service_analysis |
 | Which cells overlap most with Sunday/midweek / best cells at inviting | cell_service_overlap |
 | One person's full profile + attendance history | get_person_attendance |
@@ -47,6 +51,8 @@ Each person may have enriched fields: designation (First timer/Member/Worker), g
 
 Rules:
 - "first timers", "members", "workers", "not baptized", "Pastor X's people", "group Y members" → get_people with the right filter
+- "how many Charm City / [fellowship] members attended midweek / Sunday" → get_group_service_attendance
+- "how many of Pastor X's people came to [service]" → get_group_service_attendance with filter_field: "pastor"
 - "top cells", "most attended cell" → get_cell_stats
 - "who attends X cell", "top people in X cell" → get_cell_attendees
 - "people in X who never attended Y" → cross_service_analysis (mode: "difference")
@@ -205,6 +211,22 @@ Always use this tool for "who attends X but not Y" and "who attends both X and Y
       type: 'object' as const,
       properties: {
         group_name_filter: { type: 'string' },
+      },
+    },
+  },
+  {
+    name: 'get_group_service_attendance',
+    description: `Count how many members from a specific fellowship, group, or pastor's congregation attended a service type. Use for: "how many Charm City members came to midweek?", "how many of Pastor Deji's people attended Sunday?", "how many DC fellowship members attend midweek?". Returns total members in the group, how many attended, and the attendance rate.`,
+    input_schema: {
+      type: 'object' as const,
+      required: ['group_filter'],
+      properties: {
+        group_filter:  { type: 'string', description: 'Fellowship name, group name, or pastor name to filter by (partial match). E.g. "Charm City", "Pastor Deji", "Trailblazers"' },
+        filter_field:  { type: 'string', description: '"fellowship" | "group_name" | "pastor" | "any" (default: "any" — searches all three fields)' },
+        service_type:  { type: 'string', description: 'Service type to check: midweek, sunday_inperson, sunday_online, cell. Omit for all services.' },
+        from_date:     { type: 'string', description: 'Start date YYYY-MM-DD (default: 6 months ago)' },
+        to_date:       { type: 'string', description: 'End date YYYY-MM-DD (default: today)' },
+        list_names:    { type: 'boolean', description: 'If true, include the names of attendees in the response' },
       },
     },
   },
@@ -912,6 +934,84 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         total_people: g.cells.reduce((s, c) => s + c.people.length, 0),
       })),
     })
+  }
+
+  // ── get_group_service_attendance ─────────────────────────────────────────────
+  if (name === 'get_group_service_attendance') {
+    const groupFilter = (input.group_filter as string).trim()
+    const filterField = (input.filter_field as string | undefined) ?? 'any'
+    const serviceType = input.service_type as string | undefined
+    const listNames   = Boolean(input.list_names)
+
+    // Default date range: last 6 months
+    const now = new Date()
+    const sixMonthsAgo = new Date(now); sixMonthsAgo.setMonth(now.getMonth() - 6)
+    const fromDate = (input.from_date as string | undefined) ?? sixMonthsAgo.toISOString().split('T')[0]
+    const toDate   = (input.to_date   as string | undefined) ?? now.toISOString().split('T')[0]
+
+    // Step 1: Find people matching the group filter
+    let pq = supabase.from('people').select('id, name').limit(600)
+    if (filterField === 'fellowship') {
+      pq = pq.ilike('fellowship', `%${groupFilter}%`)
+    } else if (filterField === 'group_name') {
+      pq = pq.ilike('group_name', `%${groupFilter}%`)
+    } else if (filterField === 'pastor') {
+      pq = pq.ilike('pastor', `%${groupFilter}%`)
+    } else {
+      pq = pq.or(`fellowship.ilike.%${groupFilter}%,group_name.ilike.%${groupFilter}%,pastor.ilike.%${groupFilter}%`)
+    }
+
+    const { data: matchedPeople, error: pErr } = await pq
+    if (pErr) return `Error fetching people: ${pErr.message}`
+    if (!matchedPeople || matchedPeople.length === 0)
+      return `No members found matching "${groupFilter}". Try a different name or check the fellowship/group/pastor fields.`
+
+    type PRow = { id: string; name: string }
+    const personIds = (matchedPeople as PRow[]).map(p => p.id)
+    const personNameMap = new Map((matchedPeople as PRow[]).map(p => [p.id, p.name]))
+
+    // Step 2: Get meeting IDs for the service type and date range
+    let mq = supabase.from('meetings').select('id').gte('date', fromDate).lte('date', toDate).limit(500)
+    if (serviceType) mq = mq.eq('service_type', serviceType)
+    const { data: meetings, error: mErr } = await mq
+    if (mErr) return `Error fetching meetings: ${mErr.message}`
+    if (!meetings || meetings.length === 0)
+      return `No ${serviceType ?? 'any'} meetings found between ${fromDate} and ${toDate}.`
+
+    const meetingIds = (meetings as { id: string }[]).map(m => m.id)
+
+    // Step 3: Count attendance at intersection of those people + those meetings
+    const attendedIds = new Set<string>()
+    for (const pBatch of chunkArr(personIds, 80)) {
+      for (const mBatch of chunkArr(meetingIds, 80)) {
+        const { data: attRows } = await supabase
+          .from('attendance')
+          .select('person_id')
+          .in('person_id', pBatch)
+          .in('meeting_id', mBatch)
+          .eq('present', true)
+        if (attRows) for (const r of attRows as { person_id: string }[]) attendedIds.add(r.person_id)
+      }
+    }
+
+    const result: Record<string, unknown> = {
+      group_filter:            groupFilter,
+      filter_field:            filterField,
+      service_type:            serviceType ?? 'all services',
+      period:                  `${fromDate} to ${toDate}`,
+      total_members_in_group:  personIds.length,
+      members_who_attended:    attendedIds.size,
+      attendance_rate:         personIds.length > 0
+        ? `${Math.round((attendedIds.size / personIds.length) * 100)}%`
+        : '0%',
+    }
+
+    if (listNames) {
+      result.attendee_names = Array.from(attendedIds).map(id => personNameMap.get(id) ?? id).sort()
+      result.non_attendees  = personIds.filter(id => !attendedIds.has(id)).map(id => personNameMap.get(id) ?? id).sort()
+    }
+
+    return JSON.stringify(result)
   }
 
   return `Unknown tool: ${name}`

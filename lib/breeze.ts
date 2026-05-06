@@ -76,6 +76,15 @@ export interface BreezeEvent {
   category_id: string
 }
 
+export interface BreezeAttendanceRecord {
+  instance_id: string
+  event_id:    string
+  person_id:   string
+  created_on:  string
+  event_name?: string
+  check_in?:   string
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getBaseUrl() {
@@ -193,4 +202,34 @@ export async function fetchEventAttendance(instanceId: string): Promise<string[]
   const data = await res.json()
   if (!Array.isArray(data)) return []
   return data.map((r: { person_id: string }) => r.person_id).filter(Boolean)
+}
+
+// Get all attendance records for a specific person (by their Breeze ID)
+export async function fetchPersonAttendance(breezePersonId: string): Promise<BreezeAttendanceRecord[]> {
+  const url = `${getBaseUrl()}/attendance/list?person_id=${breezePersonId}`
+  const res = await fetch(url, { headers: headers() })
+  if (!res.ok) return []
+  const data = await res.json()
+  if (!Array.isArray(data)) return []
+  return data as BreezeAttendanceRecord[]
+}
+
+// Bulk attendance sync: fetch all events in a date range, then get attendance per event.
+// Calls onProgress(fetched, total) after each event. Returns map of instance_id → [person_ids]
+export async function fetchAttendanceByDateRange(
+  from: string,
+  to: string,
+  onProgress?: (fetched: number, total: number) => void
+): Promise<Map<string, { event: BreezeEvent; personIds: string[] }>> {
+  const events = await fetchEvents(from, to)
+  const result = new Map<string, { event: BreezeEvent; personIds: string[] }>()
+
+  for (let i = 0; i < events.length; i++) {
+    const event = events[i]
+    const personIds = await fetchEventAttendance(event.id)
+    result.set(event.id, { event, personIds })
+    onProgress?.(i + 1, events.length)
+  }
+
+  return result
 }

@@ -151,6 +151,14 @@ Routing rules:
 → "which cells send the most people to midweek/Sunday"
    → cell_service_overlap(service_type: "midweek")
 
+→ "most consistent Charm City / [any group] midweek attendees"
+   STEP 1: call discover_data(what: "groups") to see exact group_name/fellowship/pastor values in the DB
+   STEP 2: call analyze_members(analysis_type: "regular", service_type: "midweek", group_name: "<exact value>", attendance_threshold: 1)
+   Do NOT ask the user — look it up yourself.
+
+→ If you are unsure what a meeting is called, call discover_data(what: "meetings") first.
+
+NEVER ask the user for clarification about database values — call discover_data to find out.
 NEVER loop person-by-person or cell-by-cell — always use the bulk tool.
 NEVER fabricate data. If no tool returns results, say so and explain which query was tried.`
 }
@@ -221,11 +229,13 @@ Always provide from_date and to_date. For game-plan questions use analysis_type:
           type: 'string',
           description: '"summary" | "low_attendance" | "regular" | "first_time" | "lapsed"',
         },
-        fellowship:   { type: 'string', description: 'Filter results to people with this fellowship value (partial match). E.g. "Charm City"' },
-        group_name:   { type: 'string', description: 'Filter results to people with this group_name value (partial match). E.g. "MEGA"' },
+        fellowship:   { type: 'string', description: 'Filter results to people with this fellowship value (partial match). E.g. "CharmCity", "Oasis CharmCity"' },
+        group_name:   { type: 'string', description: 'Filter results to people with this group_name value (partial match). E.g. "CharmCity", "MEGA"' },
+        pastor:       { type: 'string', description: 'Filter results to people assigned to this pastor (partial match). E.g. "Pastor Deji"' },
         from_date:    { type: 'string', description: 'Start of period e.g. 2025-03-01' },
         to_date:      { type: 'string', description: 'End of period e.g. 2025-04-30' },
-        service_type: { type: 'string', description: 'Optional: limit to one service type (midweek / sunday_inperson / sunday_online / cell)' },
+        service_type:   { type: 'string', description: 'Optional: limit to one service type (midweek / sunday_inperson / sunday_online / cell)' },
+        meeting_title:  { type: 'string', description: 'Partial match on meeting title (e.g. "Baltimore" or "MEGA Midweek"). Use when you know the exact meeting name from discover_data.' },
         attendance_threshold: {
           type: 'number',
           description: 'For low_attendance: max count (default 1). For regular: min count (default 1 for game plans, 4 for strict regulars).',
@@ -310,6 +320,19 @@ Always use this tool for "who attends X but not Y" and "who attends both X and Y
     },
   },
   {
+    name: 'discover_data',
+    description: `ALWAYS call this first when you are unsure what values exist in the database — especially for group names, fellowship names, meeting titles, or service types. Returns the exact values stored in the DB so you can use them in other tool calls. Use when: you don't know exact group/fellowship/pastor spellings, you don't know what meetings exist, or a previous query returned 0 results unexpectedly.`,
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        what: {
+          type: 'string',
+          description: '"meetings" — list all distinct meeting titles and service types | "groups" — list all distinct group_name, fellowship, pastor values in people table | "all" (default)',
+        },
+      },
+    },
+  },
+  {
     name: 'get_group_service_attendance',
     description: `Count how many members from a specific fellowship, group, or pastor's congregation attended a service type. Use for: "how many Charm City members came to midweek?", "how many of Pastor Deji's people attended Sunday?", "how many DC fellowship members attend midweek?". Returns total members in the group, how many attended, and the attendance rate.`,
     input_schema: {
@@ -331,13 +354,14 @@ Always use this tool for "who attends X but not Y" and "who attends both X and Y
 
 async function getMeetingIds(
   supabase: ReturnType<typeof getSupabaseServer>,
-  opts: { from?: string; to?: string; before?: string; serviceType?: string }
+  opts: { from?: string; to?: string; before?: string; serviceType?: string; titleSearch?: string }
 ): Promise<string[]> {
   let q = supabase.from('meetings').select('id')
   if (opts.from)        q = q.gte('date', opts.from)
   if (opts.to)          q = q.lte('date', opts.to)
   if (opts.before)      q = q.lt('date', opts.before)
   if (opts.serviceType) q = q.eq('service_type', opts.serviceType)
+  if (opts.titleSearch) q = q.ilike('title', `%${opts.titleSearch}%`)
   const { data } = await q
   return (data ?? []).map((m: { id: string }) => m.id)
 }
@@ -583,18 +607,22 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
     const fromDate = (input.from_date as string) ?? twelveMonthsAgo.toISOString().split('T')[0]
     const toDate   = (input.to_date   as string) ?? now.toISOString().split('T')[0]
 
-    // Optional: restrict to a specific fellowship or group
+    // Optional: restrict to a specific fellowship, group, or pastor
     let groupPersonIds: Set<string> | null = null
     const fellowshipFilter = input.fellowship as string | undefined
     const groupNameFilter  = input.group_name  as string | undefined
-    if (fellowshipFilter || groupNameFilter) {
+    const pastorFilter     = input.pastor      as string | undefined
+    const meetingTitleFilter = input.meeting_title as string | undefined
+
+    if (fellowshipFilter || groupNameFilter || pastorFilter) {
       let gpq = supabase.from('people').select('id').limit(1000)
       if (fellowshipFilter) gpq = gpq.ilike('fellowship', `%${fellowshipFilter}%`)
       if (groupNameFilter)  gpq = gpq.ilike('group_name',  `%${groupNameFilter}%`)
+      if (pastorFilter)     gpq = gpq.ilike('pastor',      `%${pastorFilter}%`)
       const { data: gpData } = await gpq
       groupPersonIds = new Set((gpData ?? []).map((r: { id: string }) => r.id))
       if (groupPersonIds.size === 0)
-        return `No people found with fellowship "${fellowshipFilter ?? groupNameFilter}". Check the spelling or run the Breeze sync.`
+        return `No people found matching the group filter. The Breeze sync may not have been run yet — most fellowship/group_name fields are empty. Try using pastor filter instead, or call discover_data to see what values exist.`
     }
 
     // Helper: filter a counts map to only group members
@@ -607,13 +635,15 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       return filtered
     }
 
-    const groupLabel = (fellowshipFilter ?? groupNameFilter)
-      ? ` (${fellowshipFilter ?? groupNameFilter} only)`
+    const groupLabel = [fellowshipFilter, groupNameFilter, pastorFilter].filter(Boolean).join(', ')
+      ? ` (${[fellowshipFilter, groupNameFilter, pastorFilter].filter(Boolean).join(', ')} only)`
       : ''
+    // Shared meeting filter options
+    const meetingOpts = { from: fromDate, to: toDate, serviceType: svcType, titleSearch: meetingTitleFilter }
 
     // ── summary ──────────────────────────────────────────────────────────────
     if (type === 'summary') {
-      const ids    = await getMeetingIds(supabase, { from: fromDate, to: toDate, serviceType: svcType })
+      const ids    = await getMeetingIds(supabase, meetingOpts)
       const counts = filterToGroup(await getPersonCounts(supabase, ids))
       const vals   = Array.from(counts.values())
       const totalAtt = vals.reduce((s, p) => s + p.count, 0)
@@ -636,7 +666,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
 
     // ── low_attendance ────────────────────────────────────────────────────────
     if (type === 'low_attendance') {
-      const ids    = await getMeetingIds(supabase, { from: fromDate, to: toDate, serviceType: svcType })
+      const ids    = await getMeetingIds(supabase, meetingOpts)
       const counts = filterToGroup(await getPersonCounts(supabase, ids))
       const results = Array.from(counts.entries())
         .filter(([, p]) => p.count <= threshold)
@@ -654,7 +684,7 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
 
     // ── regular ───────────────────────────────────────────────────────────────
     if (type === 'regular') {
-      const ids    = await getMeetingIds(supabase, { from: fromDate, to: toDate, serviceType: svcType })
+      const ids    = await getMeetingIds(supabase, meetingOpts)
       const counts = filterToGroup(await getPersonCounts(supabase, ids))
       const results = Array.from(counts.entries())
         .filter(([, p]) => p.count >= threshold)
@@ -672,8 +702,8 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
 
     // ── lapsed ────────────────────────────────────────────────────────────────
     if (type === 'lapsed') {
-      const recentIds = await getMeetingIds(supabase, { from: fromDate, to: toDate, serviceType: svcType })
-      const priorIds  = await getMeetingIds(supabase, { before: fromDate, serviceType: svcType })
+      const recentIds = await getMeetingIds(supabase, meetingOpts)
+      const priorIds  = await getMeetingIds(supabase, { before: fromDate, serviceType: svcType, titleSearch: meetingTitleFilter })
 
       const recentSet = new Set(filterToGroup(await getPersonCounts(supabase, recentIds)).keys())
       const priorMap  = filterToGroup(await getPersonCounts(supabase, priorIds))
@@ -694,13 +724,13 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
 
     // ── first_time ────────────────────────────────────────────────────────────
     if (type === 'first_time') {
-      const recentIds  = await getMeetingIds(supabase, { from: fromDate, to: toDate, serviceType: svcType })
+      const recentIds  = await getMeetingIds(supabase, meetingOpts)
       const recentMap  = filterToGroup(await getPersonCounts(supabase, recentIds))
       const recentKeys = Array.from(recentMap.keys())
 
       if (recentKeys.length === 0) return 'No attendees found in that period.'
 
-      const priorIds = await getMeetingIds(supabase, { before: fromDate, serviceType: svcType })
+      const priorIds = await getMeetingIds(supabase, { before: fromDate, serviceType: svcType, titleSearch: meetingTitleFilter })
       const priorSet = new Set(filterToGroup(await getPersonCounts(supabase, priorIds)).keys())
 
       const firstTime = recentKeys
@@ -1010,6 +1040,51 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       total_unique_attendees: personMap.size,
       top_attendees: ranked,
     })
+  }
+
+  // ── discover_data ────────────────────────────────────────────────────────────
+  if (name === 'discover_data') {
+    const what = (input.what as string | undefined) ?? 'all'
+    const result: Record<string, unknown> = {}
+
+    if (what === 'meetings' || what === 'all') {
+      const { data: mData } = await supabase
+        .from('meetings')
+        .select('service_type, title')
+        .limit(500)
+      type MRow = { service_type: string; title: string }
+      const byType = new Map<string, Set<string>>()
+      for (const r of (mData ?? []) as MRow[]) {
+        const s = byType.get(r.service_type) ?? new Set()
+        s.add(r.title)
+        byType.set(r.service_type, s)
+      }
+      result.meetings = Object.fromEntries(
+        [...byType.entries()].map(([type, titles]) => [type, [...titles].sort()])
+      )
+    }
+
+    if (what === 'groups' || what === 'all') {
+      const { data: pData } = await supabase
+        .from('people')
+        .select('group_name, fellowship, pastor')
+        .limit(2000)
+      type PRow2 = { group_name: string | null; fellowship: string | null; pastor: string | null }
+      const rows = (pData ?? []) as PRow2[]
+
+      const countBy = <T>(arr: (T | null)[]): Record<string, number> => {
+        const out: Record<string, number> = {}
+        for (const v of arr) { if (v) out[String(v)] = (out[String(v)] ?? 0) + 1 }
+        return Object.fromEntries(Object.entries(out).sort((a, b) => b[1] - a[1]))
+      }
+
+      result.group_names  = countBy(rows.map(r => r.group_name))
+      result.fellowships  = countBy(rows.map(r => r.fellowship))
+      result.pastors      = countBy(rows.map(r => r.pastor))
+      result.note = 'If many values show 0 or are missing, run the Breeze sync script to populate profile fields.'
+    }
+
+    return JSON.stringify(result)
   }
 
   // ── get_groups ──────────────────────────────────────────────────────────────

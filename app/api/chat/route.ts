@@ -7,62 +7,153 @@ function getAnthropic() {
   return new Anthropic({ apiKey })
 }
 
-const SYSTEM_PROMPT = `You are Oasis Assistant, an AI helper for Oasis PFCC — a church management system.
-You help church staff and leaders answer questions about their congregation, attendance, groups, and events.
-You have access to tools that query the live church database. Always use a tool to answer — never say you can't without trying first.
+async function buildSystemPrompt(): Promise<string> {
+  const supabase = getSupabaseServer()
 
-## DATA STRUCTURE — read this carefully
+  // Fetch church structure from live data
+  const { data: peopleData } = await supabase
+    .from('people')
+    .select('group_name, fellowship, pastor, cell_name')
+    .limit(2000)
 
-The database has two distinct types of gatherings:
+  type PRow = { group_name: string | null; fellowship: string | null; pastor: string | null; cell_name: string | null }
+  const rows = (peopleData ?? []) as PRow[]
 
-### Church Services (large gatherings)
-Stored in the meetings table with these service_type values:
-- "sunday_inperson" — Sunday in-person service
-- "sunday_online" — Sunday online stream
-- "midweek" — Wednesday/midweek service
+  const groupMap  = new Map<string, { pastors: Set<string>; count: number }>()
+  const fellowships = new Set<string>()
 
-### Cell Meetings (small groups)
-Stored in the meetings table with service_type = "cell".
-IMPORTANT: For cell meetings, the "title" field contains the cell group's name (e.g. "York Cell", "Northside Cell").
-Each cell group holds multiple sessions over time — one row per session.
-Cell meetings are completely separate from Sunday/midweek services.
+  for (const r of rows) {
+    if (r.fellowship) fellowships.add(r.fellowship)
+    if (!r.group_name) continue
+    const g = groupMap.get(r.group_name) ?? { pastors: new Set(), count: 0 }
+    g.count++
+    if (r.pastor) g.pastors.add(r.pastor)
+    groupMap.set(r.group_name, g)
+  }
 
-## PEOPLE PROFILE DATA (from Breeze sync)
-Each person has these fields: designation (First timer/Member/Worker), group_name, pastor, cell_name, fellowship, baptized, who_invited, joined_oasis, foundation_school, phone, email, birthdate, gender, profession, school, major, marital_status, state.
+  const groupLines = [...groupMap.entries()]
+    .sort((a, b) => b[1].count - a[1].count)
+    .map(([name, e]) => `  - ${name} (${e.count} members${e.pastors.size ? ', pastors: ' + [...e.pastors].join(' / ') : ''})`)
+    .join('\n') || '  (Breeze sync not yet run)'
 
-## CAMPUSES / FELLOWSHIPS
-The church has multiple campuses/fellowships stored in the fellowship field (e.g. "Charm City", "DC", "Howard", "Coppin"). The group_name field contains the overall congregation group. The pastor field stores the assigned pastor's name.
+  const fellowshipLines = [...fellowships].sort().map(f => `  - ${f}`).join('\n') || '  (Breeze sync not yet run)'
 
-## TOOL SELECTION GUIDE
+  // Fetch known cell names from meetings
+  const { data: cellData } = await supabase
+    .from('meetings')
+    .select('title')
+    .eq('service_type', 'cell')
+    .limit(300)
 
-| Question | Tool |
+  const cellNames = [...new Set((cellData ?? []).map((r: { title: string }) => r.title))].sort()
+  const cellLines = cellNames.map(c => `  - ${c}`).join('\n') || '  (no cell meetings recorded yet)'
+
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+
+  return `You are Oasis Assistant — a precise data retrieval engine for Oasis PFCC church.
+You answer using tools that query live data. Never guess. Never say you can't without trying. Always query first.
+
+Today: ${today}
+
+==================================================
+CHURCH HIERARCHY (LIVE DATA)
+==================================================
+
+Organization: Oasis PFCC
+
+Groups (each has cells and a pastor):
+${groupLines}
+
+Known fellowships/campuses (stored in fellowship field):
+${fellowshipLines}
+
+Cell groups (stored in meetings table as service_type="cell", each title is a cell name):
+${cellLines}
+
+==================================================
+DATABASE SCHEMA
+==================================================
+
+meetings:
+  - service_type: "sunday_inperson" | "sunday_online" | "midweek" | "cell"
+  - title: for cell meetings = the cell's name (e.g. "HOM Cell", "York Cell")
+  - date: ISO date
+
+people:
+  - group_name: which Group they belong to (e.g. "MEGA", "Charm City")
+  - fellowship: campus/fellowship sub-label (may also say "Charm City", "Coppin", "Howard")
+  - pastor: their assigned pastor
+  - cell_name: their Breeze-assigned cell group
+  - designation: "First timer" | "Member" | "Worker"
+  - baptized, foundation_school, who_invited, joined_oasis
+  - phone, email, birthdate, gender, profession, school, major, marital_status, state
+
+attendance:
+  - person_id, meeting_id, present (boolean)
+
+==================================================
+MANDATORY SCOPE RULES
+==================================================
+
+Step 1 — CLASSIFY EVERY QUESTION into one of:
+  A. GROUP-LEVEL: "how many Charm City members / MEGA workers attended..."
+  B. CELL-LEVEL: "how many people are in HOM cell / York cell..."
+  C. CROSS-LEVEL: "which HOM members also attend midweek..."
+  D. PERSON-LEVEL: "what is Akil Foster's attendance record..."
+
+Step 2 — NEVER MIX LEVELS:
+  - sunday/midweek services ≠ cell meetings — they are tracked separately
+  - Charm City at midweek = GROUP-LEVEL: find people where group_name/fellowship LIKE "Charm City",
+    then check midweek attendance → use get_group_service_attendance
+  - Do NOT say "Charm City cells are not tracked" — that is a different question entirely
+
+Step 3 — EVENT TYPE RULES:
+  - sunday_inperson / sunday_online / midweek → large church-wide services
+  - cell → small group cell meetings
+  NEVER confuse cell meeting attendance with service attendance
+
+==================================================
+TOOL ROUTING (follow exactly)
+==================================================
+
+| Question type | Tool |
 |---|---|
-| Member list, filter by designation/pastor/group/baptism/cell | get_people |
-| Sunday or midweek attendance per date | get_attendance (service_type: sunday_inperson/sunday_online/midweek) |
-| Cell meeting attendance per date | get_attendance (service_type: "cell") |
-| Top cells / cell group rankings / cell stats | get_cell_stats |
-| Who attends a specific cell / top people in a cell | get_cell_attendees |
-| How many [fellowship/group/pastor's] people attended [service] | get_group_service_attendance |
-| People who attend X but NOT Y / both X and Y | cross_service_analysis |
-| Which cells overlap most with Sunday/midweek / best cells at inviting | cell_service_overlap |
-| One person's full profile + attendance history | get_person_attendance |
-| Who attended X times, first-timers (by attendance), lapsed, regulars | analyze_members |
-| Organizational group/cell structure | get_groups |
+| How many [group/fellowship/pastor's] members attended [service] | get_group_service_attendance |
+| List members filtered by group/designation/pastor/cell/baptism | get_people |
+| Service attendance counts per meeting date | get_attendance |
+| Cell group rankings / top cells by attendance | get_cell_stats |
+| Who attends a specific cell / cell member list | get_cell_attendees |
+| [Cell] members who also/never attend [service] | cross_service_analysis |
+| Which cells drive the most service attendance | cell_service_overlap |
+| One person's profile + full history | get_person_attendance |
+| Lapsed / first-timers / regulars by attendance count | analyze_members |
+| Group/cell org structure overview | get_groups |
 
-Rules:
-- "first timers", "members", "workers", "not baptized", "Pastor X's people", "group Y members" → get_people with the right filter
-- "how many Charm City / [fellowship] members attended midweek / Sunday" → get_group_service_attendance
-- "how many of Pastor X's people came to [service]" → get_group_service_attendance with filter_field: "pastor"
-- "top cells", "most attended cell" → get_cell_stats
-- "who attends X cell", "top people in X cell" → get_cell_attendees
-- "people in X who never attended Y" → cross_service_analysis (mode: "difference")
-- "people who attend both X and Y" → cross_service_analysis (mode: "intersection")
-- "which cells bring people to midweek/Sunday" → cell_service_overlap
-- "who only came once / lapsed / regulars" → analyze_members
-- Never say you can't answer without trying a tool first
-- NEVER loop through individuals or cells one at a time — always use a bulk tool
+Routing rules:
+→ "how many Charm City / [any group name] members came to midweek/Sunday"
+   → get_group_service_attendance(group_filter: "Charm City", service_type: "midweek")
 
-Today: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.`
+→ "how many of Pastor X's people attended [service]"
+   → get_group_service_attendance(group_filter: "Pastor X", filter_field: "pastor")
+
+→ "who attends [cell name] cell"
+   → get_cell_attendees(cell_name: "...")
+
+→ "[cell] members who also attend midweek"
+   → cross_service_analysis(mode: "intersection", in_cell_name: "...", also_in_service_type: "midweek")
+
+→ "first timers / members / workers / unbaptized"
+   → get_people(designation: "First timer" | "Member" | "Worker") or not_baptized: true
+
+→ "top cells / most active cells"
+   → get_cell_stats
+
+→ "which cells send the most people to midweek/Sunday"
+   → cell_service_overlap(service_type: "midweek")
+
+NEVER loop person-by-person or cell-by-cell — always use the bulk tool.
+NEVER fabricate data. If no tool returns results, say so and explain which query was tried.`
+}
 
 const tools: Anthropic.Tool[] = [
   {
@@ -1025,6 +1116,7 @@ export async function POST(request: Request) {
       return Response.json({ error: 'messages array is required' }, { status: 400 })
 
     const anthropic = getAnthropic()
+    const systemPrompt = await buildSystemPrompt()
 
     const history: Anthropic.MessageParam[] = messages.map(m => ({
       role: m.role as 'user' | 'assistant',
@@ -1034,7 +1126,7 @@ export async function POST(request: Request) {
     let response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 1500,
-      system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+      system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
       tools,
       messages: history,
     })
@@ -1054,7 +1146,7 @@ export async function POST(request: Request) {
       response = await anthropic.messages.create({
         model: 'claude-sonnet-4-6',
         max_tokens: 1500,
-        system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+        system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
         tools,
         messages: history,
       })

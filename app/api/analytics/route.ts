@@ -74,7 +74,7 @@ export async function GET(req: NextRequest) {
           .limit(10000)
       )
     )
-    const attendance: AttRow[] = attBatches.flatMap(r => (r.data ?? []) as AttRow[])
+    const attendance: AttRow[] = attBatches.flatMap(r => (r.data ?? []) as unknown as AttRow[])
     const attErr = attBatches.find(r => r.error)?.error
     if (attErr) return Response.json({ error: attErr.message }, { status: 500 })
 

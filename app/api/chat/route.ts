@@ -1,7 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { getSupabaseServer } from '@/lib/supabase-server'
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+function getAnthropic() {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY environment variable is not set')
+  return new Anthropic({ apiKey })
+}
 
 const SYSTEM_PROMPT = `You are Oasis Assistant, an AI helper for Oasis PFCC — a church management system.
 You help church staff and leaders answer questions about their congregation, attendance, groups, and events.
@@ -814,6 +818,8 @@ export async function POST(request: Request) {
     const { messages } = await request.json() as { messages: { role: string; content: string }[] }
     if (!Array.isArray(messages) || messages.length === 0)
       return Response.json({ error: 'messages array is required' }, { status: 400 })
+
+    const anthropic = getAnthropic()
 
     const history: Anthropic.MessageParam[] = messages.map(m => ({
       role: m.role as 'user' | 'assistant',

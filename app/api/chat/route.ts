@@ -27,30 +27,33 @@ IMPORTANT: For cell meetings, the "title" field contains the cell group's name (
 Each cell group holds multiple sessions over time — one row per session.
 Cell meetings are completely separate from Sunday/midweek services.
 
+## PEOPLE PROFILE DATA (from Breeze sync)
+Each person may have enriched fields: designation (First timer/Member/Worker), group_name, pastor, cell_name, baptized, who_invited, joined_oasis, foundation_school, phone, email, gender, profession.
+
 ## TOOL SELECTION GUIDE
 
 | Question | Tool |
 |---|---|
-| Member list / how many members | get_people |
+| Member list, filter by designation/pastor/group/baptism/cell | get_people |
 | Sunday or midweek attendance per date | get_attendance (service_type: sunday_inperson/sunday_online/midweek) |
 | Cell meeting attendance per date | get_attendance (service_type: "cell") |
 | Top cells / cell group rankings / cell stats | get_cell_stats |
 | Who attends a specific cell / top people in a cell | get_cell_attendees |
-| People who attend X but NOT Y | cross_service_analysis |
-| Which cells overlap most with Sunday/midweek / best cells at inviting | cell_service_overlap ← USE THIS |
-| One person's attendance history | get_person_attendance |
-| Who attended X times, first-timers, lapsed, regulars | analyze_members |
+| People who attend X but NOT Y / both X and Y | cross_service_analysis |
+| Which cells overlap most with Sunday/midweek / best cells at inviting | cell_service_overlap |
+| One person's full profile + attendance history | get_person_attendance |
+| Who attended X times, first-timers (by attendance), lapsed, regulars | analyze_members |
 | Organizational group/cell structure | get_groups |
 
 Rules:
-- "top cells", "most attended cell", "cell group rankings" → get_cell_stats
-- "who attends X cell", "top people in X cell", "regulars at X" → get_cell_attendees
-- "people in X who never/haven't attended Y", "X members not in Y" → cross_service_analysis (mode: "difference")
-- "who are the X people from cell Y that attend Z", "which HOM members also go to midweek" → cross_service_analysis (mode: "intersection") — NEVER loop through individuals
-- "which cells bring people to midweek/Sunday", "cell to service overlap", "best cells at inviting to X" → ALWAYS use cell_service_overlap — NEVER loop through cells one by one
-- "who only came once / hasn't been back / first-timers / lapsed / regulars" → analyze_members
+- "first timers", "members", "workers", "not baptized", "Pastor X's people", "group Y members" → get_people with the right filter
+- "top cells", "most attended cell" → get_cell_stats
+- "who attends X cell", "top people in X cell" → get_cell_attendees
+- "people in X who never attended Y" → cross_service_analysis (mode: "difference")
+- "people who attend both X and Y" → cross_service_analysis (mode: "intersection")
+- "which cells bring people to midweek/Sunday" → cell_service_overlap
+- "who only came once / lapsed / regulars" → analyze_members
 - Never say you can't answer without trying a tool first
-- Never use get_groups to answer questions about attendance
 - NEVER loop through individuals or cells one at a time — always use a bulk tool
 
 Today: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.`
@@ -58,14 +61,21 @@ Today: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeri
 const tools: Anthropic.Tool[] = [
   {
     name: 'get_people',
-    description: 'Search for members. Use first_name/last_name to find someone, or no filters to count all members.',
+    description: 'Search/filter members by name or profile fields. Use filters to answer questions like "who are the first timers", "Pastor Joshua\'s members", "unbaptized members", "Trailblazers group", "who was invited by X".',
     input_schema: {
       type: 'object' as const,
       properties: {
-        first_name: { type: 'string', description: 'Partial first name match' },
-        last_name:  { type: 'string', description: 'Partial last name match' },
-        cell_name_filter: { type: 'string', description: 'Filter by cell group name' },
-        limit: { type: 'number', description: 'Max results (default 30)' },
+        first_name:         { type: 'string', description: 'Partial first name match' },
+        last_name:          { type: 'string', description: 'Partial last name match' },
+        designation:        { type: 'string', description: 'Filter by designation e.g. "First timer", "Member", "Worker"' },
+        pastor:             { type: 'string', description: 'Filter by assigned pastor e.g. "Pastor Joshua"' },
+        group_name:         { type: 'string', description: 'Filter by church group e.g. "Trailblazers"' },
+        cell_name:          { type: 'string', description: 'Filter by cell group name (partial match)' },
+        baptized:           { type: 'string', description: 'Filter by baptism status e.g. "Yes", "No"' },
+        who_invited:        { type: 'string', description: 'Filter by who invited them (partial match)' },
+        foundation_school:  { type: 'string', description: 'Filter by foundation school completion' },
+        not_baptized:       { type: 'boolean', description: 'Set true to return only people who have NOT been baptized' },
+        limit:              { type: 'number', description: 'Max results (default 50)' },
       },
     },
   },
@@ -259,32 +269,67 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
 
   // ── get_people ──────────────────────────────────────────────────────────────
   if (name === 'get_people') {
+    type PersonRow = {
+      first_name: string; last_name: string; name: string; email: string | null
+      phone: string | null; designation: string | null; pastor: string | null
+      group_name: string | null; cell_name: string | null; baptized: string | null
+      who_invited: string | null; joined_oasis: string | null; foundation_school: string | null
+      profession: string | null; gender: string | null
+    }
     let q = supabase
       .from('people')
-      .select('id, first_name, last_name, name, email, created_at, cells(name, groups(name))')
+      .select('first_name, last_name, name, email, phone, designation, pastor, group_name, cell_name, baptized, who_invited, joined_oasis, foundation_school, profession, gender')
       .order('last_name').order('first_name')
-      .limit(Math.min(Number(input.limit ?? 30), 100))
+      .limit(Math.min(Number(input.limit ?? 50), 200))
 
-    if (input.first_name) q = q.ilike('first_name', `%${input.first_name}%`)
-    if (input.last_name)  q = q.ilike('last_name',  `%${input.last_name}%`)
+    if (input.first_name)        q = q.ilike('first_name',  `%${input.first_name}%`)
+    if (input.last_name)         q = q.ilike('last_name',   `%${input.last_name}%`)
+    if (input.designation)       q = q.ilike('designation', `%${input.designation}%`)
+    if (input.pastor)            q = q.ilike('pastor',      `%${input.pastor}%`)
+    if (input.group_name)        q = q.ilike('group_name',  `%${input.group_name}%`)
+    if (input.cell_name)         q = q.ilike('cell_name',   `%${input.cell_name}%`)
+    if (input.who_invited)       q = q.ilike('who_invited', `%${input.who_invited}%`)
+    if (input.foundation_school) q = q.ilike('foundation_school', `%${input.foundation_school}%`)
+    if (input.baptized && !input.not_baptized) q = q.ilike('baptized', `%${input.baptized}%`)
+    if (input.not_baptized)      q = q.or('baptized.is.null,baptized.ilike.%No%')
 
-    const { data, error } = await q
+    let { data, error } = await q
+
+    // If extended columns don't exist yet (migration not run), fall back to basic fields
+    if (error && error.message.includes('column')) {
+      const fallback = await supabase
+        .from('people')
+        .select('first_name, last_name, name, email')
+        .order('last_name').order('first_name')
+        .limit(Math.min(Number(input.limit ?? 50), 200))
+      if (input.first_name) (fallback as unknown as typeof q) // can't reapply filters on already-built query
+      data  = fallback.data as typeof data
+      error = fallback.error
+      if (!error && data) {
+        return JSON.stringify({
+          note: 'Extended profile fields (pastor, group, designation) are not yet available — run db/005_breeze_people_fields.sql and the Breeze sync script first.',
+          count: data.length,
+          people: (data as { first_name: string; last_name: string; name: string }[]).map(p => ({
+            name: p.name || `${p.first_name} ${p.last_name}`.trim(),
+          })),
+        })
+      }
+    }
+
     if (error) return `Error: ${error.message}`
-    if (!data || data.length === 0) return 'No people found.'
+    if (!data || data.length === 0) return 'No people found matching those filters.'
 
-    const rows = data as unknown as { id: string; first_name: string; last_name: string; name: string; email: string; created_at: string; cells: { name: string; groups: { name: string } | null } | null }[]
-    const filtered = input.cell_name_filter
-      ? rows.filter(p => p.cells?.name?.toLowerCase().includes((input.cell_name_filter as string).toLowerCase()))
-      : rows
-
+    const rows = data as PersonRow[]
     return JSON.stringify({
-      count: filtered.length,
-      people: filtered.map(p => ({
-        first_name: p.first_name || p.name.split(' ')[0],
-        last_name:  p.last_name  || p.name.split(' ').slice(1).join(' '),
-        cell: p.cells?.name ?? 'Unassigned',
-        group: p.cells?.groups?.name ?? 'None',
-        joined: p.created_at.split('T')[0],
+      count: rows.length,
+      people: rows.map(p => ({
+        name: p.name || `${p.first_name} ${p.last_name}`.trim(),
+        first_name: p.first_name, last_name: p.last_name,
+        designation: p.designation, pastor: p.pastor,
+        group: p.group_name, cell: p.cell_name,
+        baptized: p.baptized, who_invited: p.who_invited,
+        joined_oasis: p.joined_oasis, phone: p.phone,
+        profession: p.profession,
       })),
     })
   }
@@ -334,7 +379,8 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
 
   // ── get_person_attendance ───────────────────────────────────────────────────
   if (name === 'get_person_attendance') {
-    let pq = supabase.from('people').select('id, first_name, last_name, name').limit(5)
+    const profileFields = 'id, first_name, last_name, name, phone, email, birthdate, gender, designation, pastor, group_name, cell_name, baptized, who_invited, joined_oasis, foundation_school, foundation_school_grad_year, school, major, profession, marital_status, state, unique_id, fellowship'
+    let pq = supabase.from('people').select(profileFields).limit(5)
     if (input.first_name) pq = pq.ilike('first_name', `%${input.first_name}%`)
     if (input.last_name)  pq = pq.ilike('last_name',  `%${input.last_name}%`)
 
@@ -343,8 +389,18 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
     if (!people || people.length === 0) return 'No person found with that name.'
     if (people.length > 3) return `Multiple matches: ${(people as { name: string }[]).map(p => p.name).join(', ')}. Be more specific.`
 
+    type PersonRow = {
+      id: string; first_name: string; last_name: string; name: string
+      phone: string | null; email: string | null; birthdate: string | null; gender: string | null
+      designation: string | null; pastor: string | null; group_name: string | null; cell_name: string | null
+      baptized: string | null; who_invited: string | null; joined_oasis: string | null
+      foundation_school: string | null; foundation_school_grad_year: string | null
+      school: string | null; major: string | null; profession: string | null
+      marital_status: string | null; state: string | null; unique_id: string | null; fellowship: string | null
+    }
+
     const results = []
-    for (const person of people as { id: string; first_name: string; last_name: string; name: string }[]) {
+    for (const person of people as PersonRow[]) {
       const { data: attRows } = await supabase
         .from('attendance')
         .select('present, meetings(id, title, date, service_type)')
@@ -364,11 +420,34 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
 
       results.push({
         name: person.name,
+        first_name: person.first_name,
+        last_name: person.last_name,
+        phone: person.phone,
+        email: person.email,
+        birthdate: person.birthdate,
+        gender: person.gender,
+        designation: person.designation,
+        pastor: person.pastor,
+        group: person.group_name,
+        cell: person.cell_name,
+        fellowship: person.fellowship,
+        baptized: person.baptized,
+        who_invited: person.who_invited,
+        joined_oasis: person.joined_oasis,
+        foundation_school: person.foundation_school,
+        foundation_school_grad_year: person.foundation_school_grad_year,
+        school: person.school,
+        major: person.major,
+        profession: person.profession,
+        marital_status: person.marital_status,
+        state: person.state,
+        unique_id: person.unique_id,
         total_attendances: rows.length,
         breakdown,
-        recent_services: rows.slice(0, 15).map(r => ({
+        recent_services: rows.slice(0, 20).map(r => ({
           date: r.meetings!.date.split('T')[0],
           type: r.meetings!.service_type ?? 'unknown',
+          title: r.meetings!.title,
         })),
       })
     }
@@ -789,12 +868,39 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
 
   // ── get_groups ──────────────────────────────────────────────────────────────
   if (name === 'get_groups') {
-    let q = supabase.from('groups').select('id, name, regions(name), cells(id, name, people(id))').order('name')
-    if (input.group_name_filter) q = q.ilike('name', `%${input.group_name_filter}%`)
+    // Primary: query distinct group_name values from people table (populated by Breeze sync)
+    const { data: groupRows, error: gErr } = await supabase
+      .from('people')
+      .select('group_name, pastor')
+      .not('group_name', 'is', null)
 
-    const { data, error } = await q
-    if (error) return `Error: ${error.message}`
-    if (!data || data.length === 0) return 'No groups found.'
+    if (!gErr && groupRows && groupRows.length > 0) {
+      type GRow = { group_name: string | null; pastor: string | null }
+      const rows = groupRows as GRow[]
+      const filter = (input.group_name_filter as string | undefined)?.toLowerCase()
+
+      const grouped = new Map<string, { pastors: Set<string>; count: number }>()
+      for (const r of rows) {
+        const g = r.group_name!
+        if (filter && !g.toLowerCase().includes(filter)) continue
+        const entry = grouped.get(g) ?? { pastors: new Set(), count: 0 }
+        entry.count++
+        if (r.pastor) entry.pastors.add(r.pastor)
+        grouped.set(g, entry)
+      }
+
+      const groups = Array.from(grouped.entries())
+        .map(([name, e]) => ({ name, members: e.count, pastors: [...e.pastors] }))
+        .sort((a, b) => b.members - a.members)
+
+      return JSON.stringify({ source: 'breeze_sync', total_groups: groups.length, groups })
+    }
+
+    // Fallback: old groups table
+    const { data, error } = await supabase
+      .from('groups').select('id, name, regions(name), cells(id, name, people(id))').order('name')
+    if (error || !data || data.length === 0)
+      return 'No groups found. Run db/005_breeze_people_fields.sql and the Breeze sync script to populate group data.'
 
     const rows = data as unknown as { id: string; name: string; regions: { name: string } | null; cells: { id: string; name: string; people: { id: string }[] }[] }[]
     return JSON.stringify({
@@ -804,7 +910,6 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         region: g.regions?.name ?? 'No region',
         cells: g.cells.length,
         total_people: g.cells.reduce((s, c) => s + c.people.length, 0),
-        cell_list: g.cells.map(c => `${c.name} (${c.people.length} people)`),
       })),
     })
   }

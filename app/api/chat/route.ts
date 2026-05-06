@@ -205,13 +205,15 @@ const tools: Anthropic.Tool[] = [
   },
   {
     name: 'analyze_members',
-    description: `Bulk attendance analysis across the whole congregation. Use this for:
+    description: `Bulk attendance analysis — for the whole church OR filtered to a specific group/fellowship.
+Use fellowship or group_name to scope to one group (e.g. "Charm City midweek regulars", "MEGA lapsed members").
+- "most consistent [group] midweek attendees / game plan" → analysis_type: "regular", service_type: "midweek", fellowship: "[group]"
 - "who only came once" → analysis_type: "low_attendance", attendance_threshold: 1
 - "first-time visitors" → analysis_type: "first_time"
-- "who stopped coming / lapsed members" → analysis_type: "lapsed"
+- "who stopped coming / lapsed" → analysis_type: "lapsed"
 - "regular attenders" → analysis_type: "regular"
-- "attendance overview / stats" → analysis_type: "summary"
-Always provide from_date and to_date to define the period.`,
+- "attendance stats" → analysis_type: "summary"
+Always provide from_date and to_date. For game-plan questions use analysis_type: "regular" with low threshold (1) to get all tiers.`,
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -219,12 +221,14 @@ Always provide from_date and to_date to define the period.`,
           type: 'string',
           description: '"summary" | "low_attendance" | "regular" | "first_time" | "lapsed"',
         },
-        from_date: { type: 'string', description: 'Start of period e.g. 2025-03-01' },
-        to_date:   { type: 'string', description: 'End of period e.g. 2025-04-30' },
-        service_type: { type: 'string', description: 'Optional: limit to one service type' },
+        fellowship:   { type: 'string', description: 'Filter results to people with this fellowship value (partial match). E.g. "Charm City"' },
+        group_name:   { type: 'string', description: 'Filter results to people with this group_name value (partial match). E.g. "MEGA"' },
+        from_date:    { type: 'string', description: 'Start of period e.g. 2025-03-01' },
+        to_date:      { type: 'string', description: 'End of period e.g. 2025-04-30' },
+        service_type: { type: 'string', description: 'Optional: limit to one service type (midweek / sunday_inperson / sunday_online / cell)' },
         attendance_threshold: {
           type: 'number',
-          description: 'For low_attendance: max count (default 1). For regular: min count (default 4).',
+          description: 'For low_attendance: max count (default 1). For regular: min count (default 1 for game plans, 4 for strict regulars).',
         },
       },
     },
@@ -573,20 +577,49 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
     const svcType   = input.service_type as string | undefined
     const threshold = Number(input.attendance_threshold ?? (type === 'regular' ? 4 : 1))
 
-    // Default period: last 2 months → today if not provided
+    // Default period: last 12 months → today if not provided
     const now = new Date()
-    const twoMonthsAgo = new Date(now); twoMonthsAgo.setMonth(now.getMonth() - 2)
-    const fromDate = (input.from_date as string) ?? twoMonthsAgo.toISOString().split('T')[0]
+    const twelveMonthsAgo = new Date(now); twelveMonthsAgo.setFullYear(now.getFullYear() - 1)
+    const fromDate = (input.from_date as string) ?? twelveMonthsAgo.toISOString().split('T')[0]
     const toDate   = (input.to_date   as string) ?? now.toISOString().split('T')[0]
+
+    // Optional: restrict to a specific fellowship or group
+    let groupPersonIds: Set<string> | null = null
+    const fellowshipFilter = input.fellowship as string | undefined
+    const groupNameFilter  = input.group_name  as string | undefined
+    if (fellowshipFilter || groupNameFilter) {
+      let gpq = supabase.from('people').select('id').limit(1000)
+      if (fellowshipFilter) gpq = gpq.ilike('fellowship', `%${fellowshipFilter}%`)
+      if (groupNameFilter)  gpq = gpq.ilike('group_name',  `%${groupNameFilter}%`)
+      const { data: gpData } = await gpq
+      groupPersonIds = new Set((gpData ?? []).map((r: { id: string }) => r.id))
+      if (groupPersonIds.size === 0)
+        return `No people found with fellowship "${fellowshipFilter ?? groupNameFilter}". Check the spelling or run the Breeze sync.`
+    }
+
+    // Helper: filter a counts map to only group members
+    const filterToGroup = (counts: Map<string, PersonCount>): Map<string, PersonCount> => {
+      if (!groupPersonIds) return counts
+      const filtered = new Map<string, PersonCount>()
+      for (const [id, val] of counts) {
+        if (groupPersonIds.has(id)) filtered.set(id, val)
+      }
+      return filtered
+    }
+
+    const groupLabel = (fellowshipFilter ?? groupNameFilter)
+      ? ` (${fellowshipFilter ?? groupNameFilter} only)`
+      : ''
 
     // ── summary ──────────────────────────────────────────────────────────────
     if (type === 'summary') {
-      const ids = await getMeetingIds(supabase, { from: fromDate, to: toDate, serviceType: svcType })
-      const counts = await getPersonCounts(supabase, ids)
-      const vals = Array.from(counts.values())
+      const ids    = await getMeetingIds(supabase, { from: fromDate, to: toDate, serviceType: svcType })
+      const counts = filterToGroup(await getPersonCounts(supabase, ids))
+      const vals   = Array.from(counts.values())
       const totalAtt = vals.reduce((s, p) => s + p.count, 0)
 
       return JSON.stringify({
+        group: groupLabel || 'all',
         period: `${fromDate} → ${toDate}`,
         services: ids.length,
         unique_attendees: vals.length,
@@ -603,14 +636,14 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
 
     // ── low_attendance ────────────────────────────────────────────────────────
     if (type === 'low_attendance') {
-      const ids = await getMeetingIds(supabase, { from: fromDate, to: toDate, serviceType: svcType })
-      const counts = await getPersonCounts(supabase, ids)
+      const ids    = await getMeetingIds(supabase, { from: fromDate, to: toDate, serviceType: svcType })
+      const counts = filterToGroup(await getPersonCounts(supabase, ids))
       const results = Array.from(counts.entries())
         .filter(([, p]) => p.count <= threshold)
         .sort((a, b) => a[1].count - b[1].count)
 
       return JSON.stringify({
-        description: `Members who attended ${threshold === 1 ? 'only once' : `${threshold} or fewer times`} between ${fromDate} and ${toDate}`,
+        description: `${groupLabel}Members who attended ${threshold === 1 ? 'only once' : `${threshold} or fewer times`} between ${fromDate} and ${toDate}`,
         total: results.length,
         people: results.map(([, p]) => ({
           first_name: p.first_name, last_name: p.last_name,
@@ -621,14 +654,14 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
 
     // ── regular ───────────────────────────────────────────────────────────────
     if (type === 'regular') {
-      const ids = await getMeetingIds(supabase, { from: fromDate, to: toDate, serviceType: svcType })
-      const counts = await getPersonCounts(supabase, ids)
+      const ids    = await getMeetingIds(supabase, { from: fromDate, to: toDate, serviceType: svcType })
+      const counts = filterToGroup(await getPersonCounts(supabase, ids))
       const results = Array.from(counts.entries())
         .filter(([, p]) => p.count >= threshold)
         .sort((a, b) => b[1].count - a[1].count)
 
       return JSON.stringify({
-        description: `Members who attended ${threshold}+ times between ${fromDate} and ${toDate}`,
+        description: `${groupLabel}Members who attended ${threshold}+ times between ${fromDate} and ${toDate}`,
         total: results.length,
         people: results.map(([, p]) => ({
           first_name: p.first_name, last_name: p.last_name,
@@ -642,15 +675,15 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       const recentIds = await getMeetingIds(supabase, { from: fromDate, to: toDate, serviceType: svcType })
       const priorIds  = await getMeetingIds(supabase, { before: fromDate, serviceType: svcType })
 
-      const recentSet = new Set((await getPersonCounts(supabase, recentIds)).keys())
-      const priorMap  = await getPersonCounts(supabase, priorIds)
+      const recentSet = new Set(filterToGroup(await getPersonCounts(supabase, recentIds)).keys())
+      const priorMap  = filterToGroup(await getPersonCounts(supabase, priorIds))
 
       const lapsed = Array.from(priorMap.entries())
         .filter(([id]) => !recentSet.has(id))
         .sort((a, b) => b[1].count - a[1].count)
 
       return JSON.stringify({
-        description: `Members who attended before ${fromDate} but NOT between ${fromDate} and ${toDate}`,
+        description: `${groupLabel}Members who attended before ${fromDate} but NOT between ${fromDate} and ${toDate}`,
         total: lapsed.length,
         people: lapsed.slice(0, 50).map(([, p]) => ({
           first_name: p.first_name, last_name: p.last_name,
@@ -662,20 +695,20 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
     // ── first_time ────────────────────────────────────────────────────────────
     if (type === 'first_time') {
       const recentIds  = await getMeetingIds(supabase, { from: fromDate, to: toDate, serviceType: svcType })
-      const recentMap  = await getPersonCounts(supabase, recentIds)
+      const recentMap  = filterToGroup(await getPersonCounts(supabase, recentIds))
       const recentKeys = Array.from(recentMap.keys())
 
       if (recentKeys.length === 0) return 'No attendees found in that period.'
 
       const priorIds = await getMeetingIds(supabase, { before: fromDate, serviceType: svcType })
-      const priorSet = new Set((await getPersonCounts(supabase, priorIds)).keys())
+      const priorSet = new Set(filterToGroup(await getPersonCounts(supabase, priorIds)).keys())
 
       const firstTime = recentKeys
         .filter(id => !priorSet.has(id))
         .map(id => recentMap.get(id)!)
 
       return JSON.stringify({
-        description: `Members who attended for the first time between ${fromDate} and ${toDate}`,
+        description: `${groupLabel}Members who attended for the first time between ${fromDate} and ${toDate}`,
         total: firstTime.length,
         people: firstTime.map(p => ({
           first_name: p.first_name, last_name: p.last_name,

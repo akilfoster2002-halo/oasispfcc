@@ -23,351 +23,156 @@ async function buildSystemPrompt(): Promise<string> {
       supabase.from('attendance').select('*', { count: 'exact', head: true }),
     ])
 
-  const groupNames = (groups ?? []).map(g => g.name).join(', ')
+  // Load distinct meeting names per group so the AI knows what events exist
+  const { data: meetingNames } = await supabase
+    .from('meetings')
+    .select('name, meeting_type, groups(name)')
+    .order('name')
 
-  const prompt = `You are the Oasis PFCC Church Intelligence Assistant. You help church leadership understand attendance patterns, member engagement, and group health.
+  const byGroup: Record<string, string[]> = {}
+  for (const m of meetingNames ?? []) {
+    const gName = (m.groups as unknown as { name: string } | null)?.name ?? 'Unknown'
+    if (!byGroup[gName]) byGroup[gName] = []
+    const label = `${m.name} (${m.meeting_type})`
+    if (!byGroup[gName].includes(label)) byGroup[gName].push(label)
+  }
 
-DATABASE OVERVIEW:
-- Groups: ${groupNames}
-- Total attendees tracked: ${totalAttendees ?? 0}
-- Total meetings in system: ${totalMeetings ?? 0}
+  const meetingList = Object.entries(byGroup)
+    .map(([g, names]) => `  ${g}:\n${names.map(n => `    - ${n}`).join('\n')}`)
+    .join('\n')
+
+  const prompt = `You are the Oasis PFCC Church Intelligence Assistant. You help church leadership understand attendance patterns, member engagement, and group health across ministry groups.
+
+TODAY'S DATE: ${new Date().toISOString().split('T')[0]}
+
+DATABASE SUMMARY:
+- Groups: ${(groups ?? []).map(g => g.name).join(', ')}
+- Total attendees: ${totalAttendees ?? 0}
+- Total meetings: ${totalMeetings ?? 0}
 - Total attendance records: ${totalAttendance ?? 0}
 
-SCHEMA:
-- groups: id, name
-- meetings: id, group_id, meeting_date, meeting_type (Sunday/Wednesday/Cell/Prayer/Special/Other), name
-- attendees: id, name (breeze_id is internal only)
-- attendance: meeting_id, attendee_id, status (present/absent/late)
+KNOWN MEETING EVENTS:
+${meetingList}
 
-CAPABILITIES:
-You can answer questions about attendance consistency, who has or hasn't been coming, meeting headcounts, trends over time, and group transfers (people attending different groups).
+SCHEMA (PostgreSQL):
+\`\`\`
+groups       → id uuid, name text
+meetings     → id uuid, group_id uuid, meeting_date date, meeting_type text, name text
+attendees    → id uuid, name text  [breeze_id is internal, never query it]
+attendance   → id uuid, meeting_id uuid, attendee_id uuid, status text ('present'/'absent'/'late'), created_at timestamptz
+\`\`\`
 
-GUIDELINES:
-- Default date range: last 90 days unless user specifies otherwise
-- When asked about a person, search by name (case-insensitive partial match)
-- When asked about a group, match group names partially (e.g. "charm" → CharmCity)
-- Always clarify the date range and group in your answers
-- For transfers: someone who attended Group A before but now attends Group B is a transfer
-- Today's date: ${new Date().toISOString().split('T')[0]}`
+RELATIONSHIPS:
+- meetings.group_id → groups.id
+- attendance.meeting_id → meetings.id
+- attendance.attendee_id → attendees.id
+
+QUERY RULES:
+1. Always write SELECT queries only — no INSERT, UPDATE, DELETE, DROP, etc.
+2. Always filter attendance with: AND att.status = 'present'  (unless specifically asked about absent/late)
+3. Use ILIKE for name/group searches: WHERE g.name ILIKE '%CharmCity%'
+4. Always include ORDER BY and LIMIT clauses
+5. For "cells" → filter: WHERE m.meeting_type = 'Cell'
+6. For "Sunday service" → filter: WHERE m.meeting_type = 'Sunday'
+7. For "most attended cell" → aggregate by meeting NAME, not by date
+8. For person lookups → use: WHERE att_person.name ILIKE '%first last%'
+9. Default date range: last 90 days unless user specifies
+10. Never expose breeze_id in results
+
+COMMON QUERY PATTERNS:
+
+-- Who attends a specific cell (by name):
+SELECT att_person.name, COUNT(*) as times_attended
+FROM attendance att
+JOIN meetings m ON m.id = att.meeting_id
+JOIN attendees att_person ON att_person.id = att.attendee_id
+WHERE m.name ILIKE '%Oasis Towson%' AND att.status = 'present'
+GROUP BY att_person.name ORDER BY times_attended DESC;
+
+-- Most attended cells in a group:
+SELECT m.name, COUNT(att.id) as total_attendance, COUNT(DISTINCT m.id) as sessions
+FROM meetings m
+JOIN groups g ON g.id = m.group_id
+LEFT JOIN attendance att ON att.meeting_id = m.id AND att.status = 'present'
+WHERE g.name ILIKE '%LifeSprings%' AND m.meeting_type = 'Cell'
+GROUP BY m.name ORDER BY total_attendance DESC;
+
+-- Who has lapsed (attended before X, not after Y):
+SELECT att_person.name, MAX(m.meeting_date) as last_seen
+FROM attendees att_person
+JOIN attendance att ON att.attendee_id = att_person.id
+JOIN meetings m ON m.id = att.meeting_id
+WHERE att.status = 'present'
+GROUP BY att_person.id, att_person.name
+HAVING MAX(m.meeting_date) < '2026-01-01'
+ORDER BY last_seen DESC;
+
+-- Headcount trend over time for a group:
+SELECT m.meeting_date, m.name, COUNT(att.id) as headcount
+FROM meetings m
+JOIN groups g ON g.id = m.group_id
+LEFT JOIN attendance att ON att.meeting_id = m.id AND att.status = 'present'
+WHERE g.name ILIKE '%LifeSprings%' AND m.meeting_type = 'Sunday'
+GROUP BY m.id, m.meeting_date, m.name ORDER BY m.meeting_date DESC LIMIT 20;
+
+-- First timers in a date range:
+SELECT att_person.name, MIN(m.meeting_date) as first_attendance
+FROM attendees att_person
+JOIN attendance att ON att.attendee_id = att_person.id
+JOIN meetings m ON m.id = att.meeting_id
+WHERE att.status = 'present'
+GROUP BY att_person.id, att_person.name
+HAVING MIN(m.meeting_date) BETWEEN '2026-04-01' AND '2026-05-07'
+ORDER BY first_attendance;
+
+RESPONSE STYLE:
+- Present data in clean tables when showing lists
+- Lead with the direct answer, then supporting detail
+- Point out notable patterns (outliers, gaps, trends)
+- If a query returns 0 results, say so clearly and suggest why`
 
   _promptCache = { prompt, expires: Date.now() + 60 * 60 * 1000 }
   return prompt
 }
 
-// ── Tool definitions ──────────────────────────────────────────
+// ── Single tool: run_sql ──────────────────────────────────────
 const tools: Anthropic.Tool[] = [
   {
-    name: 'get_groups',
-    description: 'List all ministry groups with their meeting counts and date ranges.',
-    input_schema: { type: 'object' as const, properties: {}, required: [] },
-  },
-  {
-    name: 'get_meeting_headcounts',
-    description: 'Get attendance headcounts per meeting for a group and date range. Use to see trends, best/worst attended meetings.',
+    name: 'run_sql',
+    description: 'Execute a read-only SQL SELECT query against the church attendance database. Use this to answer any question about attendance, members, meetings, or groups. Write the exact SQL needed — do not use placeholder values.',
     input_schema: {
       type: 'object' as const,
       properties: {
-        group_name:   { type: 'string', description: 'Partial group name, or omit for all groups' },
-        meeting_type: { type: 'string', description: 'Sunday, Wednesday, Cell, Prayer, Special, Other — or omit for all' },
-        from_date:    { type: 'string', description: 'YYYY-MM-DD' },
-        to_date:      { type: 'string', description: 'YYYY-MM-DD' },
+        sql: {
+          type: 'string',
+          description: 'A valid PostgreSQL SELECT statement. Must start with SELECT. No INSERT/UPDATE/DELETE/DROP allowed.',
+        },
+        description: {
+          type: 'string',
+          description: 'One sentence explaining what this query is looking for.',
+        },
       },
-      required: ['from_date', 'to_date'],
-    },
-  },
-  {
-    name: 'get_attendance_summary',
-    description: 'Get per-person attendance counts for a group + date range. Use to find consistent attenders, low attenders, or search for a specific person.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        group_name:   { type: 'string', description: 'Partial group name, or omit for all groups' },
-        meeting_type: { type: 'string', description: 'Filter by meeting type, or omit for all' },
-        from_date:    { type: 'string', description: 'YYYY-MM-DD' },
-        to_date:      { type: 'string', description: 'YYYY-MM-DD' },
-        min_count:    { type: 'number', description: 'Only return people who attended at least this many times' },
-        max_count:    { type: 'number', description: 'Only return people who attended at most this many times' },
-        name_search:  { type: 'string', description: 'Filter results to a specific person by partial name' },
-        limit:        { type: 'number', description: 'Max results to return (default 50)' },
-      },
-      required: ['from_date', 'to_date'],
-    },
-  },
-  {
-    name: 'get_person_history',
-    description: 'Get the full attendance history for a specific person across all groups. Use to see every meeting they attended.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        name:      { type: 'string', description: 'Person\'s full or partial name' },
-        from_date: { type: 'string', description: 'YYYY-MM-DD' },
-        to_date:   { type: 'string', description: 'YYYY-MM-DD' },
-      },
-      required: ['name'],
-    },
-  },
-  {
-    name: 'detect_transfers',
-    description: 'Find people who attend multiple groups or whose attendance has shifted from one group to another — potential transfers.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        from_date: { type: 'string', description: 'YYYY-MM-DD' },
-        to_date:   { type: 'string', description: 'YYYY-MM-DD' },
-      },
-      required: ['from_date', 'to_date'],
-    },
-  },
-  {
-    name: 'get_lapsed_members',
-    description: 'Find people who attended before a cutoff date but have NOT attended since. Use to identify who has gone missing.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        group_name:    { type: 'string', description: 'Partial group name, or omit for all' },
-        meeting_type:  { type: 'string', description: 'Filter by meeting type, or omit for all' },
-        active_before: { type: 'string', description: 'YYYY-MM-DD — person must have attended before this date' },
-        absent_since:  { type: 'string', description: 'YYYY-MM-DD — person must have zero attendance from this date onward' },
-      },
-      required: ['active_before', 'absent_since'],
-    },
-  },
-  {
-    name: 'get_first_timers',
-    description: 'Find people who attended for the first time within a date range (no attendance before that range).',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        group_name:  { type: 'string', description: 'Partial group name, or omit for all' },
-        from_date:   { type: 'string', description: 'YYYY-MM-DD — start of window to look for first appearances' },
-        to_date:     { type: 'string', description: 'YYYY-MM-DD' },
-      },
-      required: ['from_date', 'to_date'],
+      required: ['sql', 'description'],
     },
   },
 ]
 
 // ── Tool execution ────────────────────────────────────────────
 async function runTool(name: string, input: Record<string, unknown>): Promise<unknown> {
+  if (name !== 'run_sql') return { error: `Unknown tool: ${name}` }
+
+  const sql = (input.sql as string ?? '').trim()
+  if (!sql) return { error: 'No SQL provided.' }
+
   const supabase = getSupabaseServer()
+  const { data, error } = await supabase.rpc('run_query', { sql })
 
-  const today = new Date().toISOString().split('T')[0]
-  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-
-  if (name === 'get_groups') {
-    const { data: groups } = await supabase.from('groups').select('id, name').order('name')
-    const results = []
-    for (const g of groups ?? []) {
-      const { count: meetings } = await supabase
-        .from('meetings').select('*', { count: 'exact', head: true }).eq('group_id', g.id)
-      const { data: range } = await supabase
-        .from('meetings').select('meeting_date').eq('group_id', g.id)
-        .order('meeting_date', { ascending: true }).limit(1)
-      const { data: rangeEnd } = await supabase
-        .from('meetings').select('meeting_date').eq('group_id', g.id)
-        .order('meeting_date', { ascending: false }).limit(1)
-      results.push({
-        name: g.name,
-        total_meetings: meetings ?? 0,
-        first_meeting: range?.[0]?.meeting_date ?? null,
-        last_meeting: rangeEnd?.[0]?.meeting_date ?? null,
-      })
-    }
-    return results
-  }
-
-  if (name === 'get_meeting_headcounts') {
-    const { data, error } = await supabase.rpc('meeting_headcounts', {
-      p_group_name:   input.group_name   ?? null,
-      p_meeting_type: input.meeting_type ?? null,
-      p_from_date:    input.from_date    ?? ninetyDaysAgo,
-      p_to_date:      input.to_date      ?? today,
-    })
-    if (error) return { error: error.message }
-    return data ?? []
-  }
-
-  if (name === 'get_attendance_summary') {
-    const { data, error } = await supabase.rpc('attendance_summary', {
-      p_group_name:   input.group_name   ?? null,
-      p_meeting_type: input.meeting_type ?? null,
-      p_from_date:    input.from_date    ?? ninetyDaysAgo,
-      p_to_date:      input.to_date      ?? today,
-    })
-    if (error) return { error: error.message }
-    let results = (data ?? []) as { name: string; times_attended: number; first_seen: string; last_seen: string }[]
-    if (input.name_search) {
-      const q = (input.name_search as string).toLowerCase()
-      results = results.filter(r => r.name.toLowerCase().includes(q))
-    }
-    if (input.min_count !== undefined) results = results.filter(r => r.times_attended >= (input.min_count as number))
-    if (input.max_count !== undefined) results = results.filter(r => r.times_attended <= (input.max_count as number))
-    const limit = (input.limit as number) ?? 50
-    return results.slice(0, limit)
-  }
-
-  if (name === 'get_person_history') {
-    const nameQ = `%${input.name}%`
-    const { data: people } = await supabase
-      .from('attendees').select('id, name').ilike('name', nameQ).limit(5)
-    if (!people?.length) return { message: `No attendee found matching "${input.name}"` }
-
-    const results = []
-    for (const person of people) {
-      let query = supabase
-        .from('attendance')
-        .select('status, meetings(meeting_date, meeting_type, name, groups(name))')
-        .eq('attendee_id', person.id)
-        .order('meetings(meeting_date)', { ascending: false })
-
-      if (input.from_date) query = query.gte('meetings.meeting_date', input.from_date as string)
-      if (input.to_date)   query = query.lte('meetings.meeting_date', input.to_date as string)
-
-      const { data: history } = await query
-      results.push({
-        name: person.name,
-        total_attended: history?.filter(h => h.status === 'present').length ?? 0,
-        meetings: (history ?? []).map(h => {
-          const mtg = h.meetings as unknown as { meeting_date: string; meeting_type: string; name: string; groups: { name: string } }
-          return {
-            date:   mtg?.meeting_date,
-            type:   mtg?.meeting_type,
-            event:  mtg?.name,
-            group:  mtg?.groups?.name,
-            status: h.status,
-          }
-        }),
-      })
-    }
-    return results.length === 1 ? results[0] : results
-  }
-
-  if (name === 'detect_transfers') {
-    const { data, error } = await supabase.rpc('detect_transfers', {
-      p_from_date: input.from_date ?? ninetyDaysAgo,
-      p_to_date:   input.to_date   ?? today,
-    })
-    if (error) return { error: error.message }
-    return data ?? []
-  }
-
-  if (name === 'get_lapsed_members') {
-    const activeBefore = input.active_before as string
-    const absentSince  = input.absent_since  as string
-
-    // People who attended before cutoff
-    let priorQuery = supabase
-      .from('attendance')
-      .select('attendee_id, attendees(name), meetings!inner(meeting_date, groups(name))')
-      .eq('status', 'present')
-      .lt('meetings.meeting_date', activeBefore)
-
-    if (input.group_name) {
-      priorQuery = priorQuery.ilike('meetings.groups.name', `%${input.group_name}%`)
-    }
-    if (input.meeting_type) {
-      priorQuery = priorQuery.ilike('meetings.meeting_type', `%${input.meeting_type}%`)
-    }
-
-    const { data: prior } = await priorQuery
-    if (!prior?.length) return { message: 'No prior attendees found in that range.' }
-
-    const priorIds = [...new Set(prior.map(r => r.attendee_id))]
-
-    // Of those, who has NOT attended since absentSince?
-    const stillActive = new Set<string>()
-    for (const batch of chunk(priorIds, 80)) {
-      const { data: recent } = await supabase
-        .from('attendance')
-        .select('attendee_id, meetings!inner(meeting_date)')
-        .in('attendee_id', batch)
-        .eq('status', 'present')
-        .gte('meetings.meeting_date', absentSince)
-      for (const r of recent ?? []) stillActive.add(r.attendee_id)
-    }
-
-    const lapsed = priorIds
-      .filter(id => !stillActive.has(id))
-      .map(id => {
-        const row = prior.find(r => r.attendee_id === id)
-        return { name: (row?.attendees as unknown as { name: string })?.name ?? '?', attendee_id: id }
-      })
-
-    return {
-      lapsed_count: lapsed.length,
-      lapsed: lapsed.slice(0, 100),
-    }
-  }
-
-  if (name === 'get_first_timers') {
-    const fromDate = input.from_date as string
-    const toDate   = input.to_date   as string
-
-    let query = supabase
-      .from('attendance')
-      .select('attendee_id, attendees(name), meetings!inner(meeting_date, groups(name))')
-      .eq('status', 'present')
-      .gte('meetings.meeting_date', fromDate)
-      .lte('meetings.meeting_date', toDate)
-
-    if (input.group_name) {
-      query = query.ilike('meetings.groups.name', `%${input.group_name}%`)
-    }
-
-    const { data: inPeriod } = await query
-    if (!inPeriod?.length) return { message: 'No attendance found in that range.' }
-
-    const periodIds = [...new Set(inPeriod.map(r => r.attendee_id))]
-
-    // Filter to those with NO attendance before fromDate
-    const hadPrior = new Set<string>()
-    for (const batch of chunk(periodIds, 80)) {
-      const { data: prior } = await supabase
-        .from('attendance')
-        .select('attendee_id, meetings!inner(meeting_date)')
-        .in('attendee_id', batch)
-        .eq('status', 'present')
-        .lt('meetings.meeting_date', fromDate)
-      for (const r of prior ?? []) hadPrior.add(r.attendee_id)
-    }
-
-    const firstTimers = periodIds
-      .filter(id => !hadPrior.has(id))
-      .map(id => {
-        const row = inPeriod.find(r => r.attendee_id === id)
-        const mtg = row?.meetings as unknown as { groups: { name: string } }
-        return {
-          name:  (row?.attendees as unknown as { name: string })?.name ?? '?',
-          group: mtg?.groups?.name ?? '?',
-        }
-      })
-
-    return { first_timer_count: firstTimers.length, first_timers: firstTimers.slice(0, 100) }
-  }
-
-  return { error: `Unknown tool: ${name}` }
-}
-
-// ── Helper ────────────────────────────────────────────────────
-function chunk<T>(arr: T[], size: number): T[][] {
-  const out: T[][] = []
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
-  return out
-}
-
-// ── Chat session helpers ──────────────────────────────────────
-async function getOrCreateSession(supabase: ReturnType<typeof getSupabaseServer>, sessionId?: string) {
-  if (sessionId) {
-    const { data } = await supabase.from('chat_sessions').select('id').eq('id', sessionId).single()
-    if (data) return sessionId
-  }
-  const { data } = await supabase.from('chat_sessions').insert({ title: 'New Chat' }).select('id').single()
-  return data?.id as string
+  if (error) return { error: error.message, sql }
+  return { rows: data, count: Array.isArray(data) ? data.length : null }
 }
 
 // ── Route handler ─────────────────────────────────────────────
 export async function POST(req: Request) {
-  // Frontend sends { messages: [{role, content}, ...] }
   const { messages: incomingMessages } = await req.json() as {
     messages: { role: string; content: string }[]
   }
@@ -379,7 +184,6 @@ export async function POST(req: Request) {
   const anthropic = getAnthropic()
   const systemPrompt = await buildSystemPrompt()
 
-  // Convert to Anthropic message format
   const messages: Anthropic.MessageParam[] = incomingMessages.map(m => ({
     role: m.role as 'user' | 'assistant',
     content: m.content,
@@ -387,7 +191,6 @@ export async function POST(req: Request) {
 
   let finalText = ''
 
-  // Agentic loop
   while (true) {
     const response = await anthropic.messages.create({
       model: 'claude-opus-4-7',

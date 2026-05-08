@@ -141,6 +141,44 @@ CREATE POLICY "open_all" ON chat_messages FOR ALL USING (TRUE);
 CREATE POLICY "open_all" ON sync_log      FOR ALL USING (TRUE);
 
 -- ============================================================
+-- QUERY EXECUTION (for AI assistant)
+-- ============================================================
+
+-- Safe read-only SQL execution for the AI chatbot.
+-- Only SELECT statements are permitted.
+CREATE OR REPLACE FUNCTION run_query(sql text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+AS $$
+DECLARE
+  result jsonb;
+  safe_sql text;
+BEGIN
+  safe_sql := trim(both from regexp_replace(sql, '^[\s\n\r]+', ''));
+
+  -- Block anything that isn't a SELECT or CTE (WITH ... SELECT)
+  IF lower(safe_sql) NOT LIKE 'select%' AND lower(safe_sql) NOT LIKE 'with%' THEN
+    RAISE EXCEPTION 'Only SELECT queries are permitted. Got: %', left(safe_sql, 50);
+  END IF;
+
+  -- Block destructive keywords anywhere in the query
+  IF lower(safe_sql) ~ '\y(insert|update|delete|drop|truncate|alter|create|grant|revoke|execute|perform)\y' THEN
+    RAISE EXCEPTION 'Query contains disallowed keyword.';
+  END IF;
+
+  -- Wrap in a 500-row safety cap
+  EXECUTE format(
+    'SELECT COALESCE(jsonb_agg(row_to_json(t)), ''[]''::jsonb) FROM (SELECT * FROM (%s) sub LIMIT 500) t',
+    safe_sql
+  ) INTO result;
+
+  RETURN result;
+END;
+$$;
+
+-- ============================================================
 -- ANALYTICS FUNCTIONS
 -- ============================================================
 

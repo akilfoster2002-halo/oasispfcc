@@ -26,9 +26,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full`}>
-      <body className="h-full antialiased" style={{ backgroundColor: '#F0F2F5' }}>
+      <body className="h-full antialiased">
         <Sidebar />
-        <main className="min-h-full pb-20 md:pb-0 md:ml-56">
+        <main className="min-h-full pb-20 md:pb-0 md:ml-56" style={{ background: 'transparent' }}>
           {children}
         </main>
         <MobileNav />

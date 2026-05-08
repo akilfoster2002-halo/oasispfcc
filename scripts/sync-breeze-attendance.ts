@@ -1,12 +1,7 @@
 /**
- * Sync all Breeze attendance into Supabase meetings + attendance tables.
+ * Sync all Breeze attendance into Supabase (new schema).
  *
- * For each event in Breeze:
- *   1. Upsert a row in `meetings` (keyed on breeze_instance_id)
- *   2. Upsert attendance rows (person_id × meeting_id, present=true)
- *
- * Run:
- *   npx tsx scripts/sync-breeze-attendance.ts [from] [to]
+ * Run: npx tsx scripts/sync-breeze-attendance.ts [from_date] [to_date]
  *
  * Example:
  *   npx tsx scripts/sync-breeze-attendance.ts 2024-01-01 2026-12-31
@@ -17,119 +12,297 @@
 import { createClient } from '@supabase/supabase-js'
 import * as path from 'path'
 import * as fs from 'fs'
-import { fetchAttendanceByDateRange } from '../lib/breeze'
+import { fetchEvents, fetchEventAttendance, parseBreezeTimestamp } from '../lib/breeze'
 
-// ── Load .env.local ──────────────────────────────────────────────────────────
-const envContent = fs.readFileSync(path.join(process.cwd(), '.env.local'), 'utf8')
+// ── Load .env.local ──────────────────────────────────────────
+const envPath = path.join(process.cwd(), '.env.local')
+const envContent = fs.readFileSync(envPath, 'utf8')
 for (const line of envContent.split('\n')) {
   const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.+)$/)
   if (m) process.env[m[1]] = m[2].trim()
 }
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+// ── Supabase client (service role preferred) ─────────────────
+function createSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!url) throw new Error('NEXT_PUBLIC_SUPABASE_URL is not set')
 
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (serviceKey) {
+    return createClient(url, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+  }
+
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!anonKey) throw new Error('No Supabase key available (set SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY)')
+  console.warn('[sync-breeze-attendance] Using anon key — service role key not found.')
+  return createClient(url, anonKey)
+}
+
+const supabase = createSupabase()
+
+// ── Utility ───────────────────────────────────────────────────
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = []
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
   return out
 }
 
-// Classify Breeze event name → service_type
-function classifyServiceType(name: string): string {
-  const n = name.toLowerCase()
+// ── Service type classification (matches schema.sql enum) ─────
+type ServiceType = 'sunday_inperson' | 'sunday_online' | 'midweek' | 'cell' | 'outreach' | 'prayer' | 'other'
+
+function classifyServiceType(name: string): ServiceType {
+  const n = (name ?? '').toLowerCase()
   if (n.includes('sunday') && (n.includes('online') || n.includes('stream'))) return 'sunday_online'
   if (n.includes('sunday')) return 'sunday_inperson'
-  if (n.includes('wednesday') || n.includes('midweek') || n.includes('wed service')) return 'midweek'
+  if (n.includes('wednesday') || n.includes('midweek') || n.includes('wed')) return 'midweek'
   if (n.includes('cell') || n.includes('small group')) return 'cell'
-  return 'midweek' // default for service-type events
+  if (n.includes('outreach')) return 'outreach'
+  if (n.includes('prayer')) return 'prayer'
+  return 'other'
 }
 
+// ── Main ──────────────────────────────────────────────────────
 async function main() {
-  const now   = new Date()
-  const dfrom = process.argv[2] ?? (() => { const d = new Date(now); d.setMonth(d.getMonth() - 18); return d.toISOString().split('T')[0] })()
-  const dto   = process.argv[3] ?? now.toISOString().split('T')[0]
+  const now = new Date()
+  const dfrom = process.argv[2] ?? (() => {
+    const d = new Date(now)
+    d.setMonth(d.getMonth() - 18)
+    return d.toISOString().split('T')[0]
+  })()
+  const dto = process.argv[3] ?? now.toISOString().split('T')[0]
 
-  console.log(`Fetching Breeze events from ${dfrom} to ${dto}...`)
+  console.log(`=== Breeze → Supabase Attendance Sync ===`)
+  console.log(`Date range: ${dfrom} → ${dto}`)
+  const syncStart = new Date()
 
-  const eventMap = await fetchAttendanceByDateRange(dfrom, dto, (fetched, total) => {
-    process.stdout.write(`\r  Processing events: ${fetched}/${total}...`)
-  })
-  console.log(`\nFound ${eventMap.size} events from Breeze.`)
+  // 1. Insert sync_log record
+  const { data: syncRow } = await supabase
+    .from('sync_log')
+    .insert({ sync_type: 'attendance', status: 'running' })
+    .select('id')
+    .single()
+  const syncLogId: string | null = syncRow?.id ?? null
 
-  // Build a map of breeze_id → supabase people.id
-  console.log('Loading people map from Supabase...')
-  const { data: peopleRows } = await supabase
-    .from('people')
-    .select('id, breeze_id')
-    .limit(10000)
-
-  const breezeIdToSupabaseId = new Map<number, string>()
-  for (const p of (peopleRows ?? []) as { id: string; breeze_id: number }[]) {
-    breezeIdToSupabaseId.set(p.breeze_id, p.id)
+  // 2. Fetch all events from Breeze for the date range
+  console.log('\nFetching events from Breeze...')
+  let events: Awaited<ReturnType<typeof fetchEvents>>
+  try {
+    events = await fetchEvents(dfrom, dto)
+    console.log(`  Found ${events.length} events`)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('Fatal: failed to fetch Breeze events:', msg)
+    if (syncLogId) {
+      await supabase.from('sync_log').update({
+        status: 'error',
+        completed_at: new Date().toISOString(),
+        error_message: msg,
+      }).eq('id', syncLogId)
+    }
+    process.exit(1)
   }
-  console.log(`Loaded ${breezeIdToSupabaseId.size} people.`)
 
-  let meetingsUpserted = 0
+  if (events.length === 0) {
+    console.log('No events found in range. Exiting.')
+    if (syncLogId) {
+      await supabase.from('sync_log').update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        records_processed: 0,
+      }).eq('id', syncLogId)
+    }
+    return
+  }
+
+  // 3. Load groups from Supabase → name→id lookup
+  console.log('\nLoading groups...')
+  const { data: groupData, error: gErr } = await supabase
+    .from('groups')
+    .select('id, name')
+  if (gErr) throw new Error('Failed to load groups: ' + gErr.message)
+  const groups = (groupData ?? []) as { id: string; name: string }[]
+  const groupNameToId = new Map<string, string>()
+  for (const g of groups) groupNameToId.set(g.name, g.id)
+  console.log(`  Loaded ${groups.length} groups`)
+
+  // 4. Load cells from Supabase → name→id lookup
+  console.log('Loading cells...')
+  const { data: cellData, error: cErr } = await supabase
+    .from('cells')
+    .select('id, name')
+  if (cErr) throw new Error('Failed to load cells: ' + cErr.message)
+  const cells = (cellData ?? []) as { id: string; name: string }[]
+  const cellNameToId = new Map<string, string>()
+  for (const c of cells) cellNameToId.set(c.name, c.id)
+  console.log(`  Loaded ${cells.length} cells`)
+
+  // 5. Load people from Supabase → breeze_id→uuid map
+  console.log('Loading people...')
+  const breezeIdToUuid = new Map<string, string>()
+  let offset = 0
+  const pageSize = 1000
+  while (true) {
+    const { data: rows, error: pErr } = await supabase
+      .from('people')
+      .select('id, breeze_id')
+      .range(offset, offset + pageSize - 1)
+    if (pErr) throw new Error('Failed to load people: ' + pErr.message)
+    if (!rows || rows.length === 0) break
+    for (const row of rows as { id: string; breeze_id: number }[]) {
+      breezeIdToUuid.set(String(row.breeze_id), row.id)
+    }
+    if (rows.length < pageSize) break
+    offset += pageSize
+  }
+  console.log(`  Loaded ${breezeIdToUuid.size} people`)
+
+  // 6. Process events
+  let eventsUpserted = 0
   let attendanceUpserted = 0
   let skippedPeople = 0
+  let eventErrors = 0
 
-  for (const [instanceId, { event, personIds }] of eventMap) {
-    // 1. Upsert meeting
-    const date = event.start_datetime?.split('T')[0] ?? event.start_datetime?.substring(0, 10) ?? dfrom
-    const serviceType = classifyServiceType(event.name ?? '')
+  console.log('\nProcessing events...')
+  for (let i = 0; i < events.length; i++) {
+    const event = events[i]
+    process.stdout.write(`\r  Event ${i + 1}/${events.length}: ${event.name.substring(0, 40).padEnd(40)}`)
 
-    const { data: meetingRow, error: mErr } = await supabase
-      .from('meetings')
+    // Classify service type
+    const serviceType = classifyServiceType(event.name)
+
+    // Parse event date
+    const eventDate = event.start_datetime?.split('T')[0]
+      ?? event.start_datetime?.substring(0, 10)
+      ?? dfrom
+
+    // Determine group_id: substring match against known group names (case-insensitive)
+    let groupId: string | null = null
+    const eventNameLower = event.name.toLowerCase()
+    for (const [gName, gId] of groupNameToId.entries()) {
+      if (eventNameLower.includes(gName.toLowerCase())) {
+        groupId = gId
+        break
+      }
+    }
+
+    // Determine cell_id: if cell service_type, match cell name against event name
+    let cellId: string | null = null
+    if (serviceType === 'cell') {
+      for (const [cName, cId] of cellNameToId.entries()) {
+        if (eventNameLower.includes(cName.toLowerCase())) {
+          cellId = cId
+          break
+        }
+      }
+    }
+
+    // Upsert event
+    const { data: eventRow, error: evErr } = await supabase
+      .from('events')
       .upsert({
-        breeze_instance_id: instanceId,
-        title:        event.name,
-        date:         date,
-        service_type: serviceType,
+        breeze_instance_id: event.id,
+        breeze_event_id:    event.event_id,
+        name:               event.name,
+        service_type:       serviceType,
+        event_date:         eventDate,
+        event_datetime:     event.start_datetime ?? null,
+        group_id:           groupId,
+        cell_id:            cellId,
+        hybrid_status:      'inperson',
       }, { onConflict: 'breeze_instance_id' })
       .select('id')
       .single()
 
-    if (mErr || !meetingRow) {
-      console.error(`  Meeting upsert error for "${event.name}": ${mErr?.message}`)
+    if (evErr || !eventRow) {
+      console.error(`\n  Event upsert error for "${event.name}": ${evErr?.message}`)
+      eventErrors++
+      continue
+    }
+    eventsUpserted++
+    const eventId = eventRow.id as string
+
+    // Fetch attendance from Breeze
+    let breezeRecords: Awaited<ReturnType<typeof fetchEventAttendance>>
+    try {
+      breezeRecords = await fetchEventAttendance(event.id)
+    } catch {
+      // Non-fatal: skip attendance for this event
       continue
     }
 
-    meetingsUpserted++
-    const meetingId = meetingRow.id as string
+    if (breezeRecords.length === 0) continue
 
-    // 2. Upsert attendance rows (only for known people)
-    const attRows: { meeting_id: string; person_id: string; present: boolean }[] = []
-    for (const breezePersonId of personIds) {
-      const supabaseId = breezeIdToSupabaseId.get(Number(breezePersonId))
-      if (!supabaseId) { skippedPeople++; continue }
-      attRows.push({ meeting_id: meetingId, person_id: supabaseId, present: true })
+    // Map breeze_ids to Supabase UUIDs, capturing check_in_time from created_on
+    const attRows: {
+      person_id: string
+      event_id: string
+      attendance_status: string
+      check_in_time: string | null
+      imported_from_breeze: boolean
+    }[] = []
+    for (const rec of breezeRecords) {
+      const uuid = breezeIdToUuid.get(rec.person_id)
+      if (!uuid) { skippedPeople++; continue }
+      attRows.push({
+        person_id:            uuid,
+        event_id:             eventId,
+        attendance_status:    'present',
+        check_in_time:        parseBreezeTimestamp(rec.created_on),
+        imported_from_breeze: true,
+      })
     }
 
-    if (attRows.length > 0) {
-      for (const batch of chunk(attRows, 100)) {
-        await supabase
-          .from('attendance')
-          .upsert(batch, { onConflict: 'meeting_id,person_id' })
+    // Bulk upsert attendance in batches of 100
+    for (const batch of chunk(attRows, 100)) {
+      const { error: aErr } = await supabase
+        .from('attendance')
+        .upsert(batch, { onConflict: 'person_id,event_id', ignoreDuplicates: true })
+      if (aErr) {
+        console.error(`\n  Attendance upsert error: ${aErr.message}`)
+      } else {
+        attendanceUpserted += batch.length
       }
-      attendanceUpserted += attRows.length
     }
-
-    process.stdout.write(`\r  Meetings: ${meetingsUpserted} | Attendance rows: ${attendanceUpserted} | Skipped: ${skippedPeople}...`)
   }
 
-  console.log('\n\n─────────────────────────────────────────')
-  console.log(`Meetings upserted:    ${meetingsUpserted}`)
-  console.log(`Attendance upserted:  ${attendanceUpserted}`)
-  console.log(`Skipped (no match):   ${skippedPeople} (run sync-breeze-people.ts first to minimize this)`)
+  // 7. Update sync_log
+  const completed = new Date()
+  const duration  = ((completed.getTime() - syncStart.getTime()) / 1000).toFixed(1)
+  if (syncLogId) {
+    await supabase.from('sync_log').update({
+      status: 'completed',
+      completed_at: completed.toISOString(),
+      records_processed: events.length,
+      records_created: eventsUpserted,
+    }).eq('id', syncLogId)
+  }
 
-  // Verify
-  const { count: mCount } = await supabase.from('meetings').select('*', { count: 'exact', head: true })
-  const { count: aCount } = await supabase.from('attendance').select('*', { count: 'exact', head: true })
-  console.log(`\nTotal meetings in Supabase:    ${mCount}`)
-  console.log(`Total attendance rows:         ${aCount}`)
+  // 8. Summary
+  const { count: evCount } = await supabase
+    .from('events')
+    .select('*', { count: 'exact', head: true })
+  const { count: aCount } = await supabase
+    .from('attendance')
+    .select('*', { count: 'exact', head: true })
+
+  console.log('\n\n─────────────────────────────────────────────')
+  console.log(`Sync completed in ${duration}s`)
+  console.log(`  Events processed:    ${events.length}`)
+  console.log(`  Events upserted:     ${eventsUpserted}`)
+  console.log(`  Attendance upserted: ${attendanceUpserted}`)
+  console.log(`  Skipped (no match):  ${skippedPeople}`)
+  console.log(`  Event errors:        ${eventErrors}`)
+  console.log(`  Total events in DB:  ${evCount}`)
+  console.log(`  Total attendance:    ${aCount}`)
+  console.log('─────────────────────────────────────────────')
+  if (skippedPeople > 0) {
+    console.log('\n  Tip: run sync-breeze-people.ts first to reduce skipped people.')
+  }
 }
 
-main().catch(err => { console.error('Fatal:', err); process.exit(1) })
+main().catch(err => {
+  console.error('Fatal error:', err instanceof Error ? err.message : err)
+  process.exit(1)
+})

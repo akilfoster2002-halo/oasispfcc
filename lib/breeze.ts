@@ -78,11 +78,9 @@ export interface BreezeEvent {
 
 export interface BreezeAttendanceRecord {
   instance_id: string
-  event_id:    string
   person_id:   string
-  created_on:  string
-  event_name?: string
-  check_in?:   string
+  created_on:  string   // check-in time: "YYYY-MM-DD HH:MM:SS"
+  check_out:   string   // "0000-00-00 00:00:00" = still checked in; real timestamp = checked out
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -195,39 +193,143 @@ export async function fetchEvents(from: string, to: string): Promise<BreezeEvent
   return res.json()
 }
 
-export async function fetchEventAttendance(instanceId: string): Promise<string[]> {
-  const url = `${getBaseUrl()}/attendance/list?instance_id=${instanceId}`
+export async function fetchEventAttendance(instanceId: string): Promise<BreezeAttendanceRecord[]> {
+  const url = `${getBaseUrl()}/events/attendance/list?instance_id=${instanceId}`
   const res = await fetch(url, { headers: headers() })
   if (!res.ok) return []
   const data = await res.json()
   if (!Array.isArray(data)) return []
-  return data.map((r: { person_id: string }) => r.person_id).filter(Boolean)
+  return (data as BreezeAttendanceRecord[]).filter(r => r.person_id)
 }
 
-// Get all attendance records for a specific person (by their Breeze ID)
+// Parse a Breeze datetime string "YYYY-MM-DD HH:MM:SS" to ISO 8601.
+// Returns null for the null-sentinel "0000-00-00 00:00:00" or empty strings.
+export function parseBreezeTimestamp(ts: string | undefined | null): string | null {
+  if (!ts || ts.startsWith('0000-00-00')) return null
+  return ts.replace(' ', 'T') + 'Z'
+}
+
+// Get all attendance records for a specific person (by their Breeze ID).
+// NOTE: person_id is not in the official Breeze docs for this endpoint — use with care.
 export async function fetchPersonAttendance(breezePersonId: string): Promise<BreezeAttendanceRecord[]> {
-  const url = `${getBaseUrl()}/attendance/list?person_id=${breezePersonId}`
+  const url = `${getBaseUrl()}/events/attendance/list?person_id=${breezePersonId}`
   const res = await fetch(url, { headers: headers() })
   if (!res.ok) return []
   const data = await res.json()
   if (!Array.isArray(data)) return []
-  return data as BreezeAttendanceRecord[]
+  return (data as BreezeAttendanceRecord[]).filter(r => r.person_id)
+}
+
+// Fetch people from Breeze filtered by a profile field, using filter_json for server-side filtering.
+// Falls back to client-side filtering if Breeze returns all people (e.g. filter_json not supported).
+export async function fetchPeopleFiltered(opts: {
+  fellowship?: string
+  group_name?: string
+  pastor?: string
+}): Promise<BreezePerson[]> {
+  const filters: Record<string, unknown> = {}
+  if (opts.fellowship)   filters[FIELD.fellowship] = { operator_type: 'CONTAINS', values: [opts.fellowship] }
+  else if (opts.group_name) filters[FIELD.group]  = { operator_type: 'CONTAINS', values: [opts.group_name] }
+  else if (opts.pastor)     filters[FIELD.pastor]  = { operator_type: 'CONTAINS', values: [opts.pastor] }
+  else return []
+
+  const url = `${getBaseUrl()}/people?details=1&limit=500&filter_json=${encodeURIComponent(JSON.stringify(filters))}`
+  const res = await fetch(url, { headers: headers() })
+  if (!res.ok) throw new Error(`Breeze people filter request failed: ${res.status}`)
+  const raw: BreezePersonRaw[] = await res.json()
+  if (!Array.isArray(raw)) return []
+
+  const people = raw.map(parsePerson)
+
+  // Client-side filter as safety net in case server-side filter_json was ignored
+  if (opts.fellowship) {
+    const v = opts.fellowship.toLowerCase()
+    return people.filter(p => p.fellowship?.toLowerCase().includes(v))
+  }
+  if (opts.group_name) {
+    const v = opts.group_name.toLowerCase()
+    return people.filter(p => p.group_name?.toLowerCase().includes(v))
+  }
+  if (opts.pastor) {
+    const v = opts.pastor.toLowerCase()
+    return people.filter(p => p.pastor?.toLowerCase().includes(v))
+  }
+  return people
+}
+
+// Run up to `limit` async tasks concurrently
+async function concurrent<T>(tasks: (() => Promise<T>)[], limit: number): Promise<T[]> {
+  const results: T[] = new Array(tasks.length)
+  let next = 0
+  async function worker() {
+    while (next < tasks.length) {
+      const i = next++
+      results[i] = await tasks[i]()
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker))
+  return results
+}
+
+export type ServiceType = 'sunday_inperson' | 'sunday_online' | 'midweek' | 'cell' | 'other'
+
+export function classifyServiceType(name: string): ServiceType {
+  const n = (name ?? '').toLowerCase()
+  if (n.includes('sunday') && (n.includes('online') || n.includes('stream'))) return 'sunday_online'
+  if (n.includes('sunday')) return 'sunday_inperson'
+  if (n.includes('wednesday') || n.includes('midweek') || n.includes('wed')) return 'midweek'
+  if (n.includes('cell') || n.includes('small group')) return 'cell'
+  return 'other'
+}
+
+export interface BreezeEventRecord {
+  instanceId:        string
+  name:              string
+  date:              string
+  serviceType:       ServiceType
+  attendanceRecords: BreezeAttendanceRecord[]
+}
+
+// Fetch all events in a date range with their full attendance records.
+// Fetches attendance for up to 8 events concurrently.
+export async function fetchEventsWithAttendance(
+  from: string,
+  to: string,
+  onProgress?: (done: number, total: number) => void
+): Promise<BreezeEventRecord[]> {
+  const events = await fetchEvents(from, to)
+  let done = 0
+  const records = await concurrent(
+    events.map(event => async () => {
+      const attendanceRecords = await fetchEventAttendance(event.id)
+      onProgress?.(++done, events.length)
+      return {
+        instanceId: event.id,
+        name: event.name,
+        date: event.start_datetime?.split('T')[0] ?? from,
+        serviceType: classifyServiceType(event.name),
+        attendanceRecords,
+      } satisfies BreezeEventRecord
+    }),
+    8
+  )
+  return records
 }
 
 // Bulk attendance sync: fetch all events in a date range, then get attendance per event.
-// Calls onProgress(fetched, total) after each event. Returns map of instance_id → [person_ids]
+// Calls onProgress(fetched, total) after each event. Returns map of instance_id → records.
 export async function fetchAttendanceByDateRange(
   from: string,
   to: string,
   onProgress?: (fetched: number, total: number) => void
-): Promise<Map<string, { event: BreezeEvent; personIds: string[] }>> {
+): Promise<Map<string, { event: BreezeEvent; attendanceRecords: BreezeAttendanceRecord[] }>> {
   const events = await fetchEvents(from, to)
-  const result = new Map<string, { event: BreezeEvent; personIds: string[] }>()
+  const result = new Map<string, { event: BreezeEvent; attendanceRecords: BreezeAttendanceRecord[] }>()
 
   for (let i = 0; i < events.length; i++) {
     const event = events[i]
-    const personIds = await fetchEventAttendance(event.id)
-    result.set(event.id, { event, personIds })
+    const attendanceRecords = await fetchEventAttendance(event.id)
+    result.set(event.id, { event, attendanceRecords })
     onProgress?.(i + 1, events.length)
   }
 

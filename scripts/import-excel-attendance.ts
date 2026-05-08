@@ -43,11 +43,16 @@ function chunk<T>(arr: T[], size: number): T[][] {
 // Classify meeting type from event name
 function meetingType(name: string): string {
   const n = name.toLowerCase()
+  if (n.includes('online service') || (n.includes('sunday') && (n.includes('online') || n.includes('stream')))) return 'Sunday'
   if (n.includes('sunday') || n.includes('sunday service')) return 'Sunday'
   if (n.includes('wednesday') || n.includes('midweek') || n.includes('wed service')) return 'Wednesday'
   if (n.includes('cell') || n.includes('bible study') || n.includes('fusion') ||
       n.includes('ablaze') || n.includes('agape') || n.includes('visionar') ||
-      n.includes('oasis @') || n.includes('oasis@')) return 'Cell'
+      n.includes('oasis @') || n.includes('oasis@') ||
+      // LS campus cells (including "catensville" typo for Catonsville)
+      n.match(/\boasis\s+(bccc|ccbc|caten?sville|coppin|towson|umd|bmore|baltimore|qcc)\b/) ||
+      // College/university cells
+      n.match(/\b(hunter college|russel sage|tcnj)\b/)) return 'Cell'
   if (n.includes('prayer')) return 'Prayer'
   if (n.includes('outreach')) return 'Outreach'
   if (n.includes('hub') || n.includes('professional') || n.includes('leaders')) return 'Leadership'

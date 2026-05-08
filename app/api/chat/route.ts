@@ -367,21 +367,23 @@ async function getOrCreateSession(supabase: ReturnType<typeof getSupabaseServer>
 
 // ── Route handler ─────────────────────────────────────────────
 export async function POST(req: Request) {
-  const { message, history = [], sessionId: incomingSessionId } = await req.json()
+  // Frontend sends { messages: [{role, content}, ...] }
+  const { messages: incomingMessages } = await req.json() as {
+    messages: { role: string; content: string }[]
+  }
 
-  const supabase = getSupabaseServer()
-  const sessionId = await getOrCreateSession(supabase, incomingSessionId)
-
-  // Persist user message
-  await supabase.from('chat_messages').insert({ session_id: sessionId, role: 'user', content: message })
+  if (!incomingMessages?.length) {
+    return Response.json({ reply: 'No message received.' }, { status: 400 })
+  }
 
   const anthropic = getAnthropic()
   const systemPrompt = await buildSystemPrompt()
 
-  const messages: Anthropic.MessageParam[] = [
-    ...history,
-    { role: 'user', content: message },
-  ]
+  // Convert to Anthropic message format
+  const messages: Anthropic.MessageParam[] = incomingMessages.map(m => ({
+    role: m.role as 'user' | 'assistant',
+    content: m.content,
+  }))
 
   let finalText = ''
 
@@ -395,7 +397,6 @@ export async function POST(req: Request) {
       messages,
     })
 
-    // Collect any text blocks
     for (const block of response.content) {
       if (block.type === 'text') finalText += block.text
     }
@@ -429,13 +430,7 @@ export async function POST(req: Request) {
     break
   }
 
-  // Persist assistant response
-  if (finalText) {
-    await supabase.from('chat_messages').insert({ session_id: sessionId, role: 'assistant', content: finalText })
-    await supabase.from('chat_sessions').update({ updated_at: new Date().toISOString() }).eq('id', sessionId)
-  }
-
-  return Response.json({ response: finalText, sessionId })
+  return Response.json({ reply: finalText })
 }
 
 export async function GET(req: Request) {

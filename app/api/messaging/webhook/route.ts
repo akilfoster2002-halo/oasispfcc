@@ -11,10 +11,11 @@ export async function POST(req: Request) {
       return Response.json({ ok: true, skipped: true })
     }
 
-    const phone: string = payload.subscriber?.mobile_number
-    const body: string  = payload.text
-    const firstName: string = payload.subscriber?.first ?? ''
-    const lastName: string  = payload.subscriber?.last  ?? ''
+    const data = payload.data ?? payload
+    const phone: string = data.subscriber?.mobile_number ?? data.from
+    const body: string  = data.text
+    const firstName: string = data.subscriber?.first ?? ''
+    const lastName: string  = data.subscriber?.last  ?? ''
     const fullName = [firstName, lastName].filter(Boolean).join(' ') || null
 
     if (!phone || !body) {

@@ -11,8 +11,10 @@ import {
   MessageSquare,
   Church,
   LogOut,
+  Settings,
 } from 'lucide-react'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
+import { useUserProfile } from '@/lib/use-user-profile'
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -26,6 +28,7 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const { isMaster } = useUserProfile()
 
   async function handleSignOut() {
     const supabase = getSupabaseBrowser()
@@ -126,6 +129,27 @@ export default function Sidebar() {
         className="px-3 py-4 shrink-0 space-y-1"
         style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
       >
+        {isMaster && (() => {
+          const active = pathname === '/settings/users' || pathname.startsWith('/settings/')
+          return (
+            <Link
+              href="/settings/users"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
+              style={{
+                color: active ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.35)',
+                background: active
+                  ? 'linear-gradient(135deg, rgba(99,102,241,0.20) 0%, rgba(129,140,248,0.10) 100%)'
+                  : 'transparent',
+                border: active ? '1px solid rgba(129,140,248,0.20)' : '1px solid transparent',
+              }}
+              onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.70)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' } }}
+              onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.35)'; (e.currentTarget as HTMLElement).style.background = 'transparent' } }}
+            >
+              <Settings className="w-4 h-4 shrink-0" style={{ color: active ? '#818cf8' : 'inherit' }} />
+              <span>User Access</span>
+            </Link>
+          )
+        })()}
         <button
           onClick={handleSignOut}
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"

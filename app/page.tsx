@@ -146,8 +146,17 @@ export default function ChatPage() {
   const [loading, setLoading]                 = useState(false)
   const [loadingMsgs, setLoadingMsgs]         = useState(false)
   const [showDrawer, setShowDrawer]           = useState(false)
+  const [firstName, setFirstName]             = useState<string | null>(null)
   const bottomRef  = useRef<HTMLDivElement>(null)
   const inputRef   = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const meta = data.user?.user_metadata
+      const name = (meta?.full_name ?? meta?.name ?? '') as string
+      setFirstName(name.split(' ')[0] || null)
+    })
+  }, [])
 
   const loadSessions = useCallback(async () => {
     const { data } = await supabase
@@ -462,7 +471,7 @@ export default function ChatPage() {
                   <Sparkles className="w-7 h-7" style={{ color: '#34d399' }} />
                 </div>
                 <h2 className="text-xl font-semibold mb-2" style={{ color: 'rgba(255,255,255,0.90)' }}>
-                  How can I help?
+                  {firstName ? `Hi ${firstName}, how can I help?` : 'How can I help?'}
                 </h2>
                 <p className="text-sm max-w-xs mx-auto" style={{ color: 'rgba(255,255,255,0.40)' }}>
                   Ask about members, attendance, cells, groups, or any individual.

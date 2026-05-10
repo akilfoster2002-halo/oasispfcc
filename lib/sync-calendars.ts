@@ -121,13 +121,13 @@ export async function syncCalendarFeed(
     if (records.length === 0) { result.skippedNoAttendance++; continue }
 
     const key = meetingKey(ev.name, ev.date)
-    let meetingId = meetingMap.get(key)
+    let meetingId: string | undefined = meetingMap.get(key)
     if (!meetingId) {
       const { data: newM, error: mErr } = await supabase.from('meetings').insert({
         name: ev.name, meeting_date: ev.date, meeting_type: meetingType(ev.name), group_id: groupId,
       }).select('id').single()
-      if (mErr || !newM) { result.errors++; continue }
-      meetingId = newM.id
+      if (mErr || !newM?.id) { result.errors++; continue }
+      meetingId = newM.id as string
       meetingMap.set(key, meetingId)
       result.meetingsCreated++
     }

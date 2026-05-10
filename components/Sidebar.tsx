@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
   Users,
@@ -10,7 +10,9 @@ import {
   Heart,
   MessageSquare,
   Church,
+  LogOut,
 } from 'lucide-react'
+import { getSupabaseBrowser } from '@/lib/supabase-browser'
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -23,6 +25,13 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+
+  async function handleSignOut() {
+    const supabase = getSupabaseBrowser()
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
 
   return (
     <aside
@@ -114,10 +123,20 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div
-        className="px-5 py-4 shrink-0"
+        className="px-3 py-4 shrink-0 space-y-1"
         style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
       >
-        <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.20)' }}>
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
+          style={{ color: 'rgba(255,255,255,0.35)' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.70)'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.35)'; (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+        >
+          <LogOut className="w-4 h-4 shrink-0" />
+          <span>Sign out</span>
+        </button>
+        <p className="px-3 text-[10px]" style={{ color: 'rgba(255,255,255,0.15)' }}>
           © 2026 Oasis PFCC
         </p>
       </div>

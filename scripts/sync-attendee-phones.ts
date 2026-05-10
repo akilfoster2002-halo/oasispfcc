@@ -43,15 +43,24 @@ async function main() {
   }
   console.log(`  People with phone numbers in Breeze: ${phoneMap.size}`)
 
-  // 3. Load all attendees that have a breeze_id
+  // 3. Load all attendees that have a breeze_id (paginate past 1000 row limit)
   console.log('\nLoading attendees from Supabase...')
-  const { data: attendees, error } = await supabase
-    .from('attendees')
-    .select('id, breeze_id, phone')
-    .not('breeze_id', 'is', null)
-
-  if (error) throw new Error('Failed to load attendees: ' + error.message)
-  console.log(`  Attendees with breeze_id: ${attendees?.length ?? 0}`)
+  const attendees: { id: string; breeze_id: number; phone: string | null }[] = []
+  const PAGE = 1000
+  let from = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('attendees')
+      .select('id, breeze_id, phone')
+      .not('breeze_id', 'is', null)
+      .range(from, from + PAGE - 1)
+    if (error) throw new Error('Failed to load attendees: ' + error.message)
+    if (!data || data.length === 0) break
+    attendees.push(...data)
+    if (data.length < PAGE) break
+    from += PAGE
+  }
+  console.log(`  Attendees with breeze_id: ${attendees.length}`)
 
   // 4. Build update rows
   const updates: { id: string; phone: string }[] = []

@@ -135,7 +135,7 @@ async function main() {
         errors++
         continue
       }
-      meetingId = newMeeting.id
+      meetingId = newMeeting.id as string
       meetingMap.set(key, meetingId)
       meetingsCreated++
     }

@@ -16,6 +16,12 @@ const sb = createClient(
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface PendingDraft {
+  id: string
+  body: string
+  tone: string | null
+}
+
 interface Conversation {
   id: string
   phone: string
@@ -24,6 +30,7 @@ interface Conversation {
   is_sensitive: boolean
   last_message_at: string | null
   attendee_id: string | null
+  pending_draft: PendingDraft | null
 }
 
 interface Message {
@@ -516,6 +523,24 @@ function ThreadDetail({ conv, onBack }: { conv: Conversation; onBack: () => void
   )
 }
 
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+function requestNotifPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission()
+  }
+}
+
+function showNotif(name: string, body: string, onClick?: () => void) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return
+  const n = new Notification(`💬 ${name}`, {
+    body: body.length > 120 ? body.slice(0, 117) + '...' : body,
+    icon: '/favicon.ico',
+    tag: 'oasis-sms',
+  })
+  if (onClick) n.onclick = () => { window.focus(); onClick() }
+}
+
 // ─── Conversations Tab ────────────────────────────────────────────────────────
 
 function ConversationsTab() {
@@ -524,11 +549,17 @@ function ConversationsTab() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [showNew, setShowNew] = useState(false)
+  const [quickSending, setQuickSending] = useState<string | null>(null)
+  const convsRef = useRef<Conversation[]>([])
 
   async function loadConversations() {
     try {
       const res = await fetch('/api/messaging/conversations')
-      if (res.ok) setConversations(await res.json())
+      if (res.ok) {
+        const data: Conversation[] = await res.json()
+        setConversations(data)
+        convsRef.current = data
+      }
     } catch (e) {
       console.error('[conversations]', e)
     } finally {
@@ -537,20 +568,71 @@ function ConversationsTab() {
   }
 
   useEffect(() => {
+    requestNotifPermission()
     loadConversations()
 
-    // Realtime: any conversation insert or update refreshes the list
     const channel = sb
       .channel('conversations-list')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'conversations',
-      }, () => loadConversations())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => loadConversations())
+      // New inbound message → notification + reload
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sms_messages' }, payload => {
+        const msg = payload.new as { id: string; conversation_id: string; direction: string; body: string; approved: boolean; ai_generated: boolean; tone: string | null }
+        if (msg.direction === 'inbound') {
+          const conv = convsRef.current.find(c => c.id === msg.conversation_id)
+          showNotif(conv?.name ?? 'New message', msg.body, () => {
+            if (conv) setSelected(conv)
+          })
+          loadConversations()
+        } else if (!msg.approved && msg.ai_generated) {
+          // AI draft arrived — update pending_draft in place
+          setConversations(prev => {
+            const next = prev.map(c => c.id === msg.conversation_id
+              ? { ...c, pending_draft: { id: msg.id, body: msg.body, tone: msg.tone } }
+              : c)
+            convsRef.current = next
+            return next
+          })
+        }
+      })
+      // Draft approved → clear pending_draft badge
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sms_messages' }, payload => {
+        const msg = payload.new as { id: string; conversation_id: string; approved: boolean }
+        if (msg.approved) {
+          setConversations(prev => {
+            const next = prev.map(c => c.pending_draft?.id === msg.id ? { ...c, pending_draft: null } : c)
+            convsRef.current = next
+            return next
+          })
+        }
+      })
+      // Draft discarded → clear pending_draft badge
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'sms_messages' }, payload => {
+        const old = payload.old as { id: string }
+        setConversations(prev => {
+          const next = prev.map(c => c.pending_draft?.id === old.id ? { ...c, pending_draft: null } : c)
+          convsRef.current = next
+          return next
+        })
+      })
       .subscribe()
 
     return () => { sb.removeChannel(channel) }
   }, [])
+
+  async function quickSend(conv: Conversation) {
+    if (!conv.pending_draft) return
+    setQuickSending(conv.id)
+    try {
+      await fetch(`/api/messaging/messages/${conv.pending_draft.id}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      // Realtime UPDATE will clear pending_draft via the subscription above
+    } finally {
+      setQuickSending(null)
+    }
+  }
 
   const filtered = conversations.filter(c => {
     const q = search.toLowerCase()
@@ -593,36 +675,71 @@ function ConversationsTab() {
         <GlassCard className="p-10 text-center">
           <MessageSquare className="w-8 h-8 mx-auto mb-3" style={{ color: 'rgba(255,255,255,0.2)' }} />
           <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>No conversations yet</p>
-          <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 4 }}>
-            Configure your Clearstream webhook URL to start receiving texts
-          </p>
+          <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 4 }}>Configure your Clearstream webhook URL to start receiving texts</p>
         </GlassCard>
       ) : (
         <div className="flex flex-col gap-2">
           {filtered.map(c => (
-            <button
+            <div
               key={c.id}
-              onClick={() => setSelected(c)}
-              style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.022))', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s' }}
+              style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.055), rgba(255,255,255,0.022))', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: c.pending_draft ? '1px solid rgba(129,140,248,0.3)' : '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden', transition: 'border-color 0.2s' }}
             >
-              <div style={{ width: 40, height: 40, borderRadius: '50%', background: c.is_sensitive ? 'linear-gradient(135deg, #f59e0b, #fbbf24)' : 'linear-gradient(135deg, #6366f1, #818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-                {c.name?.charAt(0) ?? '?'}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-sm truncate" style={{ color: 'rgba(255,255,255,0.9)' }}>{c.name}</span>
-                  {c.is_sensitive && <AlertTriangle className="w-3 h-3" style={{ color: '#fbbf24', flexShrink: 0 }} />}
+              {/* Main row — click to open thread */}
+              <button
+                onClick={() => setSelected(c)}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+              >
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: c.is_sensitive ? 'linear-gradient(135deg, #f59e0b, #fbbf24)' : 'linear-gradient(135deg, #6366f1, #818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                  {c.name?.charAt(0) ?? '?'}
                 </div>
-                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{c.phone}</p>
-              </div>
-              <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                {c.last_message_at && (
-                  <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>
-                    {new Date(c.last_message_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm truncate" style={{ color: 'rgba(255,255,255,0.9)' }}>{c.name}</span>
+                    {c.is_sensitive && <AlertTriangle className="w-3 h-3" style={{ color: '#fbbf24', flexShrink: 0 }} />}
+                    {c.pending_draft && (
+                      <span style={{ fontSize: 10, color: '#818cf8', background: 'rgba(129,140,248,0.15)', padding: '1px 7px', borderRadius: 10, fontWeight: 600, flexShrink: 0 }}>AI Draft</span>
+                    )}
+                  </div>
+                  {c.pending_draft ? (
+                    <p className="text-xs truncate" style={{ color: 'rgba(129,140,248,0.75)', marginTop: 2 }}>✦ {c.pending_draft.body}</p>
+                  ) : (
+                    <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{c.phone}</p>
+                  )}
+                </div>
+                <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                  {c.last_message_at && (
+                    <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>
+                      {new Date(c.last_message_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                    </p>
+                  )}
+                </div>
+              </button>
+
+              {/* Quick-send bar — only when AI draft is pending */}
+              {c.pending_draft && (
+                <div className="flex items-center gap-2 px-4 pb-3" style={{ borderTop: '1px solid rgba(129,140,248,0.12)' }}>
+                  <p className="flex-1 text-xs truncate" style={{ color: 'rgba(255,255,255,0.5)', paddingTop: 10 }}>
+                    {c.pending_draft.body}
                   </p>
-                )}
-              </div>
-            </button>
+                  <div className="flex gap-2 flex-shrink-0" style={{ paddingTop: 8 }}>
+                    <button
+                      onClick={() => quickSend(c)}
+                      disabled={quickSending === c.id}
+                      style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, background: 'linear-gradient(135deg, #6366f1, #818cf8)', border: 'none', color: '#fff', cursor: 'pointer', boxShadow: '0 0 10px rgba(99,102,241,0.35)' }}
+                    >
+                      {quickSending === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                      Send
+                    </button>
+                    <button
+                      onClick={() => setSelected(c)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 8, fontSize: 12, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)', cursor: 'pointer' }}
+                    >
+                      <Edit3 className="w-3 h-3" />Edit
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}

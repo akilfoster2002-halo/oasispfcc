@@ -35,6 +35,9 @@ interface Message {
   approved: boolean
   sent_at: string | null
   created_at: string
+  tone: string | null
+  pastoral_note: string | null
+  is_sensitive: boolean
 }
 
 interface Recipient {
@@ -189,6 +192,149 @@ function NewMessageModal({ onClose, onSent }: { onClose: () => void; onSent: () 
   )
 }
 
+// ─── AI Draft Card ────────────────────────────────────────────────────────────
+
+const TONES = ['Warm', 'Encouraging', 'Pastoral', 'Direct'] as const
+
+function AIDraftCard({
+  message, conversationId,
+  onApprove, onDiscard, onRegenerate,
+}: {
+  message: Message
+  conversationId: string
+  onApprove: (msg: Message, editedBody?: string) => Promise<void>
+  onDiscard: (msg: Message) => Promise<void>
+  onRegenerate: (msg: Message, tone?: string) => Promise<void>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [editedBody, setEditedBody] = useState(message.body)
+  const [sending, setSending] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const activeTone = message.tone?.toLowerCase()
+
+  async function approve() {
+    setSending(true)
+    try { await onApprove(message, editing ? editedBody : undefined) }
+    finally { setSending(false) }
+  }
+
+  async function regen(tone?: string) {
+    setRegenerating(true)
+    try { await onRegenerate(message, tone) }
+    finally { setRegenerating(false) }
+  }
+
+  function startEdit() {
+    setEditing(true)
+    setTimeout(() => textareaRef.current?.focus(), 40)
+  }
+
+  return (
+    <div style={{ margin: '6px 0 4px', padding: '14px 16px', borderRadius: 16, border: '1px solid rgba(129,140,248,0.35)', background: 'linear-gradient(135deg, rgba(99,102,241,0.07), rgba(139,92,246,0.03))' }}>
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-3">
+        <div style={{ width: 20, height: 20, borderRadius: 6, background: 'linear-gradient(135deg, #6366f1, #818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Sparkles className="w-2.5 h-2.5 text-white" />
+        </div>
+        <span style={{ fontSize: 11, color: '#818cf8', fontWeight: 700, letterSpacing: '0.05em' }}>AI DRAFT</span>
+        {message.is_sensitive && (
+          <span style={{ fontSize: 10, color: '#fbbf24', background: 'rgba(251,191,36,0.12)', padding: '2px 7px', borderRadius: 10, fontWeight: 600 }}>⚠ Sensitive</span>
+        )}
+        {message.tone && (
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginLeft: 1 }}>· {message.tone.charAt(0).toUpperCase() + message.tone.slice(1)}</span>
+        )}
+        <button onClick={() => onDiscard(message)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.25)', display: 'flex', padding: 2 }}>
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Pastoral note */}
+      {message.pastoral_note && (
+        <div style={{ fontSize: 11, color: '#fbbf24', background: 'rgba(251,191,36,0.07)', border: '1px solid rgba(251,191,36,0.15)', borderRadius: 8, padding: '7px 10px', marginBottom: 10, lineHeight: 1.5 }}>
+          📋 {message.pastoral_note}
+        </div>
+      )}
+
+      {/* Body */}
+      {editing ? (
+        <textarea
+          ref={textareaRef}
+          value={editedBody}
+          onChange={e => setEditedBody(e.target.value)}
+          rows={3}
+          className="w-full outline-none resize-none"
+          style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(129,140,248,0.3)', borderRadius: 10, color: 'rgba(255,255,255,0.9)', fontSize: 13, padding: '10px 12px', lineHeight: 1.6, marginBottom: 10 }}
+          onKeyDown={e => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') approve()
+            if (e.key === 'Escape') { setEditing(false); setEditedBody(message.body) }
+          }}
+        />
+      ) : (
+        <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.88)', lineHeight: 1.6, marginBottom: 12 }}>{message.body}</p>
+      )}
+
+      {/* Tone pills */}
+      <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginRight: 2 }}>Tone:</span>
+        {TONES.map(t => (
+          <button key={t} onClick={() => regen(t.toLowerCase())} disabled={regenerating || sending}
+            style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, border: 'none', cursor: regenerating ? 'not-allowed' : 'pointer', fontWeight: activeTone === t.toLowerCase() ? 600 : 400, background: activeTone === t.toLowerCase() ? 'rgba(129,140,248,0.25)' : 'rgba(255,255,255,0.06)', color: activeTone === t.toLowerCase() ? '#818cf8' : 'rgba(255,255,255,0.45)', transition: 'all 0.15s' }}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2">
+        <button onClick={approve} disabled={sending || regenerating}
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 9, fontSize: 12, fontWeight: 600, background: sending ? 'rgba(99,102,241,0.4)' : 'linear-gradient(135deg, #6366f1, #818cf8)', border: 'none', color: '#fff', cursor: sending ? 'not-allowed' : 'pointer', boxShadow: sending ? 'none' : '0 0 12px rgba(99,102,241,0.3)', transition: 'all 0.15s' }}>
+          {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+          {editing ? 'Send Edited' : 'Send'}
+        </button>
+
+        {editing ? (
+          <button onClick={() => { setEditing(false); setEditedBody(message.body) }}
+            style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', background: 'none', border: 'none', cursor: 'pointer', padding: '7px 10px' }}>
+            Cancel
+          </button>
+        ) : (
+          <button onClick={startEdit}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 9, fontSize: 12, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer' }}>
+            <Edit3 className="w-3.5 h-3.5" />Edit
+          </button>
+        )}
+
+        <button onClick={() => regen()} disabled={regenerating || sending}
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 9, fontSize: 12, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', cursor: regenerating ? 'not-allowed' : 'pointer' }}
+          title="Regenerate">
+          {regenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+          Retry
+        </button>
+
+        <span style={{ marginLeft: 'auto', fontSize: 10, color: 'rgba(255,255,255,0.18)' }}>⌘↵ send</span>
+      </div>
+    </div>
+  )
+}
+
+function GeneratingSkeleton() {
+  return (
+    <div style={{ margin: '6px 0 4px', padding: '14px 16px', borderRadius: 16, border: '1px solid rgba(129,140,248,0.15)', background: 'rgba(99,102,241,0.03)' }}>
+      <div className="flex items-center gap-2 mb-3">
+        <div style={{ width: 20, height: 20, borderRadius: 6, background: 'rgba(99,102,241,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Loader2 className="w-2.5 h-2.5 animate-spin" style={{ color: '#818cf8' }} />
+        </div>
+        <span style={{ fontSize: 11, color: 'rgba(129,140,248,0.6)', fontWeight: 600 }}>Generating AI response...</span>
+      </div>
+      <div className="flex flex-col gap-2">
+        <div className="animate-pulse" style={{ height: 12, borderRadius: 6, background: 'rgba(255,255,255,0.07)', width: '80%' }} />
+        <div className="animate-pulse" style={{ height: 12, borderRadius: 6, background: 'rgba(255,255,255,0.05)', width: '55%' }} />
+      </div>
+    </div>
+  )
+}
+
 // ─── Thread Detail ────────────────────────────────────────────────────────────
 
 function ThreadDetail({ conv, onBack }: { conv: Conversation; onBack: () => void }) {
@@ -196,22 +342,20 @@ function ThreadDetail({ conv, onBack }: { conv: Conversation; onBack: () => void
   const [loading, setLoading] = useState(true)
   const [replyBody, setReplyBody] = useState('')
   const [sending, setSending] = useState(false)
-  const [aiLoading, setAiLoading] = useState(false)
-  const [aiActive, setAiActive] = useState(false)
+  const [generatingDraft, setGeneratingDraft] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const prevCountRef = useRef(0)
+
+  // Separate sent/inbound messages from pending AI draft
+  const threadMessages = messages.filter(m => m.direction === 'inbound' || m.approved)
+  const pendingDraft = messages.find(m => m.direction === 'outbound' && !m.approved && m.ai_generated) ?? null
 
   async function loadMessages() {
     try {
       const res = await fetch(`/api/messaging/conversations/${conv.id}`)
       if (res.ok) {
         const data = await res.json()
-        const msgs: Message[] = data.messages ?? []
-        setMessages(msgs)
-        if (msgs.length !== prevCountRef.current) {
-          prevCountRef.current = msgs.length
-          setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-        }
+        setMessages(data.messages ?? [])
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
       }
     } finally {
       setLoading(false)
@@ -221,30 +365,69 @@ function ThreadDetail({ conv, onBack }: { conv: Conversation; onBack: () => void
   useEffect(() => {
     loadMessages()
 
-    // Realtime: new messages in this conversation
     const channel = sb
       .channel(`messages-${conv.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'sms_messages',
-        filter: `conversation_id=eq.${conv.id}`,
-      }, payload => {
-        setMessages(prev => {
-          const exists = prev.some(m => m.id === (payload.new as Message).id)
-          if (exists) return prev
-          const next = [...prev, payload.new as Message]
-          prevCountRef.current = next.length
-          setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-          return next
-        })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sms_messages', filter: `conversation_id=eq.${conv.id}` }, payload => {
+        const msg = payload.new as Message
+        setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
+        if (msg.direction === 'inbound') setGeneratingDraft(true)
+        else if (!msg.approved) setGeneratingDraft(false)
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sms_messages', filter: `conversation_id=eq.${conv.id}` }, payload => {
+        setMessages(prev => prev.map(m => m.id === (payload.new as Message).id ? payload.new as Message : m))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'sms_messages' }, payload => {
+        setMessages(prev => prev.filter(m => m.id !== (payload.old as { id: string }).id))
       })
       .subscribe()
 
     return () => { sb.removeChannel(channel) }
   }, [conv.id])
 
-  async function sendReply() {
+  // Auto-clear generating state if AI never arrives (network/AI failure)
+  useEffect(() => {
+    if (!generatingDraft) return
+    const t = setTimeout(() => setGeneratingDraft(false), 30_000)
+    return () => clearTimeout(t)
+  }, [generatingDraft])
+
+  // ⌘↵ to send the pending draft
+  useEffect(() => {
+    if (!pendingDraft) return
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') approveDraft(pendingDraft!)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [pendingDraft])
+
+  async function approveDraft(draft: Message, editedBody?: string) {
+    await fetch(`/api/messaging/messages/${draft.id}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: editedBody }),
+    })
+    // Realtime UPDATE will flip approved→true, moving it into threadMessages
+  }
+
+  async function discardDraft(draft: Message) {
+    setMessages(prev => prev.filter(m => m.id !== draft.id))
+    await fetch(`/api/messaging/messages/${draft.id}`, { method: 'DELETE' })
+  }
+
+  async function regenerateDraft(draft: Message, tone?: string) {
+    setMessages(prev => prev.filter(m => m.id !== draft.id))
+    setGeneratingDraft(true)
+    await fetch(`/api/messaging/conversations/${conv.id}/regenerate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message_id: draft.id, tone }),
+    })
+    // New draft arrives via Realtime INSERT → setGeneratingDraft(false)
+  }
+
+  async function sendManualReply() {
     if (!replyBody.trim()) return
     setSending(true)
     try {
@@ -254,31 +437,8 @@ function ThreadDetail({ conv, onBack }: { conv: Conversation; onBack: () => void
         body: JSON.stringify({ body: replyBody }),
       })
       setReplyBody('')
-      setAiActive(false)
-      // Realtime will add the outbound message automatically
     } finally {
       setSending(false)
-    }
-  }
-
-  async function generateAI() {
-    setAiLoading(true)
-    try {
-      const history = messages.map(m => `${m.direction === 'inbound' ? 'THEM' : 'US'}: ${m.body}`).join('\n')
-      const latest = messages.filter(m => m.direction === 'inbound').at(-1)?.body ?? ''
-      if (!latest) return
-      const res = await fetch('/api/messaging/ai-reply', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: conv.name, history, latest }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setReplyBody(data.suggested_reply ?? '')
-        setAiActive(true)
-      }
-    } finally {
-      setAiLoading(false)
     }
   }
 
@@ -303,58 +463,52 @@ function ThreadDetail({ conv, onBack }: { conv: Conversation; onBack: () => void
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2" style={{ minHeight: 0 }}>
         {loading ? (
           <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin" style={{ color: '#818cf8' }} /></div>
-        ) : messages.length === 0 ? (
+        ) : threadMessages.length === 0 && !generatingDraft && !pendingDraft ? (
           <div className="flex-1 flex items-center justify-center">
             <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>No messages yet</p>
           </div>
         ) : (
-          messages.map(m => (
-            <div key={m.id} className={`flex ${m.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
-              <div style={{
-                maxWidth: '72%', padding: '10px 14px',
-                borderRadius: m.direction === 'outbound' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                background: m.direction === 'outbound' ? 'linear-gradient(135deg, #6366f1, #818cf8)' : 'rgba(255,255,255,0.07)',
-                color: m.direction === 'outbound' ? '#fff' : 'rgba(255,255,255,0.8)',
-                fontSize: 13, lineHeight: 1.5,
-                boxShadow: m.direction === 'outbound' ? '0 2px 12px rgba(99,102,241,0.3)' : 'none',
-              }}>
-                {m.body}
-                {m.ai_generated && (
-                  <span style={{ display: 'block', fontSize: 10, opacity: 0.6, marginTop: 3 }}>AI-assisted</span>
-                )}
-                <span style={{ display: 'block', fontSize: 10, opacity: 0.4, marginTop: 2 }}>
-                  {new Date(m.sent_at ?? m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
+          <>
+            {threadMessages.map(m => (
+              <div key={m.id} className={`flex ${m.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
+                <div style={{ maxWidth: '72%', padding: '10px 14px', borderRadius: m.direction === 'outbound' ? '16px 16px 4px 16px' : '16px 16px 16px 4px', background: m.direction === 'outbound' ? 'linear-gradient(135deg, #6366f1, #818cf8)' : 'rgba(255,255,255,0.07)', color: m.direction === 'outbound' ? '#fff' : 'rgba(255,255,255,0.8)', fontSize: 13, lineHeight: 1.5, boxShadow: m.direction === 'outbound' ? '0 2px 12px rgba(99,102,241,0.3)' : 'none' }}>
+                  {m.body}
+                  {m.ai_generated && m.approved && (
+                    <span style={{ display: 'block', fontSize: 10, opacity: 0.55, marginTop: 3 }}>AI-assisted</span>
+                  )}
+                  <span style={{ display: 'block', fontSize: 10, opacity: 0.4, marginTop: 2 }}>
+                    {new Date(m.sent_at ?? m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))
+            ))}
+
+            {generatingDraft && !pendingDraft && <GeneratingSkeleton />}
+            {pendingDraft && (
+              <AIDraftCard
+                message={pendingDraft}
+                conversationId={conv.id}
+                onApprove={approveDraft}
+                onDiscard={discardDraft}
+                onRegenerate={regenerateDraft}
+              />
+            )}
+          </>
         )}
         <div ref={bottomRef} />
       </div>
 
-      {/* AI banner */}
-      {aiActive && (
-        <div className="px-4 py-2 flex items-center gap-2" style={{ flexShrink: 0, background: 'rgba(99,102,241,0.06)', borderTop: '1px solid rgba(129,140,248,0.15)' }}>
-          <Bot className="w-3.5 h-3.5" style={{ color: '#818cf8', flexShrink: 0 }} />
-          <span style={{ fontSize: 11, color: '#818cf8' }}>AI suggestion — edit or send as-is</span>
-          <button onClick={() => { setAiActive(false); setReplyBody('') }} style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.3)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11 }}>Dismiss</button>
-        </div>
-      )}
-
-      {/* Reply bar */}
+      {/* Reply bar — manual replies only */}
       <div className="p-4 flex gap-2" style={{ borderTop: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
-        <button onClick={generateAI} disabled={aiLoading} title="Generate AI reply" style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(129,140,248,0.12)', border: '1px solid rgba(129,140,248,0.2)', color: '#818cf8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-        </button>
         <input
           value={replyBody}
           onChange={e => setReplyBody(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && sendReply()}
-          placeholder="Type a reply..."
+          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendManualReply()}
+          placeholder={pendingDraft ? 'Or type a manual reply...' : 'Type a reply...'}
           className="flex-1 text-sm outline-none"
           style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'rgba(255,255,255,0.85)' }}
         />
-        <button onClick={sendReply} disabled={sending || !replyBody.trim()} style={{ width: 40, height: 40, borderRadius: 10, background: replyBody.trim() ? 'linear-gradient(135deg, #6366f1, #818cf8)' : 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', cursor: replyBody.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: replyBody.trim() ? '0 0 14px rgba(99,102,241,0.35)' : 'none' }}>
+        <button onClick={sendManualReply} disabled={sending || !replyBody.trim()} style={{ width: 40, height: 40, borderRadius: 10, background: replyBody.trim() ? 'linear-gradient(135deg, #6366f1, #818cf8)' : 'rgba(255,255,255,0.06)', border: 'none', color: '#fff', cursor: replyBody.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: replyBody.trim() ? '0 0 14px rgba(99,102,241,0.35)' : 'none' }}>
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         </button>
       </div>

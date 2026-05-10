@@ -1,8 +1,8 @@
 import { getSupabaseServer } from '@/lib/supabase-server'
+import { generateAIReply } from '@/lib/generate-ai-reply'
 
 export const dynamic = 'force-dynamic'
 
-// Clearstream webhook — receives inbound SMS (text.received event)
 export async function POST(req: Request) {
   try {
     const payload = await req.json()
@@ -24,7 +24,6 @@ export async function POST(req: Request) {
 
     const supabase = getSupabaseServer()
 
-    // Find attendee by phone for a better display name
     const { data: attendee } = await supabase
       .from('attendees')
       .select('id, name')
@@ -34,17 +33,10 @@ export async function POST(req: Request) {
     const displayName = attendee?.name ?? fullName ?? phone
     const now = new Date().toISOString()
 
-    // Upsert conversation — creates one if it doesn't exist yet
     const { data: conv, error: ce } = await supabase
       .from('conversations')
       .upsert(
-        {
-          phone,
-          name: displayName,
-          attendee_id: attendee?.id ?? null,
-          last_message_at: now,
-          updated_at: now,
-        },
+        { phone, name: displayName, attendee_id: attendee?.id ?? null, last_message_at: now, updated_at: now },
         { onConflict: 'phone', ignoreDuplicates: false }
       )
       .select()
@@ -55,7 +47,6 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Failed to upsert conversation' }, { status: 500 })
     }
 
-    // Save the inbound message
     const { data: savedMsg, error: me } = await supabase
       .from('sms_messages')
       .insert({
@@ -72,6 +63,53 @@ export async function POST(req: Request) {
     if (me) {
       console.error('[webhook] insert message failed:', me)
       return Response.json({ error: 'Failed to save message' }, { status: 500 })
+    }
+
+    // Auto-generate AI draft (synchronous — Clearstream has generous timeout)
+    try {
+      // Remove any stale pending drafts from previous unanswered messages
+      await supabase.from('sms_messages')
+        .delete()
+        .eq('conversation_id', conv.id)
+        .eq('direction', 'outbound')
+        .eq('approved', false)
+        .eq('ai_generated', true)
+
+      // Fetch conversation history for context
+      const { data: historyMsgs } = await supabase
+        .from('sms_messages')
+        .select('direction, body')
+        .eq('conversation_id', conv.id)
+        .eq('approved', true)
+        .order('created_at', { ascending: true })
+        .limit(20)
+
+      const historyText = (historyMsgs ?? [])
+        .map(m => `${m.direction === 'inbound' ? 'THEM' : 'US'}: ${m.body}`)
+        .join('\n')
+
+      const ai = await generateAIReply({
+        name: displayName,
+        history: historyText,
+        latest: body,
+      })
+
+      if (ai.is_sensitive) {
+        await supabase.from('conversations').update({ is_sensitive: true }).eq('id', conv.id)
+      }
+
+      await supabase.from('sms_messages').insert({
+        conversation_id: conv.id,
+        direction: 'outbound',
+        body: ai.suggested_reply,
+        ai_generated: true,
+        approved: false,
+        tone: ai.tone ?? null,
+        pastoral_note: ai.pastoral_note ?? null,
+        is_sensitive: ai.is_sensitive ?? false,
+      })
+    } catch (err) {
+      console.error('[webhook] AI draft generation failed:', err)
     }
 
     return Response.json({ ok: true, conversation_id: conv.id, message_id: savedMsg.id })

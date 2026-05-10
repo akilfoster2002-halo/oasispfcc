@@ -1,0 +1,29 @@
+name: Sync Attendance
+
+on:
+  schedule:
+    # Monday 10pm EST = Tuesday 02:00 UTC (EDT offset -4)
+    - cron: '0 2 * * 2'
+    # Thursday 10pm EST = Friday 02:00 UTC
+    - cron: '0 2 * * 5'
+  workflow_dispatch: # allow manual trigger from GitHub UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger attendance sync
+        run: |
+          response=$(curl -s -o /tmp/sync_response.json -w "%{http_code}" \
+            -X POST "${{ secrets.APP_URL }}/api/sync/attendance" \
+            -H "Authorization: Bearer ${{ secrets.SYNC_SECRET }}" \
+            -H "Content-Type: application/json")
+
+          echo "HTTP status: $response"
+          echo "Response:"
+          cat /tmp/sync_response.json | python3 -m json.tool || cat /tmp/sync_response.json
+
+          if [ "$response" != "200" ]; then
+            echo "Sync failed with status $response"
+            exit 1
+          fi

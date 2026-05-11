@@ -35,16 +35,11 @@ export interface FlaggedMember {
   sunday_history: boolean[]
   midweek_history: boolean[]
   cell_history: boolean[]
+  home_cell: string
   flags: EngagementFlag[]
   priority_score: number
   risk_level: RiskLevel
   sections: FlagSection[]
-}
-
-function missedStreak(history: boolean[]): number {
-  let n = 0
-  for (const v of history) { if (!v) n++; else break }
-  return n
 }
 
 type AttRow = {
@@ -54,6 +49,13 @@ type AttRow = {
   created_at: string
   meeting_date: string
   meeting_type: string
+  meeting_name: string
+}
+
+type ScheduleRow = {
+  meeting_date: string
+  meeting_type: string
+  meeting_name: string
 }
 
 export async function computeEngagementFlags(
@@ -62,12 +64,14 @@ export async function computeEngagementFlags(
 ): Promise<FlaggedMember[]> {
   if (!groupId) return []
 
-  const today = new Date()
+  const today    = new Date()
   const todayStr = today.toISOString().split('T')[0]
-  const d180 = new Date(today.getTime() - 180 * 86400000).toISOString().split('T')[0]
+  const d180     = new Date(today.getTime() - 180 * 86400000).toISOString().split('T')[0]
+  // "Recent" = last 30 days; "Prior" = 30–120 days ago (were they consistent before?)
+  const cutRecent = new Date(today.getTime() -  30 * 86400000).toISOString().split('T')[0]
+  const cutPrior  = new Date(today.getTime() - 120 * 86400000).toISOString().split('T')[0]
 
-  // Single SQL JOIN — same run_query approach as the chatbot.
-  // Avoids PostgREST .in() URL length limits that silently truncate large ID lists.
+  // ── Query 1: all attendance for this group in the window ──────────────────
   const { data: rows, error } = await (supabase.rpc as Function)('run_query', {
     sql: `
       SELECT
@@ -76,7 +80,8 @@ export async function computeEngagementFlags(
         a.phone,
         a.created_at,
         m.meeting_date,
-        m.meeting_type
+        m.meeting_type,
+        m.name         AS meeting_name
       FROM attendance att
       JOIN meetings  m ON m.id = att.meeting_id
       JOIN attendees a ON a.id = att.attendee_id
@@ -89,21 +94,47 @@ export async function computeEngagementFlags(
 
   if (error || !rows || rows.length === 0) return []
 
-  // Unique schedule dates per type, newest first, up to 8.
-  // Using dates as keys naturally deduplicates same-day duplicate meetings.
-  const uniqueDates = (type: string) =>
-    [...new Set(rows.filter(r => r.meeting_type === type).map(r => r.meeting_date))]
-      .sort((a, b) => b.localeCompare(a)).slice(0, 8)
+  // ── Query 2: full meeting schedule (includes meetings nobody attended) ─────
+  const { data: schedule } = await (supabase.rpc as Function)('run_query', {
+    sql: `
+      SELECT DISTINCT meeting_date, meeting_type, name AS meeting_name
+      FROM meetings
+      WHERE group_id     = '${groupId}'
+        AND meeting_date >= '${d180}'
+        AND meeting_date <= '${todayStr}'
+        AND meeting_type  IN ('Sunday', 'Wednesday', 'Cell')
+    `,
+  }) as { data: ScheduleRow[] | null }
 
-  const sundayDates  = uniqueDates('Sunday')
-  const midweekDates = uniqueDates('Wednesday')
-  const cellDates    = uniqueDates('Cell')
+  const scheduleRows = schedule ?? []
 
-  // Build per-attendee sets keyed by date
+  // Sunday schedule: unique dates newest-first (same-day duplicates collapsed)
+  const sundaySchedule = [...new Set(
+    scheduleRows.filter(r => r.meeting_type === 'Sunday').map(r => r.meeting_date)
+  )].sort((a, b) => b.localeCompare(a))
+
+  // Wednesday schedule
+  const midweekSchedule = [...new Set(
+    scheduleRows.filter(r => r.meeting_type === 'Wednesday').map(r => r.meeting_date)
+  )].sort((a, b) => b.localeCompare(a))
+
+  // Cell schedules keyed by cell name — each person has ONE home cell
+  const cellScheduleByName = new Map<string, string[]>()
+  for (const r of scheduleRows.filter(s => s.meeting_type === 'Cell')) {
+    if (!cellScheduleByName.has(r.meeting_name)) cellScheduleByName.set(r.meeting_name, [])
+    const arr = cellScheduleByName.get(r.meeting_name)!
+    if (!arr.includes(r.meeting_date)) arr.push(r.meeting_date)
+  }
+  for (const arr of cellScheduleByName.values()) arr.sort((a, b) => b.localeCompare(a))
+
+  // ── Build per-attendee maps ───────────────────────────────────────────────
   type Entry = {
     name: string; phone: string | null; created_at: string
-    sunday: Set<string>; midweek: Set<string>; cell: Set<string>
-    allDates: Set<string>; lastDate: string
+    sunday: Set<string>
+    midweek: Set<string>
+    cellByName: Map<string, Set<string>>  // cellName → dates attended
+    allDates: Set<string>
+    lastDate: string
   }
 
   const attMap = new Map<string, Entry>()
@@ -112,7 +143,7 @@ export async function computeEngagementFlags(
     if (!attMap.has(row.attendee_id)) {
       attMap.set(row.attendee_id, {
         name: row.attendee_name, phone: row.phone ?? null, created_at: row.created_at,
-        sunday: new Set(), midweek: new Set(), cell: new Set(),
+        sunday: new Set(), midweek: new Set(), cellByName: new Map(),
         allDates: new Set(), lastDate: '',
       })
     }
@@ -121,29 +152,51 @@ export async function computeEngagementFlags(
     if (row.meeting_date > e.lastDate) e.lastDate = row.meeting_date
     if (row.meeting_type === 'Sunday')    e.sunday.add(row.meeting_date)
     if (row.meeting_type === 'Wednesday') e.midweek.add(row.meeting_date)
-    if (row.meeting_type === 'Cell')      e.cell.add(row.meeting_date)
+    if (row.meeting_type === 'Cell') {
+      if (!e.cellByName.has(row.meeting_name)) e.cellByName.set(row.meeting_name, new Set())
+      e.cellByName.get(row.meeting_name)!.add(row.meeting_date)
+    }
   }
 
+  // ── Score and flag each attendee ──────────────────────────────────────────
   const flagged: FlaggedMember[] = []
 
   for (const [attendee_id, e] of attMap) {
-    const sundayHistory  = sundayDates.map(d => e.sunday.has(d))
-    const midweekHistory = midweekDates.map(d => e.midweek.has(d))
-    const cellHistory    = cellDates.map(d => e.cell.has(d))
-
-    const missedSundayN  = missedStreak(sundayHistory)
-    const missedMidweekN = missedStreak(midweekHistory)
-    const missedCellN    = missedStreak(cellHistory)
-
-    const prevSundayAtt  = sundayHistory.slice(missedSundayN).filter(Boolean).length
-    const prevMidweekAtt = midweekHistory.slice(missedMidweekN).filter(Boolean).length
-    const prevCellAtt    = cellHistory.slice(missedCellN).filter(Boolean).length
-
-    const lastDate = e.lastDate || null
-    const daysSince = lastDate
+    const lastDate   = e.lastDate || null
+    const daysSince  = lastDate
       ? Math.floor((today.getTime() - new Date(lastDate).getTime()) / 86400000)
       : 999
     const totalAttended = e.allDates.size
+
+    // Identify home cell: whichever cell name they attended most
+    let homeCell    = ''
+    let homeCellMax = 0
+    for (const [name, dates] of e.cellByName) {
+      if (dates.size > homeCellMax) { homeCellMax = dates.size; homeCell = name }
+    }
+    const homeCellSchedule  = homeCell ? (cellScheduleByName.get(homeCell) ?? []) : []
+    const homeCellAttended  = e.cellByName.get(homeCell) ?? new Set<string>()
+
+    // ── Period splits ─────────────────────────────────────────────────────
+    // Recent = last 30 days; Prior = 30–120 days ago
+    const sundayRecent  = sundaySchedule.filter(d => d >  cutRecent)
+    const sundayPrior   = sundaySchedule.filter(d => d <= cutRecent && d >= cutPrior)
+    const midweekRecent = midweekSchedule.filter(d => d >  cutRecent)
+    const midweekPrior  = midweekSchedule.filter(d => d <= cutRecent && d >= cutPrior)
+    const cellRecent    = homeCellSchedule.filter(d => d >  cutRecent)
+    const cellPrior     = homeCellSchedule.filter(d => d <= cutRecent && d >= cutPrior)
+
+    const sundayAttRecent  = sundayRecent.filter(d  => e.sunday.has(d)).length
+    const sundayAttPrior   = sundayPrior.filter(d   => e.sunday.has(d)).length
+    const midweekAttRecent = midweekRecent.filter(d => e.midweek.has(d)).length
+    const midweekAttPrior  = midweekPrior.filter(d  => e.midweek.has(d)).length
+    const cellAttRecent    = cellRecent.filter(d    => homeCellAttended.has(d)).length
+    const cellAttPrior     = cellPrior.filter(d     => homeCellAttended.has(d)).length
+
+    // History dots for UI (8 most recent from their schedule)
+    const sundayHistory  = sundaySchedule.slice(0, 8).map(d => e.sunday.has(d))
+    const midweekHistory = midweekSchedule.slice(0, 8).map(d => e.midweek.has(d))
+    const cellHistory    = homeCellSchedule.slice(0, 8).map(d => homeCellAttended.has(d))
 
     const flags: EngagementFlag[] = []
     const sections = new Set<FlagSection>()
@@ -173,35 +226,55 @@ export async function computeEngagementFlags(
       sections.add('inactive')
     }
 
-    // ── Missed Sundays (2+ consecutive, attended before in window) ────────────
-    if (!isFirstTimer && missedSundayN >= 2 && prevSundayAtt >= 1 && sundayDates.length >= 3) {
+    // ── Missed Sunday ─────────────────────────────────────────────────────────
+    // Was consistent (≥2 Sundays in prior 30–120d window) then slipped (0 in last 30d)
+    if (
+      !isFirstTimer &&
+      sundayAttPrior  >= 2 &&
+      sundayRecent.length >= 1 &&
+      sundayAttRecent === 0
+    ) {
+      const n = sundayRecent.length
       flags.push({
         type: 'missed_sunday',
-        label: `Missed ${missedSundayN} Sunday${missedSundayN !== 1 ? 's' : ''}`,
-        detail: `${missedSundayN} consecutive Sunday${missedSundayN !== 1 ? 's' : ''} missed`,
-        severity: missedSundayN >= 4 ? 'critical' : missedSundayN >= 3 ? 'high' : 'medium',
+        label: `Missed ${n} Sunday${n !== 1 ? 's' : ''}`,
+        detail: `Was attending regularly — missed last ${n} Sunday${n !== 1 ? 's' : ''}`,
+        severity: n >= 4 ? 'critical' : n >= 2 ? 'high' : 'medium',
       })
       sections.add('missed_sunday')
     }
 
-    // ── Missed Midweek (3+ consecutive, attended before) ─────────────────────
-    if (!isFirstTimer && missedMidweekN >= 3 && prevMidweekAtt >= 1 && midweekDates.length >= 4) {
+    // ── Missed Midweek ────────────────────────────────────────────────────────
+    if (
+      !isFirstTimer &&
+      midweekAttPrior  >= 2 &&
+      midweekRecent.length >= 1 &&
+      midweekAttRecent === 0
+    ) {
+      const n = midweekRecent.length
       flags.push({
         type: 'missed_midweek',
-        label: `Missed ${missedMidweekN} Midweek${missedMidweekN !== 1 ? 's' : ''}`,
-        detail: `${missedMidweekN} consecutive midweek services missed`,
-        severity: missedMidweekN >= 5 ? 'high' : 'medium',
+        label: `Missed ${n} Midweek${n !== 1 ? 's' : ''}`,
+        detail: `Was attending regularly — missed last ${n} midweek service${n !== 1 ? 's' : ''}`,
+        severity: n >= 4 ? 'high' : 'medium',
       })
       sections.add('missed_midweek')
     }
 
-    // ── Missed Cell (2+ consecutive, attended before) ─────────────────────────
-    if (!isFirstTimer && missedCellN >= 2 && prevCellAtt >= 1 && cellDates.length >= 3) {
+    // ── Missed Cell (home cell only) ──────────────────────────────────────────
+    if (
+      !isFirstTimer &&
+      homeCell &&
+      cellAttPrior  >= 2 &&
+      cellRecent.length >= 1 &&
+      cellAttRecent === 0
+    ) {
+      const n = cellRecent.length
       flags.push({
         type: 'missed_cell',
-        label: `Missed ${missedCellN} Cell Meeting${missedCellN !== 1 ? 's' : ''}`,
-        detail: `${missedCellN} consecutive cell meetings missed`,
-        severity: missedCellN >= 3 ? 'high' : 'medium',
+        label: `Missed ${n} Cell Meeting${n !== 1 ? 's' : ''}`,
+        detail: `Consistent at ${homeCell} — missed last ${n} meeting${n !== 1 ? 's' : ''}`,
+        severity: n >= 3 ? 'high' : 'medium',
       })
       sections.add('missed_cell')
     }
@@ -211,30 +284,31 @@ export async function computeEngagementFlags(
     // ── Priority score ────────────────────────────────────────────────────────
     let priority = 0
 
+    // Depth bonus — long-term members matter more when they slip
     if (totalAttended >= 24)      priority += 40
     else if (totalAttended >= 12) priority += 28
     else if (totalAttended >= 6)  priority += 16
     else if (totalAttended >= 3)  priority += 8
 
-    priority += Math.min(missedSundayN, 5) * 14
-    priority += Math.min(missedMidweekN, 5) * 8
-    priority += Math.min(missedCellN, 5) * 7
-
+    // Recency of last attendance
     if (daysSince >= 60)      priority += 30
-    else if (daysSince >= 30) priority += 15
+    else if (daysSince >= 30) priority += 20
+    else if (daysSince >= 14) priority += 10
 
+    // Each service type missed compounds risk
     const multiMiss =
-      (missedSundayN >= 2 ? 1 : 0) +
-      (missedMidweekN >= 3 ? 1 : 0) +
-      (missedCellN >= 2 ? 1 : 0)
-    if (multiMiss >= 2) priority += 18
+      (sundayAttRecent  === 0 && sundayRecent.length  >= 1 && sundayAttPrior  >= 2 ? 1 : 0) +
+      (midweekAttRecent === 0 && midweekRecent.length >= 1 && midweekAttPrior >= 2 ? 1 : 0) +
+      (cellAttRecent    === 0 && cellRecent.length    >= 1 && cellAttPrior    >= 2 && homeCell ? 1 : 0)
+    if (multiMiss >= 2) priority += 20
+    if (multiMiss === 3) priority += 10
 
     if (isFirstTimer) priority = Math.min(priority, 45)
 
     const risk_level: RiskLevel =
       priority >= 80 ? 'critical' :
-      priority >= 55 ? 'high' :
-      priority >= 30 ? 'medium' : 'low'
+      priority >= 55 ? 'high'     :
+      priority >= 30 ? 'medium'   : 'low'
 
     if (risk_level === 'critical' || risk_level === 'high') sections.add('red_flag')
 
@@ -246,9 +320,10 @@ export async function computeEngagementFlags(
       total_attended: totalAttended,
       last_attended: lastDate,
       days_since_last: daysSince,
-      sunday_history: sundayHistory,
+      sunday_history:  sundayHistory,
       midweek_history: midweekHistory,
-      cell_history: cellHistory,
+      cell_history:    cellHistory,
+      home_cell:       homeCell,
       flags,
       priority_score: priority,
       risk_level,

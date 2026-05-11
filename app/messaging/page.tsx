@@ -354,7 +354,7 @@ function FlaggedMemberCard({ member, onSwitchToConversations }: {
             <div style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.22)', borderRadius: 10, marginBottom: 14 }}>
               <AttRow label="Sunday"  history={member.sunday_history}  color="#34d399" />
               <AttRow label="Midweek" history={member.midweek_history} color="#60a5fa" />
-              <AttRow label="Cell"    history={member.cell_history}    color="#a78bfa" />
+              <AttRow label={member.home_cell || 'Cell'} history={member.cell_history} color="#a78bfa" />
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
                 <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.22)' }}>← older</span>
                 <div style={{ display: 'flex', gap: 10, fontSize: 9, color: 'rgba(255,255,255,0.25)' }}>

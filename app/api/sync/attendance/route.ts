@@ -31,11 +31,17 @@ export async function POST(req: Request) {
       (acc, r) => ({
         meetingsCreated: acc.meetingsCreated + r.meetingsCreated,
         attendanceAdded: acc.attendanceAdded + r.attendanceAdded,
+        errors: acc.errors + r.errors,
       }),
-      { meetingsCreated: 0, attendanceAdded: 0 }
+      { meetingsCreated: 0, attendanceAdded: 0, errors: 0 }
     )
 
-    console.log(`[sync/attendance] Done — ${totals.meetingsCreated} meetings, ${totals.attendanceAdded} attendance records`)
+    // Log any per-event errors so they appear in Render logs
+    for (const r of results) {
+      for (const e of r.errorDetails) console.error(`[sync/attendance] ${e}`)
+    }
+
+    console.log(`[sync/attendance] Done — ${totals.meetingsCreated} meetings, ${totals.attendanceAdded} attendance, ${totals.errors} errors`)
     return Response.json({ ok: true, from, to, results, totals })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

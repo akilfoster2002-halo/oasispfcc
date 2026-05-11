@@ -36,8 +36,21 @@ async function main() {
     const from = process.argv[4] ?? threeWeeksAgo
     const to   = process.argv[5] ?? today
     console.log(`=== Syncing ${groupName} (${from} → ${to}) ===\n`)
-    const r = await syncCalendarFeed(createSupabaseAdmin(), firstArg, groupName, from, to, console.log)
-    console.log(`\nDone: ${r.meetingsCreated} meetings created, ${r.attendanceAdded} attendance added`)
+    const supabase = createSupabaseAdmin()
+    const { data: groupRows } = await supabase.from('groups').select('id, name')
+    const groupId = (groupRows ?? []).find((g: { id: string; name: string }) => g.name === groupName)?.id ?? null
+    const breezeToUuid = new Map<number, string>()
+    let offset = 0
+    while (true) {
+      const { data: rows } = await supabase.from('attendees').select('id, breeze_id').not('breeze_id', 'is', null).range(offset, offset + 999)
+      if (!rows || rows.length === 0) break
+      for (const r of rows) breezeToUuid.set(Number(r.breeze_id), r.id)
+      if (rows.length < 1000) break
+      offset += 1000
+    }
+    const r = await syncCalendarFeed(supabase, firstArg, groupName, groupId, from, to, breezeToUuid, console.log)
+    console.log(`\nDone: ${r.meetingsCreated} meetings created, ${r.attendanceAdded} attendance added, ${r.errors} errors`)
+    if (r.errorDetails.length) console.log('Errors:', r.errorDetails)
     return
   }
 

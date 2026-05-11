@@ -457,18 +457,29 @@ function EngagementSection({ config, members, onSwitchToConversations }: {
 }
 
 function FollowUpTab({ onSwitchToConversations }: { onSwitchToConversations: () => void }) {
-  const { profile, loading: profileLoading } = useUserProfile()
-  const [members, setMembers]     = useState<FlaggedMember[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [error, setError]         = useState('')
-  const [refreshed, setRefreshed] = useState<Date | null>(null)
+  const { profile, loading: profileLoading, isMaster } = useUserProfile()
+  const [groups, setGroups]         = useState<{ id: string; name: string }[]>([])
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
+  const [members, setMembers]       = useState<FlaggedMember[]>([])
+  const [loading, setLoading]       = useState(false)
+  const [error, setError]           = useState('')
+  const [refreshed, setRefreshed]   = useState<Date | null>(null)
+
+  // Fetch group list for master selector
+  useEffect(() => {
+    if (!profileLoading && isMaster) {
+      sb.from('groups').select('id, name').order('name').then(({ data }) => setGroups(data ?? []))
+    }
+  }, [profileLoading, isMaster])
+
+  // Effective group: master picks one; group-role users use their assigned group
+  const effectiveGroupId = isMaster ? selectedGroupId : (profile?.group_id ?? null)
 
   const load = useCallback(async () => {
+    if (!effectiveGroupId) return
     setLoading(true); setError('')
     try {
-      const qs = profile?.role === 'group' && profile.group_id
-        ? `?groupId=${profile.group_id}` : ''
-      const res = await fetch(`/api/engagement/flags${qs}`)
+      const res = await fetch(`/api/engagement/flags?groupId=${effectiveGroupId}`)
       if (!res.ok) throw new Error('Failed to load')
       setMembers(await res.json())
       setRefreshed(new Date())
@@ -477,7 +488,7 @@ function FollowUpTab({ onSwitchToConversations }: { onSwitchToConversations: () 
     } finally {
       setLoading(false)
     }
-  }, [profile])
+  }, [effectiveGroupId])
 
   useEffect(() => {
     if (!profileLoading) load()
@@ -506,73 +517,117 @@ function FollowUpTab({ onSwitchToConversations }: { onSwitchToConversations: () 
     { label: 'Going Inactive', value: inactive.length,    color: '#fb923c', icon: <TrendingDown style={{ width: 16, height: 16 }} /> },
   ]
 
+  const selectedGroupName = groups.find(g => g.id === selectedGroupId)?.name
+
   return (
     <div>
-      {/* Stats bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 20 }}>
-        {stats.map(s => (
-          <div key={s.label} style={{ padding: '14px', borderRadius: 14, background: 'linear-gradient(135deg, rgba(255,255,255,0.050), rgba(255,255,255,0.018))', border: `1px solid ${s.color}22`, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ color: s.color, opacity: 0.7 }}>{s.icon}</span>
-            </div>
-            <p style={{ fontSize: 26, fontWeight: 700, color: loading ? 'rgba(255,255,255,0.15)' : s.color, lineHeight: 1 }}>
-              {loading ? '—' : s.value}
-            </p>
-            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.38)', letterSpacing: '0.02em', lineHeight: 1.3 }}>{s.label}</p>
+      {/* Group selector — master only */}
+      {isMaster && (
+        <div style={{ marginBottom: 20 }}>
+          <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 600, letterSpacing: '0.08em', marginBottom: 8 }}>
+            SELECT GROUP
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {groups.map(g => {
+              const active = g.id === selectedGroupId
+              return (
+                <button
+                  key={g.id}
+                  onClick={() => setSelectedGroupId(g.id)}
+                  style={{
+                    padding: '7px 16px', borderRadius: 20, fontSize: 12, fontWeight: active ? 600 : 400, cursor: 'pointer',
+                    background: active ? 'linear-gradient(135deg, #6366f1, #818cf8)' : 'rgba(255,255,255,0.05)',
+                    border: active ? 'none' : '1px solid rgba(255,255,255,0.10)',
+                    color: active ? '#fff' : 'rgba(255,255,255,0.55)',
+                    boxShadow: active ? '0 0 14px rgba(99,102,241,0.30)' : 'none',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {g.name}
+                </button>
+              )
+            })}
           </div>
-        ))}
-      </div>
-
-      {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>
-          {refreshed
-            ? `Refreshed at ${refreshed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-            : 'Loading…'}
-        </p>
-        <button
-          onClick={load}
-          disabled={loading}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 13px', borderRadius: 9, fontSize: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)', color: 'rgba(255,255,255,0.55)', cursor: 'pointer' }}
-        >
-          <RefreshCw style={{ width: 12, height: 12, animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-          Refresh
-        </button>
-      </div>
-
-      {/* Content */}
-      {loading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {[1, 2, 3].map(i => (
-            <div key={i} style={{ height: 100, borderRadius: 16, background: 'rgba(255,255,255,0.04)', animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite' }} />
-          ))}
         </div>
-      ) : error ? (
-        <GlassCard style={{ padding: 32, textAlign: 'center' }}>
-          <p style={{ color: '#f87171', fontSize: 13, marginBottom: 12 }}>{error}</p>
-          <button onClick={load} style={{ fontSize: 12, color: '#818cf8', background: 'none', border: 'none', cursor: 'pointer' }}>Try again</button>
-        </GlassCard>
-      ) : totalFlags === 0 ? (
+      )}
+
+      {/* If master and no group chosen yet, show prompt */}
+      {isMaster && !selectedGroupId ? (
         <GlassCard style={{ padding: 52, textAlign: 'center' }}>
-          <div style={{ fontSize: 36, marginBottom: 14 }}>✅</div>
-          <p style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.88)', marginBottom: 8 }}>All clear</p>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.40)', maxWidth: 260, margin: '0 auto' }}>
-            No members need follow-up right now. Check back after the next service.
+          <div style={{ fontSize: 32, marginBottom: 14 }}>👆</div>
+          <p style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.82)', marginBottom: 8 }}>Select a group above</p>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', maxWidth: 260, margin: '0 auto' }}>
+            Choose a group to see who needs follow-up.
           </p>
         </GlassCard>
       ) : (
-        <div>
-          {/* Divider */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginBottom: 8 }} />
-          {SECTIONS.map(sec => (
-            <EngagementSection
-              key={sec.id}
-              config={sec}
-              members={sectionData[sec.id]}
-              onSwitchToConversations={onSwitchToConversations}
-            />
-          ))}
-        </div>
+        <>
+          {/* Stats bar */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 20 }}>
+            {stats.map(s => (
+              <div key={s.label} style={{ padding: '14px', borderRadius: 14, background: 'linear-gradient(135deg, rgba(255,255,255,0.050), rgba(255,255,255,0.018))', border: `1px solid ${s.color}22`, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ color: s.color, opacity: 0.7 }}>{s.icon}</span>
+                </div>
+                <p style={{ fontSize: 26, fontWeight: 700, color: loading ? 'rgba(255,255,255,0.15)' : s.color, lineHeight: 1 }}>
+                  {loading ? '—' : s.value}
+                </p>
+                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.38)', letterSpacing: '0.02em', lineHeight: 1.3 }}>{s.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Toolbar */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>
+              {loading ? 'Loading…' : refreshed
+                ? `${selectedGroupName ? selectedGroupName + ' · ' : ''}Refreshed ${refreshed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                : ''}
+            </p>
+            <button
+              onClick={load}
+              disabled={loading}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 13px', borderRadius: 9, fontSize: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)', color: 'rgba(255,255,255,0.55)', cursor: 'pointer' }}
+            >
+              <RefreshCw style={{ width: 12, height: 12, animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+              Refresh
+            </button>
+          </div>
+
+          {/* Content */}
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[1, 2, 3].map(i => (
+                <div key={i} style={{ height: 100, borderRadius: 16, background: 'rgba(255,255,255,0.04)', animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite' }} />
+              ))}
+            </div>
+          ) : error ? (
+            <GlassCard style={{ padding: 32, textAlign: 'center' }}>
+              <p style={{ color: '#f87171', fontSize: 13, marginBottom: 12 }}>{error}</p>
+              <button onClick={load} style={{ fontSize: 12, color: '#818cf8', background: 'none', border: 'none', cursor: 'pointer' }}>Try again</button>
+            </GlassCard>
+          ) : totalFlags === 0 ? (
+            <GlassCard style={{ padding: 52, textAlign: 'center' }}>
+              <div style={{ fontSize: 36, marginBottom: 14 }}>✅</div>
+              <p style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.88)', marginBottom: 8 }}>All clear</p>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.40)', maxWidth: 260, margin: '0 auto' }}>
+                No members need follow-up right now. Check back after the next service.
+              </p>
+            </GlassCard>
+          ) : (
+            <div>
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginBottom: 8 }} />
+              {SECTIONS.map(sec => (
+                <EngagementSection
+                  key={sec.id}
+                  config={sec}
+                  members={sectionData[sec.id]}
+                  onSwitchToConversations={onSwitchToConversations}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

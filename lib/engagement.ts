@@ -47,6 +47,20 @@ function missedStreak(history: boolean[]): number {
   return n
 }
 
+// Collapse duplicate meetings on the same date: { date, ids[] }, newest first, up to `limit` dates
+function dedupDates(meetings: { id: string; meeting_date: string; meeting_type: string }[], type: string, limit: number) {
+  const map = new Map<string, string[]>()
+  for (const m of meetings) {
+    if (m.meeting_type !== type) continue
+    if (!map.has(m.meeting_date)) map.set(m.meeting_date, [])
+    map.get(m.meeting_date)!.push(m.id)
+  }
+  return [...map.entries()]
+    .sort(([a], [b]) => b.localeCompare(a))
+    .slice(0, limit)
+    .map(([date, ids]) => ({ date, ids }))
+}
+
 export async function computeEngagementFlags(
   supabase: SupabaseClient,
   groupId?: string | null,
@@ -66,10 +80,11 @@ export async function computeEngagementFlags(
   if (groupId) meetQ = meetQ.eq('group_id', groupId)
   const { data: meetings } = await meetQ
 
-  const sundays  = (meetings ?? []).filter(m => m.meeting_type === 'Sunday').slice(0, 8)
-  const midweeks = (meetings ?? []).filter(m => m.meeting_type === 'Wednesday').slice(0, 8)
-  const cells    = (meetings ?? []).filter(m => m.meeting_type === 'Cell').slice(0, 8)
-  const allIds   = (meetings ?? []).map(m => m.id)
+  // Deduplicate by date: two services on the same day count as one "slot"
+  const sundayDates  = dedupDates(meetings ?? [], 'Sunday',    8)
+  const midweekDates = dedupDates(meetings ?? [], 'Wednesday', 8)
+  const cellDates    = dedupDates(meetings ?? [], 'Cell',      8)
+  const allIds       = (meetings ?? []).map(m => m.id)
   if (allIds.length === 0) return []
 
   // 2. Fetch all attendance for those meetings
@@ -80,9 +95,9 @@ export async function computeEngagementFlags(
 
   // 3. Build per-attendee maps
   const meetingDateMap = new Map((meetings ?? []).map(m => [m.id, m.meeting_date] as [string, string]))
-  const sundaySet  = new Set(sundays.map(m => m.id))
-  const midweekSet = new Set(midweeks.map(m => m.id))
-  const cellSet    = new Set(cells.map(m => m.id))
+  const sundaySet  = new Set(sundayDates.flatMap(d => d.ids))
+  const midweekSet = new Set(midweekDates.flatMap(d => d.ids))
+  const cellSet    = new Set(cellDates.flatMap(d => d.ids))
 
   type Entry = { sunday: Set<string>; midweek: Set<string>; cell: Set<string>; all: Set<string>; lastDate: string }
   const attMap = new Map<string, Entry>()
@@ -117,9 +132,10 @@ export async function computeEngagementFlags(
     const e = attMap.get(attendee.id)
     if (!e) continue
 
-    const sundayHistory  = sundays.map(m => e.sunday.has(m.id))
-    const midweekHistory = midweeks.map(m => e.midweek.has(m.id))
-    const cellHistory    = cells.map(m => e.cell.has(m.id))
+    // One boolean per unique date — attended if they attended ANY meeting on that date
+    const sundayHistory  = sundayDates.map(d => d.ids.some(id => e.sunday.has(id)))
+    const midweekHistory = midweekDates.map(d => d.ids.some(id => e.midweek.has(id)))
+    const cellHistory    = cellDates.map(d => d.ids.some(id => e.cell.has(id)))
 
     const missedSundayN  = missedStreak(sundayHistory)
     const missedMidweekN = missedStreak(midweekHistory)
@@ -165,7 +181,7 @@ export async function computeEngagementFlags(
     }
 
     // ── Missed Sundays (2+ consecutive, attended before in window) ─────────
-    if (!isFirstTimer && missedSundayN >= 2 && prevSundayAtt >= 1 && sundays.length >= 3) {
+    if (!isFirstTimer && missedSundayN >= 2 && prevSundayAtt >= 1 && sundayDates.length >= 3) {
       flags.push({
         type: 'missed_sunday',
         label: `Missed ${missedSundayN} Sunday${missedSundayN !== 1 ? 's' : ''}`,
@@ -176,7 +192,7 @@ export async function computeEngagementFlags(
     }
 
     // ── Missed Midweek (3+ consecutive, attended before) ──────────────────
-    if (!isFirstTimer && missedMidweekN >= 3 && prevMidweekAtt >= 1 && midweeks.length >= 4) {
+    if (!isFirstTimer && missedMidweekN >= 3 && prevMidweekAtt >= 1 && midweekDates.length >= 4) {
       flags.push({
         type: 'missed_midweek',
         label: `Missed ${missedMidweekN} Midweek${missedMidweekN !== 1 ? 's' : ''}`,
@@ -187,7 +203,7 @@ export async function computeEngagementFlags(
     }
 
     // ── Missed Cell (2+ consecutive, attended before) ─────────────────────
-    if (!isFirstTimer && missedCellN >= 2 && prevCellAtt >= 1 && cells.length >= 3) {
+    if (!isFirstTimer && missedCellN >= 2 && prevCellAtt >= 1 && cellDates.length >= 3) {
       flags.push({
         type: 'missed_cell',
         label: `Missed ${missedCellN} Cell Meeting${missedCellN !== 1 ? 's' : ''}`,

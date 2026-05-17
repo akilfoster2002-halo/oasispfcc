@@ -1,7 +1,5 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
-import Sidebar from '@/components/Sidebar'
-import MobileNav from '@/components/MobileNav'
 import './globals.css'
 
 const geistSans = Geist({
@@ -15,8 +13,8 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Oasis PFCC',
-  description: 'Oasis PFCC Church Management System',
+  title: 'Church-Link',
+  description: 'Church management platform',
 }
 
 export default function RootLayout({
@@ -27,11 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full`}>
       <body className="h-full antialiased">
-        <Sidebar />
-        <main className="min-h-full pb-20 md:pb-0 md:ml-56" style={{ background: 'transparent' }}>
-          {children}
-        </main>
-        <MobileNav />
+        {children}
       </body>
     </html>
   )

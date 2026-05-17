@@ -1,19 +1,21 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useParams } from 'next/navigation'
 import { LayoutDashboard, Users, Layers, BarChart3, MessageSquare } from 'lucide-react'
 
-const items = [
-  { href: '/', label: 'Home', icon: LayoutDashboard, exact: true },
-  { href: '/people', label: 'People', icon: Users },
-  { href: '/groups', label: 'Groups', icon: Layers },
-  { href: '/reports', label: 'Analytics', icon: BarChart3 },
-  { href: '/messaging', label: 'Messages', icon: MessageSquare },
+const paths = [
+  { path: 'dashboard', label: 'Home',     icon: LayoutDashboard },
+  { path: 'people',    label: 'People',   icon: Users },
+  { path: 'groups',    label: 'Groups',   icon: Layers },
+  { path: 'reports',   label: 'Analytics',icon: BarChart3 },
+  { path: 'messaging', label: 'Messages', icon: MessageSquare },
 ]
 
 export default function MobileNav() {
   const pathname = usePathname()
+  const params = useParams()
+  const slug = (params?.slug as string) ?? pathname.split('/')[1] ?? ''
 
   return (
     <nav
@@ -26,13 +28,12 @@ export default function MobileNav() {
       }}
     >
       <div className="flex items-stretch h-16">
-        {items.map(({ href, label, icon: Icon, exact }) => {
-          const active = exact
-            ? pathname === href
-            : pathname === href || pathname.startsWith(href + '/')
+        {paths.map(({ path, label, icon: Icon }) => {
+          const href = `/${slug}/${path}`
+          const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link
-              key={href}
+              key={path}
               href={href}
               className="flex-1 flex flex-col items-center justify-center gap-1 text-[10px] font-medium transition-all duration-200"
               style={{ color: active ? '#818cf8' : 'rgba(255,255,255,0.35)' }}

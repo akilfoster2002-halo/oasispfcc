@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Trigger attendance sync
         run: |
-          response=$(curl -s -o /tmp/sync_response.json -w "%{http_code}" \
+          response=$(curl -s -L -o /tmp/sync_response.json -w "%{http_code}" \
             -X POST "${{ secrets.APP_URL }}/api/sync/attendance" \
             -H "Authorization: Bearer ${{ secrets.SYNC_SECRET }}" \
             -H "Content-Type: application/json")
@@ -21,6 +21,6 @@ jobs:
           cat /tmp/sync_response.json | python3 -m json.tool || cat /tmp/sync_response.json
 
           if [ "$response" != "200" ]; then
-            echo "Sync failed with status $response"
+            echo "/api/sync/attendance failed with status $response"
             exit 1
           fi

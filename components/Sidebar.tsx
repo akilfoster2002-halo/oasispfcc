@@ -13,6 +13,7 @@ import {
   LogOut,
   Settings,
   CheckSquare,
+  UserPlus,
 } from 'lucide-react'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
 import { useUserProfile } from '@/lib/use-user-profile'
@@ -136,8 +137,9 @@ export default function Sidebar() {
         {isMaster && (
           <>
             {[
-              { path: 'settings/users',     label: 'User Access',  Icon: Settings },
-              { path: 'settings/approvals', label: 'Approvals',    Icon: CheckSquare },
+              { path: 'settings/team',      label: 'Team & Invites', Icon: UserPlus },
+              { path: 'settings/users',     label: 'User Access',    Icon: Settings },
+              { path: 'settings/approvals', label: 'Approvals',      Icon: CheckSquare },
             ].map(({ path, label, Icon }) => {
               const href = `/${slug}/${path}`
               const active = pathname.startsWith(href)

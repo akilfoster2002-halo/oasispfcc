@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { type NextRequest, NextResponse } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/auth', '/join', '/pending-approval', '/select-church']
+const PUBLIC_PATHS = ['/login', '/signup', '/auth', '/join', '/invite', '/pending-approval', '/select-church']
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
@@ -55,7 +55,7 @@ export async function updateSession(request: NextRequest) {
   if (user) {
     // Extract slug from path — first segment that isn't a known top-level page
     const segments = pathname.split('/').filter(Boolean)
-    const topLevelPublic = ['login', 'auth', 'join', 'pending-approval', 'select-church', 'api']
+    const topLevelPublic = ['login', 'signup', 'auth', 'join', 'invite', 'onboarding', 'pending-approval', 'select-church', 'api']
 
     if (segments.length >= 1 && !topLevelPublic.includes(segments[0])) {
       const slug = segments[0]
@@ -116,7 +116,8 @@ export async function updateSession(request: NextRequest) {
       } else if (approved.length > 1) {
         url.pathname = '/select-church'
       } else {
-        url.pathname = '/pending-approval'
+        // No approved churches — go to onboarding to create one
+        url.pathname = '/onboarding'
       }
       return NextResponse.redirect(url)
     }

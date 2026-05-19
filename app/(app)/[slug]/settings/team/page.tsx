@@ -33,7 +33,7 @@ export default function TeamPage() {
   const [role, setRole] = useState<typeof ROLES[number]>('member')
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState('')
-  const [lastLink, setLastLink] = useState('')
+  const [lastResult, setLastResult] = useState<{ emailSent: boolean; inviteUrl?: string; email: string } | null>(null)
   const [copied, setCopied] = useState(false)
 
   // Fetch church ID
@@ -58,7 +58,8 @@ export default function TeamPage() {
     if (!churchId) { setSendError('Church not loaded yet — please wait a moment and try again.'); return }
     setSendError('')
     setSending(true)
-    setLastLink('')
+    setLastResult(null)
+    const sentTo = email
     try {
       const res = await fetch('/api/invites', {
         method: 'POST',
@@ -67,7 +68,7 @@ export default function TeamPage() {
       })
       const data = await res.json()
       if (!res.ok) { setSendError(data.error ?? 'Failed to send invite'); return }
-      setLastLink(data.inviteUrl)
+      setLastResult({ emailSent: data.emailSent, inviteUrl: data.inviteUrl, email: sentTo })
       setEmail('')
       fetch(`/api/invites?churchId=${churchId}`)
         .then(r => r.json())
@@ -86,7 +87,8 @@ export default function TeamPage() {
   }
 
   function copyLink() {
-    navigator.clipboard.writeText(lastLink)
+    if (!lastResult?.inviteUrl) return
+    navigator.clipboard.writeText(lastResult.inviteUrl)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -156,18 +158,26 @@ export default function TeamPage() {
           <p className="mt-3 text-xs" style={{ color: '#f87171' }}>{sendError}</p>
         )}
 
-        {lastLink && (
+        {lastResult && (
           <div className="mt-4 flex items-center gap-2 p-3 rounded-xl"
             style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.20)' }}>
-            <p className="flex-1 text-xs truncate" style={{ color: 'rgba(255,255,255,0.55)' }}>
-              Invite sent! Link: <span style={{ color: '#34d399' }}>{lastLink}</span>
-            </p>
-            <button onClick={copyLink}
-              className="flex items-center gap-1 text-xs font-medium shrink-0"
-              style={{ color: copied ? '#34d399' : 'rgba(255,255,255,0.45)' }}>
-              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              {copied ? 'Copied' : 'Copy'}
-            </button>
+            {lastResult.emailSent ? (
+              <p className="flex-1 text-xs" style={{ color: '#34d399' }}>
+                Invite email sent to <strong>{lastResult.email}</strong> — they&apos;ll get a link to join.
+              </p>
+            ) : (
+              <>
+                <p className="flex-1 text-xs truncate" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                  Already registered — share this link: <span style={{ color: '#34d399' }}>{lastResult.inviteUrl}</span>
+                </p>
+                <button onClick={copyLink}
+                  className="flex items-center gap-1 text-xs font-medium shrink-0"
+                  style={{ color: copied ? '#34d399' : 'rgba(255,255,255,0.45)' }}>
+                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? 'Copied' : 'Copy'}
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>

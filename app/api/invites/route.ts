@@ -128,35 +128,32 @@ export async function POST(req: Request) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL
     ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
-  const redirectTo = `${appUrl}/invite/${inviteToken}`
+  const inviteUrl = `${appUrl}/invite/${inviteToken}`
 
-  // Generate a magic invite link without sending an email (avoids rate limits).
-  // The admin copies this link and shares it via text/WhatsApp/etc.
-  const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
-    type: 'invite',
-    email,
-    options: {
-      redirectTo,
-      data: {
-        church_slug: church.slug,
-        church_name: church.name,
-        invite_token: inviteToken,
-        role,
-      },
+  // redirectTo tells Supabase where to send the user after clicking the email link.
+  // The auth callback exchanges the code and then forwards to /invite/[token].
+  const redirectTo = `${appUrl}/auth/callback?next=/invite/${inviteToken}`
+
+  // Send the invite email via Supabase — user receives a magic link directly.
+  const { error: inviteErr } = await supabase.auth.admin.inviteUserByEmail(email, {
+    redirectTo,
+    data: {
+      church_slug: church.slug,
+      church_name: church.name,
+      invite_token: inviteToken,
+      role,
     },
   })
 
-  if (linkErr) {
-    // If user already exists they can just use the invite URL directly
-    if (linkErr.message.toLowerCase().includes('already been registered') || linkErr.message.toLowerCase().includes('already registered')) {
-      return Response.json({ inviteToken, inviteUrl: redirectTo, note: 'user_exists' })
+  if (inviteErr) {
+    // User already has a Supabase account — return the invite URL for the admin to share
+    if (inviteErr.message.toLowerCase().includes('already been registered') || inviteErr.message.toLowerCase().includes('already registered')) {
+      return Response.json({ inviteToken, inviteUrl, emailSent: false }, { status: 201 })
     }
-    return Response.json({ error: linkErr.message }, { status: 500 })
+    return Response.json({ error: inviteErr.message }, { status: 500 })
   }
 
-  const inviteUrl = linkData.properties?.action_link ?? redirectTo
-
-  return Response.json({ inviteToken, inviteUrl }, { status: 201 })
+  return Response.json({ inviteToken, emailSent: true }, { status: 201 })
 }
 
 /**

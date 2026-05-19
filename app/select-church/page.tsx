@@ -9,7 +9,7 @@ interface Membership {
   id: string
   status: string
   role: string
-  church: { id: string; name: string; slug: string; logo_url: string | null }
+  church: { id: string; name: string; slug: string }
 }
 
 export default function SelectChurchPage() {
@@ -65,20 +65,12 @@ export default function SelectChurchPage() {
                 onClick={() => router.push(`/${m.church.slug}/dashboard`)}
                 className="w-full flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-xl hover:border-indigo-300 hover:shadow-sm transition-all text-left"
               >
-                {m.church.logo_url ? (
-                  <img
-                    src={m.church.logo_url}
-                    alt={m.church.name}
-                    className="w-10 h-10 rounded-xl object-cover"
-                  />
-                ) : (
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)' }}
-                  >
-                    <Church className="w-5 h-5 text-white" />
-                  </div>
-                )}
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)' }}
+                >
+                  <Church className="w-5 h-5 text-white" />
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-gray-900 truncate">{m.church.name}</p>
                   <p className="text-xs text-gray-500 capitalize">{m.role}</p>

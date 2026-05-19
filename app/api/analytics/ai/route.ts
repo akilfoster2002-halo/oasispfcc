@@ -27,26 +27,26 @@ const SYSTEM = `You are a church analytics AI. Given a natural language question
 
 DATABASE SCHEMA (PostgreSQL):
   groups(id uuid, name text)
-    -- known names: 'CharmCity', 'LifeSprings', 'MEGA'
-  meetings(id uuid, group_id uuid, meeting_date date, meeting_type text, name text)
-    -- meeting_type values: 'Sunday' | 'Wednesday' | 'Cell' | 'Prayer' | 'Leadership' | 'Special' | 'Other'
-  attendees(id uuid, name text)
-  attendance(id uuid, meeting_id uuid, attendee_id uuid, status text)
-    -- status: 'present' | 'absent' | 'late'  → always filter with status = 'present' unless asked otherwise
+  events(id uuid, group_id uuid, event_date date, service_type text, name text)
+    -- service_type values: 'sunday_inperson' | 'sunday_online' | 'midweek' | 'cell' | 'outreach' | 'prayer' | 'other'
+  people(id uuid, first_name text, last_name text, phone text, group_name text, cell_name text, designation text)
+  attendance(id uuid, event_id uuid, person_id uuid, attendance_status text)
+    -- attendance_status: 'present' → always filter with attendance_status = 'present'
 
 RELATIONSHIPS:
-  meetings.group_id → groups.id
-  attendance.meeting_id → meetings.id
-  attendance.attendee_id → attendees.id
+  events.group_id → groups.id
+  attendance.event_id → events.id
+  attendance.person_id → people.id
 
 SQL RULES:
   1. SELECT only — no INSERT/UPDATE/DELETE/DROP
   2. Always end with ORDER BY and LIMIT 50
   3. Use ILIKE for name/type searches
-  4. Filter: AND att.status = 'present' unless user asks about absent/late
+  4. Filter: AND att.attendance_status = 'present'
   5. Date range: default to last 90 days unless user specifies
-  6. Aggregate by meeting NAME for cell breakdowns (not by individual meeting row)
-  7. Never expose attendee IDs in results
+  6. Aggregate by event NAME for cell breakdowns (not by individual event row)
+  7. Never expose person IDs or breeze_id in results
+  8. For full name: use p.first_name || ' ' || p.last_name
 
 CHART TYPE GUIDE:
   bar          — a few categories, vertical, good for comparison

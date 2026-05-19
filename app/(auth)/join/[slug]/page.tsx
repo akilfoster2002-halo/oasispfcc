@@ -6,9 +6,6 @@ interface Church {
   id: string
   name: string
   slug: string
-  description: string | null
-  logo_url: string | null
-  requires_approval: boolean
 }
 
 async function getChurch(slug: string): Promise<Church | null> {
@@ -41,36 +38,14 @@ export default async function JoinLandingPage({
       <div className="w-full max-w-md space-y-8 text-center">
         {/* Church logo / icon */}
         <div className="flex flex-col items-center gap-4">
-          {church.logo_url ? (
-            <img
-              src={church.logo_url}
-              alt={church.name}
-              className="w-20 h-20 rounded-2xl object-cover shadow"
-            />
-          ) : (
-            <div
-              className="w-20 h-20 rounded-2xl flex items-center justify-center shadow"
-              style={{
-                background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
-              }}
-            >
-              <Church className="w-10 h-10 text-white" />
-            </div>
-          )}
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">{church.name}</h1>
-            {church.description && (
-              <p className="mt-2 text-sm text-gray-500">{church.description}</p>
-            )}
+          <div
+            className="w-20 h-20 rounded-2xl flex items-center justify-center shadow"
+            style={{ background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)' }}
+          >
+            <Church className="w-10 h-10 text-white" />
           </div>
+          <h1 className="text-3xl font-bold text-gray-900">{church.name}</h1>
         </div>
-
-        {/* Approval notice */}
-        {church.requires_approval && (
-          <div className="bg-blue-50 border border-blue-200 text-blue-700 text-sm rounded-xl px-4 py-3">
-            Membership requires admin approval. You&apos;ll be notified once you&apos;re approved.
-          </div>
-        )}
 
         {/* Actions */}
         <div className="space-y-3">

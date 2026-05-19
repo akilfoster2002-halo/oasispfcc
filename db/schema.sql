@@ -1,312 +1,355 @@
 -- ============================================================
--- Oasis PFCC — Attendance System
--- Minimal schema: groups → meetings → attendees → attendance
--- Run in Supabase SQL Editor (wipes and rebuilds everything).
+-- Church-Link — Full Schema (Breeze-structured, multi-tenant)
+-- Run in Supabase SQL Editor to wipe and rebuild everything.
 -- ============================================================
 
--- ── Drop everything ──────────────────────────────────────────
+-- ── Drop everything ───────────────────────────────────────────
 DROP TABLE IF EXISTS chat_messages          CASCADE;
 DROP TABLE IF EXISTS chat_sessions          CASCADE;
+DROP TABLE IF EXISTS sms_messages           CASCADE;
+DROP TABLE IF EXISTS campaign_recipients    CASCADE;
+DROP TABLE IF EXISTS campaigns              CASCADE;
+DROP TABLE IF EXISTS conversations          CASCADE;
 DROP TABLE IF EXISTS sync_log               CASCADE;
 DROP TABLE IF EXISTS attendance             CASCADE;
-DROP TABLE IF EXISTS meetings               CASCADE;
-DROP TABLE IF EXISTS attendees              CASCADE;
-DROP TABLE IF EXISTS groups                 CASCADE;
-
--- Legacy tables from old schema (safe to ignore errors)
-DROP TABLE IF EXISTS relationship_history   CASCADE;
-DROP TABLE IF EXISTS person_cell_memberships CASCADE;
-DROP TABLE IF EXISTS person_group_memberships CASCADE;
-DROP TABLE IF EXISTS leaders                CASCADE;
 DROP TABLE IF EXISTS events                 CASCADE;
 DROP TABLE IF EXISTS people                 CASCADE;
 DROP TABLE IF EXISTS cells                  CASCADE;
-DROP TABLE IF EXISTS regions                CASCADE;
+DROP TABLE IF EXISTS groups                 CASCADE;
+DROP TABLE IF EXISTS dataplug               CASCADE;
+DROP TABLE IF EXISTS meetings               CASCADE;
+DROP TABLE IF EXISTS attendees              CASCADE;
+DROP TABLE IF EXISTS church_invites         CASCADE;
+DROP TABLE IF EXISTS church_memberships     CASCADE;
+DROP TABLE IF EXISTS user_profiles          CASCADE;
+DROP TABLE IF EXISTS churches               CASCADE;
 
--- Legacy enums
 DROP TYPE IF EXISTS service_type_enum       CASCADE;
 DROP TYPE IF EXISTS attendance_status_enum  CASCADE;
 DROP TYPE IF EXISTS participation_type_enum CASCADE;
 
 -- ============================================================
--- CORE TABLES
+-- MULTI-TENANT CORE
 -- ============================================================
 
--- ── groups ───────────────────────────────────────────────────
+CREATE TABLE churches (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       TEXT NOT NULL,
+  slug       TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Links auth.users to legacy app roles
+CREATE TABLE user_profiles (
+  id         UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  role       TEXT NOT NULL DEFAULT 'group',
+  group_id   UUID,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE church_memberships (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  church_id  UUID NOT NULL REFERENCES churches(id)   ON DELETE CASCADE,
+  role       TEXT NOT NULL DEFAULT 'member',
+  status     TEXT NOT NULL DEFAULT 'pending',
+  joined_via TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (user_id, church_id)
+);
+
+CREATE TABLE church_invites (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  church_id   UUID NOT NULL REFERENCES churches(id) ON DELETE CASCADE,
+  email       TEXT NOT NULL,
+  role        TEXT NOT NULL DEFAULT 'member',
+  token       UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+  status      TEXT NOT NULL DEFAULT 'pending',
+  created_by  UUID REFERENCES auth.users(id),
+  expires_at  TIMESTAMPTZ NOT NULL,
+  accepted_at TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================================
+-- BREEZE DATA MODEL
+-- ============================================================
+
 -- Ministry groups (CharmCity, LifeSprings, MEGA, etc.)
 CREATE TABLE groups (
-  id         UUID  PRIMARY KEY DEFAULT gen_random_uuid(),
-  name       TEXT  UNIQUE NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  church_id  UUID NOT NULL REFERENCES churches(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (church_id, name)
 );
 
--- ── meetings ─────────────────────────────────────────────────
--- Each gathering belongs to exactly one group.
--- meeting_type is free text: "Sunday", "Wednesday", "Cell", etc.
-CREATE TABLE meetings (
-  id            UUID  PRIMARY KEY DEFAULT gen_random_uuid(),
-  group_id      UUID  NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
-  meeting_date  DATE  NOT NULL,
-  meeting_type  TEXT  NOT NULL,
-  name          TEXT,           -- original event name from import (for reference)
-  created_at    TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (group_id, meeting_date, name)
+-- Small groups / home cells
+CREATE TABLE cells (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  church_id  UUID NOT NULL REFERENCES churches(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (church_id, name)
 );
 
-CREATE INDEX idx_meetings_group_id     ON meetings (group_id);
-CREATE INDEX idx_meetings_date         ON meetings (meeting_date);
-CREATE INDEX idx_meetings_type         ON meetings (meeting_type);
-CREATE INDEX idx_meetings_group_date   ON meetings (group_id, meeting_date);
-
--- ── attendees ────────────────────────────────────────────────
--- People identified by name only.
--- breeze_id is optional — used only to deduplicate during import,
--- never used as a CRM identifier in analytics queries.
-CREATE TABLE attendees (
-  id         UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
-  name       TEXT    NOT NULL,
-  breeze_id  BIGINT  UNIQUE,    -- import dedup key only
-  created_at TIMESTAMPTZ DEFAULT NOW()
+-- All Breeze person fields
+CREATE TABLE people (
+  id                           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  church_id                    UUID NOT NULL REFERENCES churches(id) ON DELETE CASCADE,
+  breeze_id                    BIGINT,
+  first_name                   TEXT NOT NULL DEFAULT '',
+  last_name                    TEXT NOT NULL DEFAULT '',
+  email                        TEXT,
+  phone                        TEXT,
+  address                      TEXT,
+  gender                       TEXT,
+  birthdate                    DATE,
+  group_name                   TEXT,
+  pastor                       TEXT,
+  designation                  TEXT,
+  cell_name                    TEXT,
+  fellowship                   TEXT,
+  who_invited                  TEXT,
+  joined_oasis                 TEXT,
+  baptized                     TEXT,
+  foundation_school            TEXT,
+  foundation_school_grad_year  TEXT,
+  school                       TEXT,
+  major                        TEXT,
+  profession                   TEXT,
+  marital_status               TEXT,
+  state                        TEXT,
+  unique_id                    TEXT,
+  breeze_synced_at             TIMESTAMPTZ,
+  created_at                   TIMESTAMPTZ DEFAULT NOW(),
+  updated_at                   TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (church_id, breeze_id)
 );
 
-CREATE INDEX idx_attendees_name       ON attendees (name);
-CREATE INDEX idx_attendees_breeze_id  ON attendees (breeze_id);
+CREATE INDEX idx_people_church      ON people (church_id);
+CREATE INDEX idx_people_breeze_id   ON people (breeze_id);
+CREATE INDEX idx_people_name        ON people (first_name, last_name);
+CREATE INDEX idx_people_designation ON people (designation);
+CREATE INDEX idx_people_group_name  ON people (group_name);
+CREATE INDEX idx_people_pastor      ON people (pastor);
+CREATE INDEX idx_people_baptized    ON people (baptized);
+CREATE INDEX idx_people_cell_name   ON people (cell_name);
+CREATE INDEX idx_people_fellowship  ON people (fellowship);
 
--- ── attendance ───────────────────────────────────────────────
--- Core join: who was at which meeting.
+-- Breeze events (one row per occurrence / instance)
+CREATE TABLE events (
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  church_id          UUID NOT NULL REFERENCES churches(id) ON DELETE CASCADE,
+  breeze_instance_id TEXT UNIQUE,
+  breeze_event_id    TEXT,
+  name               TEXT NOT NULL,
+  service_type       TEXT NOT NULL DEFAULT 'other',
+  event_date         DATE NOT NULL,
+  event_datetime     TIMESTAMPTZ,
+  group_id           UUID REFERENCES groups(id) ON DELETE SET NULL,
+  cell_id            UUID REFERENCES cells(id)  ON DELETE SET NULL,
+  hybrid_status      TEXT DEFAULT 'inperson',
+  created_at         TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_events_church ON events (church_id);
+CREATE INDEX idx_events_date   ON events (event_date);
+CREATE INDEX idx_events_type   ON events (service_type);
+CREATE INDEX idx_events_group  ON events (group_id);
+
+-- Who attended which event
 CREATE TABLE attendance (
-  id           UUID  PRIMARY KEY DEFAULT gen_random_uuid(),
-  meeting_id   UUID  NOT NULL REFERENCES meetings(id)   ON DELETE CASCADE,
-  attendee_id  UUID  NOT NULL REFERENCES attendees(id)  ON DELETE CASCADE,
-  status       TEXT  NOT NULL DEFAULT 'present',  -- present | absent | late
-  created_at   TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (meeting_id, attendee_id)
+  id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  church_id            UUID NOT NULL REFERENCES churches(id) ON DELETE CASCADE,
+  person_id            UUID NOT NULL REFERENCES people(id)   ON DELETE CASCADE,
+  event_id             UUID NOT NULL REFERENCES events(id)   ON DELETE CASCADE,
+  attendance_status    TEXT NOT NULL DEFAULT 'present',
+  check_in_time        TIMESTAMPTZ,
+  imported_from_breeze BOOLEAN DEFAULT FALSE,
+  created_at           TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (person_id, event_id)
 );
 
-CREATE INDEX idx_attendance_meeting_id   ON attendance (meeting_id);
-CREATE INDEX idx_attendance_attendee_id  ON attendance (attendee_id);
-CREATE INDEX idx_attendance_status       ON attendance (status);
+CREATE INDEX idx_attendance_person ON attendance (person_id);
+CREATE INDEX idx_attendance_event  ON attendance (event_id);
+CREATE INDEX idx_attendance_church ON attendance (church_id);
 
--- ── chat (persistence for AI chatbot) ────────────────────────
+-- Sync job tracking
+CREATE TABLE sync_log (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  church_id         UUID REFERENCES churches(id) ON DELETE SET NULL,
+  sync_type         TEXT NOT NULL DEFAULT 'attendance',
+  status            TEXT NOT NULL DEFAULT 'running',
+  started_at        TIMESTAMPTZ DEFAULT NOW(),
+  completed_at      TIMESTAMPTZ,
+  records_processed INT DEFAULT 0,
+  records_created   INT DEFAULT 0,
+  error_message     TEXT
+);
+
+-- ============================================================
+-- AI CHATBOT
+-- ============================================================
+
 CREATE TABLE chat_sessions (
-  id         UUID  PRIMARY KEY DEFAULT gen_random_uuid(),
-  title      TEXT  NOT NULL DEFAULT 'New Chat',
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  church_id  UUID REFERENCES churches(id) ON DELETE CASCADE,
+  user_id    UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  title      TEXT NOT NULL DEFAULT 'New Chat',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE chat_messages (
-  id         UUID  PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id UUID  NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
-  role       TEXT  NOT NULL CHECK (role IN ('user', 'assistant')),
-  content    TEXT  NOT NULL,
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+  role       TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+  content    TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_chat_messages_session  ON chat_messages (session_id, created_at);
-CREATE INDEX idx_chat_sessions_updated  ON chat_sessions (updated_at DESC);
+CREATE INDEX idx_chat_messages_session ON chat_messages (session_id, created_at);
+CREATE INDEX idx_chat_sessions_updated ON chat_sessions (updated_at DESC);
 
--- ── sync_log ──────────────────────────────────────────────────
-CREATE TABLE sync_log (
-  id                UUID  PRIMARY KEY DEFAULT gen_random_uuid(),
-  source            TEXT  NOT NULL,   -- filename or 'breeze_sync'
-  group_name        TEXT,
-  started_at        TIMESTAMPTZ DEFAULT NOW(),
-  completed_at      TIMESTAMPTZ,
-  meetings_created  INT  DEFAULT 0,
-  attendees_created INT  DEFAULT 0,
-  attendance_created INT DEFAULT 0,
-  status            TEXT DEFAULT 'running',
-  error_message     TEXT
+-- ============================================================
+-- MESSAGING
+-- ============================================================
+
+CREATE TABLE campaigns (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  church_id        UUID REFERENCES churches(id) ON DELETE CASCADE,
+  name             TEXT NOT NULL,
+  command          TEXT,
+  created_by       TEXT DEFAULT 'admin',
+  status           TEXT NOT NULL DEFAULT 'draft',
+  total_recipients INT  NOT NULL DEFAULT 0,
+  sent_count       INT  NOT NULL DEFAULT 0,
+  created_at       TIMESTAMPTZ DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE campaign_recipients (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id       UUID NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+  person_id         UUID REFERENCES people(id) ON DELETE SET NULL,
+  name              TEXT,
+  phone             TEXT NOT NULL,
+  generated_message TEXT,
+  delivery_status   TEXT NOT NULL DEFAULT 'pending',
+  response_status   TEXT NOT NULL DEFAULT 'none',
+  clearstream_id    TEXT,
+  created_at        TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE conversations (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  church_id       UUID REFERENCES churches(id) ON DELETE CASCADE,
+  person_id       UUID REFERENCES people(id)   ON DELETE SET NULL,
+  phone           TEXT NOT NULL,
+  name            TEXT,
+  status          TEXT NOT NULL DEFAULT 'new_visitor',
+  assigned_leader TEXT,
+  ai_summary      TEXT,
+  is_sensitive    BOOLEAN NOT NULL DEFAULT FALSE,
+  last_message_at TIMESTAMPTZ,
+  created_at      TIMESTAMPTZ DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE sms_messages (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  direction       TEXT NOT NULL,
+  body            TEXT NOT NULL,
+  ai_generated    BOOLEAN NOT NULL DEFAULT FALSE,
+  approved        BOOLEAN NOT NULL DEFAULT FALSE,
+  clearstream_id  TEXT,
+  tone            TEXT,
+  pastoral_note   TEXT,
+  is_sensitive    BOOLEAN DEFAULT FALSE,
+  sent_at         TIMESTAMPTZ,
+  created_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================================
--- ROW LEVEL SECURITY (open for now — service role enforced server-side)
+-- ROW LEVEL SECURITY (open — enforcement at API layer)
 -- ============================================================
 
-ALTER TABLE groups       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE meetings     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE attendees    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE attendance   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE chat_sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sync_log     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE churches            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_profiles       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE church_memberships  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE church_invites      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE groups              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cells               ENABLE ROW LEVEL SECURITY;
+ALTER TABLE people              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE events              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sync_log            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chat_sessions       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chat_messages       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE campaigns           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE campaign_recipients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conversations       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sms_messages        ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "open_all" ON groups        FOR ALL USING (TRUE) WITH CHECK (TRUE);
-CREATE POLICY "open_all" ON meetings      FOR ALL USING (TRUE) WITH CHECK (TRUE);
-CREATE POLICY "open_all" ON attendees     FOR ALL USING (TRUE) WITH CHECK (TRUE);
-CREATE POLICY "open_all" ON attendance    FOR ALL USING (TRUE) WITH CHECK (TRUE);
-CREATE POLICY "open_all" ON chat_sessions FOR ALL USING (TRUE);
-CREATE POLICY "open_all" ON chat_messages FOR ALL USING (TRUE);
-CREATE POLICY "open_all" ON sync_log      FOR ALL USING (TRUE);
+CREATE POLICY "open_all" ON churches            FOR ALL USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "open_all" ON user_profiles       FOR ALL USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "open_all" ON church_memberships  FOR ALL USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "open_all" ON church_invites      FOR ALL USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "open_all" ON groups              FOR ALL USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "open_all" ON cells               FOR ALL USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "open_all" ON people              FOR ALL USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "open_all" ON events              FOR ALL USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "open_all" ON attendance          FOR ALL USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "open_all" ON sync_log            FOR ALL USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "open_all" ON chat_sessions       FOR ALL USING (TRUE);
+CREATE POLICY "open_all" ON chat_messages       FOR ALL USING (TRUE);
+CREATE POLICY "open_all" ON campaigns           FOR ALL USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "open_all" ON campaign_recipients FOR ALL USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "open_all" ON conversations       FOR ALL USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "open_all" ON sms_messages        FOR ALL USING (TRUE) WITH CHECK (TRUE);
 
 -- ============================================================
--- QUERY EXECUTION (for AI assistant)
+-- AI CHATBOT — safe read-only SQL execution
 -- ============================================================
 
--- Safe read-only SQL execution for the AI chatbot.
--- Only SELECT statements are permitted.
 CREATE OR REPLACE FUNCTION run_query(sql text)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-STABLE
 AS $$
 DECLARE
   result jsonb;
-  safe_sql text;
 BEGIN
-  safe_sql := trim(both from regexp_replace(sql, '^[\s\n\r]+', ''));
-
-  -- Block anything that isn't a SELECT or CTE (WITH ... SELECT)
-  IF lower(safe_sql) NOT LIKE 'select%' AND lower(safe_sql) NOT LIKE 'with%' THEN
-    RAISE EXCEPTION 'Only SELECT queries are permitted. Got: %', left(safe_sql, 50);
+  IF sql !~* '^\s*(SELECT|WITH\b)' THEN
+    RAISE EXCEPTION 'Only SELECT statements are allowed';
   END IF;
-
-  -- Block destructive keywords anywhere in the query
-  IF lower(safe_sql) ~ '\y(insert|update|delete|drop|truncate|alter|create|grant|revoke|execute|perform)\y' THEN
-    RAISE EXCEPTION 'Query contains disallowed keyword.';
-  END IF;
-
-  -- Wrap in a 500-row safety cap
-  EXECUTE format(
-    'SELECT COALESCE(jsonb_agg(row_to_json(t)), ''[]''::jsonb) FROM (SELECT * FROM (%s) sub LIMIT 500) t',
-    safe_sql
-  ) INTO result;
-
-  RETURN result;
+  EXECUTE 'SELECT jsonb_agg(row_to_json(t)) FROM (' || sql || ') t' INTO result;
+  RETURN COALESCE(result, '[]'::jsonb);
 END;
 $$;
 
 -- ============================================================
--- ANALYTICS FUNCTIONS
+-- SEED: PFCC church + ministry groups
 -- ============================================================
 
--- ── attendance_summary ───────────────────────────────────────
--- Per-attendee counts for a group + meeting type + date range.
--- Drives "who attends consistently" and "who stopped attending".
-CREATE OR REPLACE FUNCTION attendance_summary(
-  p_group_name   TEXT,
-  p_meeting_type TEXT,    -- NULL = all types
-  p_from_date    DATE,
-  p_to_date      DATE
-)
-RETURNS TABLE (
-  attendee_id    UUID,
-  name           TEXT,
-  times_attended BIGINT,
-  first_seen     DATE,
-  last_seen      DATE
-)
-LANGUAGE sql SECURITY DEFINER STABLE AS $$
-  SELECT
-    a.id            AS attendee_id,
-    a.name,
-    COUNT(att.id)   AS times_attended,
-    MIN(m.meeting_date) AS first_seen,
-    MAX(m.meeting_date) AS last_seen
-  FROM attendees a
-  JOIN attendance att ON att.attendee_id = a.id
-  JOIN meetings   m   ON m.id = att.meeting_id
-  JOIN groups     g   ON g.id = m.group_id
-  WHERE
-    att.status = 'present'
-    AND m.meeting_date BETWEEN p_from_date AND p_to_date
-    AND (p_group_name   IS NULL OR g.name ILIKE '%' || p_group_name || '%')
-    AND (p_meeting_type IS NULL OR m.meeting_type ILIKE '%' || p_meeting_type || '%')
-  GROUP BY a.id, a.name
-  ORDER BY times_attended DESC;
-$$;
+INSERT INTO churches (name, slug) VALUES ('Oasis PFCC', 'pfcc')
+ON CONFLICT (slug) DO NOTHING;
 
--- ── detect_transfers ─────────────────────────────────────────
--- People whose most recent attendance is in a DIFFERENT group than their most frequent group.
--- Returns only people who appear in 2+ groups within the date range.
-CREATE OR REPLACE FUNCTION detect_transfers(
-  p_from_date DATE,
-  p_to_date   DATE
-)
-RETURNS TABLE (
-  attendee_id    UUID,
-  name           TEXT,
-  primary_group  TEXT,
-  recent_group   TEXT,
-  primary_count  BIGINT,
-  recent_count   BIGINT
-)
-LANGUAGE sql SECURITY DEFINER STABLE AS $$
-  WITH per_group AS (
-    SELECT
-      a.id           AS attendee_id,
-      a.name,
-      g.name         AS group_name,
-      COUNT(att.id)  AS cnt,
-      MAX(m.meeting_date) AS last_date
-    FROM attendees a
-    JOIN attendance att ON att.attendee_id = a.id
-    JOIN meetings   m   ON m.id = att.meeting_id
-    JOIN groups     g   ON g.id = m.group_id
-    WHERE att.status = 'present'
-      AND m.meeting_date BETWEEN p_from_date AND p_to_date
-    GROUP BY a.id, a.name, g.name
-  ),
-  multi_group AS (
-    SELECT attendee_id
-    FROM per_group
-    GROUP BY attendee_id
-    HAVING COUNT(DISTINCT group_name) > 1
-  ),
-  ranked AS (
-    SELECT
-      pg.*,
-      ROW_NUMBER() OVER (PARTITION BY attendee_id ORDER BY cnt DESC)         AS rank_by_count,
-      ROW_NUMBER() OVER (PARTITION BY attendee_id ORDER BY last_date DESC)   AS rank_by_recency
-    FROM per_group pg
-    WHERE pg.attendee_id IN (SELECT attendee_id FROM multi_group)
-  )
-  SELECT
-    freq.attendee_id,
-    freq.name,
-    freq.group_name   AS primary_group,
-    recent.group_name AS recent_group,
-    freq.cnt          AS primary_count,
-    recent.cnt        AS recent_count
-  FROM ranked freq
-  JOIN ranked recent ON recent.attendee_id = freq.attendee_id
-    AND recent.rank_by_recency = 1
-  WHERE freq.rank_by_count = 1
-    AND freq.group_name != recent.group_name
-  ORDER BY freq.name;
-$$;
-
--- ── meeting_headcounts ───────────────────────────────────────
--- Headcount per meeting for a group + date range.
-CREATE OR REPLACE FUNCTION meeting_headcounts(
-  p_group_name   TEXT,
-  p_meeting_type TEXT,
-  p_from_date    DATE,
-  p_to_date      DATE
-)
-RETURNS TABLE (
-  meeting_id    UUID,
-  meeting_date  DATE,
-  meeting_type  TEXT,
-  group_name    TEXT,
-  headcount     BIGINT
-)
-LANGUAGE sql SECURITY DEFINER STABLE AS $$
-  SELECT
-    m.id           AS meeting_id,
-    m.meeting_date,
-    m.meeting_type,
-    g.name         AS group_name,
-    COUNT(att.id)  AS headcount
-  FROM meetings m
-  JOIN groups   g   ON g.id = m.group_id
-  LEFT JOIN attendance att ON att.meeting_id = m.id AND att.status = 'present'
-  WHERE
-    m.meeting_date BETWEEN p_from_date AND p_to_date
-    AND (p_group_name   IS NULL OR g.name ILIKE '%' || p_group_name || '%')
-    AND (p_meeting_type IS NULL OR m.meeting_type ILIKE '%' || p_meeting_type || '%')
-  GROUP BY m.id, m.meeting_date, m.meeting_type, g.name
-  ORDER BY m.meeting_date DESC;
-$$;
+INSERT INTO groups (church_id, name)
+SELECT c.id, g.name
+FROM churches c, (VALUES
+  ('MEGA'),
+  ('CharmCity'),
+  ('Zone B'),
+  ('LifeSprings'),
+  ('Vanguards'),
+  ('Trailblazers'),
+  ('Missions'),
+  ('Capital City')
+) AS g(name)
+WHERE c.slug = 'pfcc'
+ON CONFLICT (church_id, name) DO NOTHING;

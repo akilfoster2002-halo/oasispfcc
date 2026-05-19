@@ -56,7 +56,7 @@ export async function POST(req: Request) {
   // Create the church
   const { data: church, error: churchErr } = await supabase
     .from('churches')
-    .insert({ name: name.trim(), slug, requires_approval: false })
+    .insert({ name: name.trim(), slug })
     .select()
     .single()
 
@@ -84,6 +84,27 @@ export async function POST(req: Request) {
   await supabase.from('user_profiles').upsert({
     id: user.id, role: 'master', group_id: null,
   }, { onConflict: 'id' })
+
+  // Seed the Cell Report preset form for this church
+  await supabase.from('forms').insert({
+    church_id: church.id,
+    name: 'Cell Report',
+    description: 'Weekly cell group meeting report',
+    is_preset: true,
+    fields: [
+      { id: 'leader_name',        type: 'text',     label: 'Leader Name',              required: true,  placeholder: 'Full name of cell leader' },
+      { id: 'cell_name',          type: 'text',     label: 'Cell Group Name',          required: true,  placeholder: 'e.g. Eagles Cell' },
+      { id: 'meeting_type',       type: 'radio',    label: 'Meeting Type',             required: true,  options: ['In-Person', 'Online', 'Hybrid'] },
+      { id: 'total_attendance',   type: 'number',   label: 'Total Attendance',         required: true  },
+      { id: 'first_timers',       type: 'number',   label: 'First Timers',             required: false },
+      { id: 'first_timer_details',type: 'textarea', label: 'First Timer Details',      required: false, placeholder: 'Names, contacts, notes…' },
+      { id: 'soul_won',           type: 'number',   label: 'Souls Won',                required: false },
+      { id: 'fs_enrolled',        type: 'number',   label: 'Foundation School Enrolled', required: false },
+      { id: 'substantiations',    type: 'number',   label: 'Substantiations',          required: false },
+      { id: 'prayer_points',      type: 'textarea', label: 'Prayer Points',            required: false, placeholder: 'Key prayer points from the meeting…' },
+      { id: 'additional_notes',   type: 'textarea', label: 'Additional Notes',         required: false, placeholder: 'Anything else to report…' },
+    ],
+  })
 
   return Response.json({ church }, { status: 201 })
 }

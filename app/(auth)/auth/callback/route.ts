@@ -50,12 +50,12 @@ export async function GET(request: NextRequest) {
           // Look up the church
           const { data: church } = await admin
             .from('churches')
-            .select('id, requires_approval')
+            .select('id')
             .eq('slug', slug)
             .single()
 
           if (church) {
-            const status = church.requires_approval ? 'pending' : 'approved'
+            const status = 'approved'
 
             // Create or update the membership
             await admin
@@ -79,10 +79,7 @@ export async function GET(request: NextRequest) {
             // Clear the pending slug cookie
             cookieStore.set('pending_church_slug', '', { maxAge: 0 })
 
-            const redirectPath = status === 'pending'
-              ? '/pending-approval'
-              : `/${slug}/dashboard`
-            return NextResponse.redirect(`${origin}${redirectPath}`)
+            return NextResponse.redirect(`${origin}/${slug}/dashboard`)
           }
         }
       }

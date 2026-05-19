@@ -7,21 +7,21 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const supabase = getSupabaseServer()
 
   const [{ data: conv, error }, { data: messages }] = await Promise.all([
-    supabase.from('conversations').select('*, attendees(name, phone, breeze_id)').eq('id', id).single(),
+    supabase.from('conversations').select('*, people(first_name, last_name, phone)').eq('id', id).single(),
     supabase.from('sms_messages').select('*').eq('conversation_id', id).order('created_at', { ascending: true }),
   ])
 
   if (error || !conv) return Response.json({ error: 'Not found' }, { status: 404 })
 
-  // Get attendance history if linked to an attendee
+  // Get attendance history if linked to a person
   let attendanceHistory: unknown[] = []
-  if (conv.attendee_id) {
+  if (conv.person_id) {
     const { data } = await supabase
       .from('attendance')
-      .select('id, status, meetings(meeting_date, meeting_type, name, groups(name))')
-      .eq('attendee_id', conv.attendee_id)
-      .eq('status', 'present')
-      .order('meetings(meeting_date)', { ascending: false })
+      .select('id, attendance_status, events(event_date, service_type, name, groups(name))')
+      .eq('person_id', conv.person_id)
+      .eq('attendance_status', 'present')
+      .order('events(event_date)', { ascending: false })
       .limit(10)
     attendanceHistory = data ?? []
   }

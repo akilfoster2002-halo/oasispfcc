@@ -2,10 +2,11 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { type NextRequest, NextResponse } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/signup', '/auth', '/join', '/invite', '/pending-approval', '/select-church']
+const PUBLIC_PATHS = ['/login', '/signup', '/auth', '/join', '/invite', '/pending-approval', '/select-church', '/api/', '/pricing', '/give']
 
 function isPublicPath(pathname: string) {
-  return PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
+  if (pathname === '/') return true
+  return PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p))
 }
 
 function adminClient() {
@@ -55,7 +56,7 @@ export async function updateSession(request: NextRequest) {
   if (user) {
     // Extract slug from path — first segment that isn't a known top-level page
     const segments = pathname.split('/').filter(Boolean)
-    const topLevelPublic = ['login', 'signup', 'auth', 'join', 'invite', 'onboarding', 'pending-approval', 'select-church', 'api']
+    const topLevelPublic = ['login', 'signup', 'auth', 'join', 'invite', 'onboarding', 'pending-approval', 'select-church', 'api', 'give']
 
     if (segments.length >= 1 && !topLevelPublic.includes(segments[0])) {
       const slug = segments[0]
@@ -98,7 +99,8 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
-    // Authenticated user at root — route to their church(es)
+    // Authenticated user at root — redirect to their dashboard if they have a church,
+    // otherwise let them see the landing page so they can choose to create one.
     if (pathname === '/') {
       const admin = adminClient()
       const { data: memberships } = await admin
@@ -108,18 +110,22 @@ export async function updateSession(request: NextRequest) {
         .eq('status', 'approved')
 
       const approved = memberships ?? []
-
       const url = request.nextUrl.clone()
+
       if (approved.length === 1) {
-        const churchSlug = (approved[0].church as { slug: string } | null)?.slug
-        url.pathname = churchSlug ? `/${churchSlug}/dashboard` : '/select-church'
+        const churchObj = approved[0].church as unknown
+        const churchSlug = (churchObj && typeof churchObj === 'object' && !Array.isArray(churchObj))
+          ? (churchObj as { slug: string }).slug
+          : null
+        if (churchSlug) {
+          url.pathname = `/${churchSlug}/dashboard`
+          return NextResponse.redirect(url)
+        }
       } else if (approved.length > 1) {
         url.pathname = '/select-church'
-      } else {
-        // No approved churches — go to onboarding to create one
-        url.pathname = '/onboarding'
+        return NextResponse.redirect(url)
       }
-      return NextResponse.redirect(url)
+      // No approved churches — show the landing page, let them click the CTA
     }
   }
 

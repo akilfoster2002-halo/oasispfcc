@@ -77,15 +77,26 @@ async function main() {
   console.log(`Date range: ${dfrom} → ${dto}`)
   const syncStart = new Date()
 
-  // 1. Insert sync_log record
+  // 1. Resolve church ID
+  const churchSlug = process.env.CHURCH_SLUG ?? 'pfcc'
+  const { data: church } = await supabase
+    .from('churches')
+    .select('id, name')
+    .eq('slug', churchSlug)
+    .single()
+  if (!church?.id) throw new Error(`Church "${churchSlug}" not found. Run onboarding first.`)
+  const churchId = church.id as string
+  console.log(`Church: ${church.name} (${churchId})`)
+
+  // 2. Insert sync_log record
   const { data: syncRow } = await supabase
     .from('sync_log')
-    .insert({ sync_type: 'attendance', status: 'running' })
+    .insert({ church_id: churchId, sync_type: 'attendance', status: 'running' })
     .select('id')
     .single()
   const syncLogId: string | null = syncRow?.id ?? null
 
-  // 2. Fetch all events from Breeze for the date range
+  // 3. Fetch all events from Breeze for the date range
   console.log('\nFetching events from Breeze...')
   let events: Awaited<ReturnType<typeof fetchEvents>>
   try {
@@ -116,29 +127,31 @@ async function main() {
     return
   }
 
-  // 3. Load groups from Supabase → name→id lookup
+  // 4. Load groups from Supabase → name→id lookup
   console.log('\nLoading groups...')
   const { data: groupData, error: gErr } = await supabase
     .from('groups')
     .select('id, name')
+    .eq('church_id', churchId)
   if (gErr) throw new Error('Failed to load groups: ' + gErr.message)
   const groups = (groupData ?? []) as { id: string; name: string }[]
   const groupNameToId = new Map<string, string>()
   for (const g of groups) groupNameToId.set(g.name, g.id)
   console.log(`  Loaded ${groups.length} groups`)
 
-  // 4. Load cells from Supabase → name→id lookup
+  // 5. Load cells from Supabase → name→id lookup
   console.log('Loading cells...')
   const { data: cellData, error: cErr } = await supabase
     .from('cells')
     .select('id, name')
+    .eq('church_id', churchId)
   if (cErr) throw new Error('Failed to load cells: ' + cErr.message)
   const cells = (cellData ?? []) as { id: string; name: string }[]
   const cellNameToId = new Map<string, string>()
   for (const c of cells) cellNameToId.set(c.name, c.id)
   console.log(`  Loaded ${cells.length} cells`)
 
-  // 5. Load people from Supabase → breeze_id→uuid map
+  // 6. Load people from Supabase → breeze_id→uuid map
   console.log('Loading people...')
   const breezeIdToUuid = new Map<string, string>()
   let offset = 0
@@ -147,6 +160,7 @@ async function main() {
     const { data: rows, error: pErr } = await supabase
       .from('people')
       .select('id, breeze_id')
+      .eq('church_id', churchId)
       .range(offset, offset + pageSize - 1)
     if (pErr) throw new Error('Failed to load people: ' + pErr.message)
     if (!rows || rows.length === 0) break
@@ -158,7 +172,7 @@ async function main() {
   }
   console.log(`  Loaded ${breezeIdToUuid.size} people`)
 
-  // 6. Process events
+  // 7. Process events
   let eventsUpserted = 0
   let attendanceUpserted = 0
   let skippedPeople = 0
@@ -202,6 +216,7 @@ async function main() {
     const { data: eventRow, error: evErr } = await supabase
       .from('events')
       .upsert({
+        church_id:          churchId,
         breeze_instance_id: event.id,
         breeze_event_id:    event.event_id,
         name:               event.name,
@@ -236,6 +251,7 @@ async function main() {
 
     // Map breeze_ids to Supabase UUIDs, capturing check_in_time from created_on
     const attRows: {
+      church_id: string
       person_id: string
       event_id: string
       attendance_status: string
@@ -246,6 +262,7 @@ async function main() {
       const uuid = breezeIdToUuid.get(rec.person_id)
       if (!uuid) { skippedPeople++; continue }
       attRows.push({
+        church_id:            churchId,
         person_id:            uuid,
         event_id:             eventId,
         attendance_status:    'present',
@@ -267,7 +284,7 @@ async function main() {
     }
   }
 
-  // 7. Update sync_log
+  // 8. Update sync_log
   const completed = new Date()
   const duration  = ((completed.getTime() - syncStart.getTime()) / 1000).toFixed(1)
   if (syncLogId) {
@@ -279,7 +296,7 @@ async function main() {
     }).eq('id', syncLogId)
   }
 
-  // 8. Summary
+  // 9. Summary
   const { count: evCount } = await supabase
     .from('events')
     .select('*', { count: 'exact', head: true })

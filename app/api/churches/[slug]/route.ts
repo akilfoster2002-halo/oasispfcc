@@ -19,7 +19,7 @@ export async function GET(
 
   const { data: church, error } = await supabase
     .from('churches')
-    .select('id, name, slug, description, logo_url, requires_approval, settings')
+    .select('id, name, slug, created_at')
     .eq('slug', slug)
     .single()
 

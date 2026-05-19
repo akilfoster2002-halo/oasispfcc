@@ -37,18 +37,22 @@ async function main() {
     const to   = process.argv[5] ?? today
     console.log(`=== Syncing ${groupName} (${from} → ${to}) ===\n`)
     const supabase = createSupabaseAdmin()
-    const { data: groupRows } = await supabase.from('groups').select('id, name')
+    const churchSlug = process.env.CHURCH_SLUG ?? 'pfcc'
+    const { data: church } = await supabase.from('churches').select('id').eq('slug', churchSlug).single()
+    if (!church?.id) throw new Error(`Church "${churchSlug}" not found`)
+    const churchId = church.id as string
+    const { data: groupRows } = await supabase.from('groups').select('id, name').eq('church_id', churchId)
     const groupId = (groupRows ?? []).find((g: { id: string; name: string }) => g.name === groupName)?.id ?? null
     const breezeToUuid = new Map<number, string>()
     let offset = 0
     while (true) {
-      const { data: rows } = await supabase.from('attendees').select('id, breeze_id').not('breeze_id', 'is', null).range(offset, offset + 999)
+      const { data: rows } = await supabase.from('people').select('id, breeze_id').eq('church_id', churchId).not('breeze_id', 'is', null).range(offset, offset + 999)
       if (!rows || rows.length === 0) break
       for (const r of rows) breezeToUuid.set(Number(r.breeze_id), r.id)
       if (rows.length < 1000) break
       offset += 1000
     }
-    const r = await syncCalendarFeed(supabase, firstArg, groupName, groupId, from, to, breezeToUuid, console.log)
+    const r = await syncCalendarFeed(supabase, firstArg, groupName, groupId, churchId, from, to, breezeToUuid, console.log)
     console.log(`\nDone: ${r.meetingsCreated} meetings created, ${r.attendanceAdded} attendance added, ${r.errors} errors`)
     if (r.errorDetails.length) console.log('Errors:', r.errorDetails)
     return

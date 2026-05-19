@@ -55,7 +55,7 @@ export default function TeamPage() {
 
   async function sendInvite(e: React.FormEvent) {
     e.preventDefault()
-    if (!churchId) return
+    if (!churchId) { setSendError('Church not loaded yet — please wait a moment and try again.'); return }
     setSendError('')
     setSending(true)
     setLastLink('')
@@ -69,10 +69,11 @@ export default function TeamPage() {
       if (!res.ok) { setSendError(data.error ?? 'Failed to send invite'); return }
       setLastLink(data.inviteUrl)
       setEmail('')
-      // Refresh list
       fetch(`/api/invites?churchId=${churchId}`)
         .then(r => r.json())
         .then(({ invites: inv }) => setInvites(inv ?? []))
+    } catch {
+      setSendError('Network error — please try again.')
     } finally {
       setSending(false)
     }
@@ -137,16 +138,17 @@ export default function TeamPage() {
           </select>
           <button
             type="submit"
-            disabled={sending}
+            disabled={sending || !churchId}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold shrink-0 transition-all"
             style={{
-              background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
-              color: '#fff',
-              opacity: sending ? 0.6 : 1,
+              background: sending || !churchId ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+              color: sending || !churchId ? 'rgba(255,255,255,0.35)' : '#fff',
+              cursor: sending || !churchId ? 'not-allowed' : 'pointer',
+              opacity: 1,
             }}
           >
             <Send className="w-4 h-4" />
-            {sending ? 'Sending…' : 'Invite'}
+            {sending ? 'Sending…' : 'Send Invite'}
           </button>
         </form>
 

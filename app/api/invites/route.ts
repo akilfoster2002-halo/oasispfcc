@@ -110,9 +110,10 @@ export async function POST(req: Request) {
       .from('church_invites')
       .insert({
         church_id: churchId,
-        invited_by: requester.userId,
+        created_by: requester.userId,
         email,
         role,
+        expires_at: new Date(Date.now() + 7 * 86400000).toISOString(),
       })
       .select('token')
       .single()
@@ -129,27 +130,33 @@ export async function POST(req: Request) {
 
   const redirectTo = `${appUrl}/invite/${inviteToken}`
 
-  // Send invite email via Supabase Auth
-  const { error: emailErr } = await supabase.auth.admin.inviteUserByEmail(email, {
-    redirectTo,
-    data: {
-      church_slug: church.slug,
-      church_name: church.name,
-      invite_token: inviteToken,
-      role,
+  // Generate a magic invite link without sending an email (avoids rate limits).
+  // The admin copies this link and shares it via text/WhatsApp/etc.
+  const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
+    type: 'invite',
+    email,
+    options: {
+      redirectTo,
+      data: {
+        church_slug: church.slug,
+        church_name: church.name,
+        invite_token: inviteToken,
+        role,
+      },
     },
   })
 
-  if (emailErr) {
-    // If user already exists, send them a magic link instead
-    if (emailErr.message.includes('already been registered')) {
-      // For existing users: just return the invite link (they can sign in and accept)
+  if (linkErr) {
+    // If user already exists they can just use the invite URL directly
+    if (linkErr.message.toLowerCase().includes('already been registered') || linkErr.message.toLowerCase().includes('already registered')) {
       return Response.json({ inviteToken, inviteUrl: redirectTo, note: 'user_exists' })
     }
-    return Response.json({ error: emailErr.message }, { status: 500 })
+    return Response.json({ error: linkErr.message }, { status: 500 })
   }
 
-  return Response.json({ inviteToken, inviteUrl: redirectTo }, { status: 201 })
+  const inviteUrl = linkData.properties?.action_link ?? redirectTo
+
+  return Response.json({ inviteToken, inviteUrl }, { status: 201 })
 }
 
 /**

@@ -9,7 +9,7 @@ export default function ChurchLayout({
   return (
     <>
       <Sidebar />
-      <main className="min-h-full pb-20 md:pb-0 md:ml-56" style={{ background: 'transparent' }}>
+      <main className="main-content min-h-full pb-20 md:pb-0" style={{ background: 'transparent' }}>
         {children}
       </main>
       <MobileNav />

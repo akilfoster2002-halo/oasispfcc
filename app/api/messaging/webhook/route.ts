@@ -24,19 +24,20 @@ export async function POST(req: Request) {
 
     const supabase = getSupabaseServer()
 
-    const { data: attendee } = await supabase
-      .from('attendees')
-      .select('id, name')
+    const { data: person } = await supabase
+      .from('people')
+      .select('id, first_name, last_name')
       .eq('phone', phone)
       .maybeSingle()
 
-    const displayName = attendee?.name ?? fullName ?? phone
+    const personName = person ? `${person.first_name} ${person.last_name}`.trim() : null
+    const displayName = personName ?? fullName ?? phone
     const now = new Date().toISOString()
 
     const { data: conv, error: ce } = await supabase
       .from('conversations')
       .upsert(
-        { phone, name: displayName, attendee_id: attendee?.id ?? null, last_message_at: now, updated_at: now },
+        { phone, name: displayName, person_id: person?.id ?? null, last_message_at: now, updated_at: now },
         { onConflict: 'phone', ignoreDuplicates: false }
       )
       .select()

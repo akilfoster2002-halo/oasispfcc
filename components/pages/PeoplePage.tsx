@@ -1,15 +1,20 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Search, Users } from 'lucide-react'
+import { useEffect, useState, useCallback } from 'react'
+import { Search, Users, Archive, RotateCcw, Trash2 } from 'lucide-react'
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
 import { useUserProfile } from '@/lib/use-user-profile'
 
-interface AttendeeRow {
+interface PersonRow {
   id: string
+  first_name: string
+  last_name: string
   name: string
   phone: string | null
   created_at: string
+  designation: string | null
 }
 
 function initials(name: string) {
@@ -24,57 +29,98 @@ function avatarColor(name: string) {
 }
 
 export default function PeoplePage() {
+  const params = useParams()
+  const slug = params?.slug as string
   const { profile, loading: profileLoading } = useUserProfile()
-  const [people, setPeople]   = useState<AttendeeRow[]>([])
+
+  const [people, setPeople]   = useState<PersonRow[]>([])
   const [query, setQuery]     = useState('')
   const [loading, setLoading] = useState(true)
+  const [tab, setTab]         = useState<'active' | 'archived'>('active')
+  const [acting, setActing]   = useState<string | null>(null)   // id being restored/deleted
 
   useEffect(() => {
     if (profileLoading) return
-
     const sb = getSupabaseBrowser()
 
     async function load() {
       let ids: string[] | null = null
 
-      // Group users: get attendee IDs for their group only
       if (profile?.role === 'group' && profile.group_id) {
         const { data: rows } = await sb
           .from('attendance')
-          .select('attendee_id, meetings!inner(group_id)')
-          .eq('meetings.group_id', profile.group_id)
-        ids = [...new Set((rows ?? []).map((r: { attendee_id: string }) => r.attendee_id))]
+          .select('person_id, events!inner(group_id)')
+          .eq('events.group_id', profile.group_id)
+        ids = [...new Set((rows ?? []).map((r: { person_id: string }) => r.person_id))]
         if (ids.length === 0) { setLoading(false); return }
       }
 
       let q = sb
-        .from('attendees')
-        .select('id, name, phone, created_at')
-        .order('name')
+        .from('people')
+        .select('id, first_name, last_name, phone, created_at, designation')
+        .order('last_name')
 
       if (ids !== null) q = q.in('id', ids)
 
       const { data } = await q
-      setPeople((data as AttendeeRow[]) ?? [])
+      setPeople(
+        ((data ?? []) as Omit<PersonRow, 'name'>[])
+          .map(p => ({ ...p, name: `${p.first_name} ${p.last_name}`.trim() }))
+      )
       setLoading(false)
     }
 
     load()
   }, [profile, profileLoading])
 
-  const filtered = people.filter(p => {
+  const active   = people.filter(p => p.designation !== 'archived')
+  const archived = people.filter(p => p.designation === 'archived')
+  const list     = tab === 'active' ? active : archived
+
+  const filtered = list.filter(p => {
     const q = query.toLowerCase()
     return p.name.toLowerCase().includes(q) || (p.phone ?? '').includes(q)
   })
 
-  const groupLabel = profile?.role === 'group' ? null : null
+  const handleRestore = useCallback(async (id: string) => {
+    setActing(id)
+    const sb = getSupabaseBrowser()
+    await sb.from('people').update({ designation: null }).eq('id', id)
+    setPeople(prev => prev.map(p => p.id === id ? { ...p, designation: null } : p))
+    setActing(null)
+  }, [])
+
+  const handleDelete = useCallback(async (id: string, name: string) => {
+    if (!confirm(`Permanently delete ${name}? This cannot be undone and will remove all their attendance records.`)) return
+    setActing(id)
+    const sb = getSupabaseBrowser()
+    await sb.from('people').delete().eq('id', id)
+    setPeople(prev => prev.filter(p => p.id !== id))
+    setActing(null)
+  }, [])
+
+  // Tab pill style
+  const tabPill = (active: boolean) => ({
+    background: active
+      ? 'linear-gradient(135deg, rgba(129,140,248,0.22) 0%, rgba(99,102,241,0.15) 100%)'
+      : 'transparent',
+    border: active ? '1px solid rgba(129,140,248,0.28)' : '1px solid transparent',
+    color: active ? '#818cf8' : 'rgba(255,255,255,0.40)',
+    borderRadius: '10px',
+    padding: '6px 14px',
+    fontSize: '12px',
+    fontWeight: active ? '600' : '500',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+  } as React.CSSProperties)
 
   return (
     <div
       className="min-h-screen px-6 py-8"
-      style={{
-        background: 'linear-gradient(180deg, rgba(10,14,35,0.95) 0%, rgba(8,12,26,0.98) 100%)',
-      }}
+      style={{ background: 'linear-gradient(180deg, rgba(10,14,35,0.95) 0%, rgba(8,12,26,0.98) 100%)' }}
     >
       <div className="max-w-4xl mx-auto">
 
@@ -90,32 +136,71 @@ export default function PeoplePage() {
             <Users className="w-5 h-5" style={{ color: '#818cf8' }} />
           </div>
           <div>
-            <h1 className="text-lg font-semibold" style={{ color: 'rgba(255,255,255,0.92)' }}>
-              People
-            </h1>
+            <h1 className="text-lg font-semibold" style={{ color: 'rgba(255,255,255,0.92)' }}>People</h1>
             <p className="text-sm" style={{ color: 'rgba(255,255,255,0.40)' }}>
-              {loading ? '—' : `${people.length.toLocaleString()} member${people.length !== 1 ? 's' : ''}${profile?.role === 'group' ? ' in your group' : ''}`}
+              {loading ? '—' : `${active.length.toLocaleString()} active member${active.length !== 1 ? 's' : ''}`}
             </p>
           </div>
         </div>
 
-        {/* Search */}
-        <div
-          className="flex items-center gap-2 mb-5 px-4 py-2.5 rounded-xl"
-          style={{
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.09)',
-            maxWidth: 360,
-          }}
-        >
-          <Search className="w-4 h-4 shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }} />
-          <input
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search by name or phone…"
-            className="flex-1 bg-transparent text-sm outline-none"
-            style={{ color: 'rgba(255,255,255,0.80)' }}
-          />
+        {/* Tabs + Search row */}
+        <div className="flex flex-wrap items-center gap-3 mb-5">
+
+          {/* Active / Archived tabs */}
+          <div
+            className="flex gap-0.5 p-1 rounded-xl"
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}
+          >
+            <button onClick={() => { setTab('active'); setQuery('') }} style={tabPill(tab === 'active')}>
+              <Users className="w-3.5 h-3.5" />
+              Active
+              {!loading && (
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded-full"
+                  style={{
+                    backgroundColor: tab === 'active' ? 'rgba(129,140,248,0.25)' : 'rgba(255,255,255,0.08)',
+                    color: tab === 'active' ? '#818cf8' : 'rgba(255,255,255,0.35)',
+                  }}
+                >
+                  {active.length}
+                </span>
+              )}
+            </button>
+            <button onClick={() => { setTab('archived'); setQuery('') }} style={tabPill(tab === 'archived')}>
+              <Archive className="w-3.5 h-3.5" />
+              Archived
+              {!loading && archived.length > 0 && (
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded-full"
+                  style={{
+                    backgroundColor: tab === 'archived' ? 'rgba(129,140,248,0.25)' : 'rgba(255,255,255,0.08)',
+                    color: tab === 'archived' ? '#818cf8' : 'rgba(255,255,255,0.35)',
+                  }}
+                >
+                  {archived.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Search */}
+          <div
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl flex-1"
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.09)',
+              maxWidth: 320,
+            }}
+          >
+            <Search className="w-4 h-4 shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }} />
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search by name or phone…"
+              className="flex-1 bg-transparent text-sm outline-none"
+              style={{ color: 'rgba(255,255,255,0.80)' }}
+            />
+          </div>
         </div>
 
         {/* Table */}
@@ -125,12 +210,18 @@ export default function PeoplePage() {
         >
           {/* Column headers */}
           <div
-            className="grid grid-cols-[2fr_1.5fr_1fr] gap-4 px-5 py-3 text-xs font-semibold uppercase tracking-wide"
-            style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.30)' }}
+            className="px-5 py-3 text-xs font-semibold uppercase tracking-wide"
+            style={{
+              borderBottom: '1px solid rgba(255,255,255,0.06)',
+              color: 'rgba(255,255,255,0.30)',
+              display: 'grid',
+              gridTemplateColumns: tab === 'archived' ? '2fr 1.5fr auto' : '2fr 1.5fr 1fr',
+              gap: '1rem',
+            }}
           >
             <span>Name</span>
             <span className="hidden sm:block">Phone</span>
-            <span className="hidden md:block">Since</span>
+            <span className="hidden md:block">{tab === 'archived' ? 'Actions' : 'Since'}</span>
           </div>
 
           {loading || profileLoading ? (
@@ -142,17 +233,102 @@ export default function PeoplePage() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-16 text-center">
-              <p className="text-sm" style={{ color: 'rgba(255,255,255,0.30)' }}>
-                {query ? `No results for "${query}"` : 'No members yet.'}
-              </p>
+              {tab === 'archived' ? (
+                <>
+                  <Archive className="w-10 h-10 mx-auto mb-3" style={{ color: 'rgba(255,255,255,0.12)' }} />
+                  <p className="text-sm" style={{ color: 'rgba(255,255,255,0.30)' }}>
+                    {query ? `No archived members matching "${query}"` : 'No archived members'}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.30)' }}>
+                  {query ? `No results for "${query}"` : 'No members yet.'}
+                </p>
+              )}
             </div>
           ) : (
             <ul className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
               {filtered.map(person => {
                 const color = avatarColor(person.name)
+                const isActing = acting === person.id
+
+                if (tab === 'archived') {
+                  return (
+                    <li key={person.id}>
+                      <div
+                        className="flex items-center gap-4 px-5 py-3.5"
+                        style={{ opacity: isActing ? 0.5 : 1, transition: 'opacity 0.2s' }}
+                      >
+                        {/* Avatar + Name */}
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold text-white"
+                            style={{ background: color, opacity: 0.6 }}
+                          >
+                            {initials(person.name)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                              {person.name}
+                            </p>
+                            {person.phone && (
+                              <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                                {person.phone}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => handleRestore(person.id)}
+                            disabled={isActing}
+                            title="Restore to active"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                            style={{
+                              backgroundColor: 'rgba(5,150,105,0.12)',
+                              border: '1px solid rgba(5,150,105,0.25)',
+                              color: '#34d399',
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(5,150,105,0.22)')}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(5,150,105,0.12)')}
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            Restore
+                          </button>
+                          <button
+                            onClick={() => handleDelete(person.id, person.name)}
+                            disabled={isActing}
+                            title="Permanently delete"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                            style={{
+                              backgroundColor: 'rgba(248,113,113,0.10)',
+                              border: '1px solid rgba(248,113,113,0.22)',
+                              color: '#f87171',
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(248,113,113,0.20)')}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(248,113,113,0.10)')}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  )
+                }
+
+                // Active row — clickable link
                 return (
                   <li key={person.id}>
-                    <div className="grid grid-cols-[2fr_1.5fr_1fr] gap-4 items-center px-5 py-3.5">
+                    <Link
+                      href={`/${slug}/people/${person.id}`}
+                      className="grid gap-4 items-center px-5 py-3.5 transition-colors"
+                      style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr' }}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)')}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
                       <div className="flex items-center gap-3 min-w-0">
                         <div
                           className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold text-white"
@@ -172,7 +348,7 @@ export default function PeoplePage() {
                       <span className="hidden md:block text-sm" style={{ color: 'rgba(255,255,255,0.30)' }}>
                         {new Date(person.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                       </span>
-                    </div>
+                    </Link>
                   </li>
                 )
               })}
@@ -182,8 +358,22 @@ export default function PeoplePage() {
 
         {!loading && filtered.length > 0 && (
           <p className="mt-3 text-xs" style={{ color: 'rgba(255,255,255,0.22)' }}>
-            Showing {filtered.length.toLocaleString()} of {people.length.toLocaleString()} members
+            Showing {filtered.length.toLocaleString()} of {list.length.toLocaleString()} {tab === 'archived' ? 'archived' : 'active'} members
           </p>
+        )}
+
+        {/* Archived info callout */}
+        {tab === 'archived' && !loading && archived.length > 0 && (
+          <div
+            className="mt-4 px-4 py-3 rounded-xl text-xs"
+            style={{
+              background: 'rgba(248,113,113,0.07)',
+              border: '1px solid rgba(248,113,113,0.15)',
+              color: 'rgba(255,255,255,0.40)',
+            }}
+          >
+            Deleting a person is permanent and removes all their attendance records. Use Restore to move them back to active.
+          </div>
         )}
       </div>
     </div>

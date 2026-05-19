@@ -36,15 +36,15 @@ export async function GET(req: Request) {
 
   if (status) q = q.eq('status', status)
 
-  // Group-scoped users only see conversations for attendees in their group
+  // Group-scoped users only see conversations for people in their group
   if (profile && profile.role === 'group' && profile.group_id) {
     const { data: rows } = await supabase
       .from('attendance')
-      .select('attendee_id, meetings!inner(group_id)')
-      .eq('meetings.group_id', profile.group_id)
-    const ids = [...new Set((rows ?? []).map((r: { attendee_id: string }) => r.attendee_id))]
+      .select('person_id, events!inner(group_id)')
+      .eq('events.group_id', profile.group_id)
+    const ids = [...new Set((rows ?? []).map((r: { person_id: string }) => r.person_id))]
     if (ids.length === 0) return Response.json([])
-    q = q.in('attendee_id', ids)
+    q = q.in('person_id', ids)
   }
 
   const { data: convs, error } = await q

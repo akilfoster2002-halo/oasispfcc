@@ -22,17 +22,17 @@ export async function getUserProfile(
 }
 
 /**
- * Returns a Supabase filter expression for scoping attendee_id to a group.
- * Pass the result to `.in('attendee_id', ids)` after fetching with this helper.
+ * Returns person UUIDs that have attended events in the given group.
+ * Pass the result to `.in('person_id', ids)`.
  */
-export async function getGroupAttendeeIds(
+export async function getGroupPersonIds(
   supabase: SupabaseClient,
   groupId: string,
 ): Promise<string[]> {
   const { data } = await supabase
     .from('attendance')
-    .select('attendee_id, meetings!inner(group_id)')
-    .eq('meetings.group_id', groupId)
+    .select('person_id, events!inner(group_id)')
+    .eq('events.group_id', groupId)
   if (!data) return []
-  return [...new Set(data.map((r: { attendee_id: string }) => r.attendee_id))]
+  return [...new Set(data.map((r: { person_id: string }) => r.person_id))]
 }

@@ -2,13 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname, useParams } from 'next/navigation'
-import { LayoutDashboard, Users, Layers, BarChart3, MessageSquare } from 'lucide-react'
+import { LayoutDashboard, Users, CalendarDays, Home, MessageSquare } from 'lucide-react'
 
-const paths = [
+const NAV = [
   { path: 'dashboard', label: 'Home',     icon: LayoutDashboard },
   { path: 'people',    label: 'People',   icon: Users },
-  { path: 'groups',    label: 'Groups',   icon: Layers },
-  { path: 'reports',   label: 'Analytics',icon: BarChart3 },
+  { path: 'cells',     label: 'Cells',    icon: Home },
+  { path: 'events',    label: 'Events',   icon: CalendarDays },
   { path: 'messaging', label: 'Messages', icon: MessageSquare },
 ]
 
@@ -21,33 +21,46 @@ export default function MobileNav() {
     <nav
       className="md:hidden fixed bottom-0 left-0 right-0 z-50"
       style={{
-        background: 'linear-gradient(180deg, rgba(8,12,26,0.92) 0%, rgba(10,14,35,0.98) 100%)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        borderTop: '1px solid rgba(255,255,255,0.07)',
+        background: 'linear-gradient(180deg, rgba(5,8,18,0.94) 0%, rgba(7,10,20,0.99) 100%)',
+        backdropFilter: 'blur(32px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(32px) saturate(160%)',
+        borderTop: '1px solid rgba(255,255,255,0.055)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
-      <div className="flex items-stretch h-16">
-        {paths.map(({ path, label, icon: Icon }) => {
+      <div className="flex items-stretch" style={{ height: 60 }}>
+        {NAV.map(({ path, label, icon: Icon }) => {
           const href = `/${slug}/${path}`
           const active = pathname === href || pathname.startsWith(href + '/')
           return (
             <Link
               key={path}
               href={href}
-              className="flex-1 flex flex-col items-center justify-center gap-1 text-[10px] font-medium transition-all duration-200"
-              style={{ color: active ? '#818cf8' : 'rgba(255,255,255,0.35)' }}
+              className="flex-1 flex flex-col items-center justify-center gap-[5px] transition-all duration-150"
+              style={{ color: active ? '#818cf8' : 'rgba(255,255,255,0.28)' }}
             >
               <div
-                className="w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-200"
                 style={{
-                  background: active ? 'rgba(129,140,248,0.15)' : 'transparent',
-                  border: active ? '1px solid rgba(129,140,248,0.25)' : '1px solid transparent',
+                  width: 34,
+                  height: 26,
+                  borderRadius: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: active ? 'rgba(99,102,241,0.14)' : 'transparent',
+                  transition: 'background 0.15s ease',
                 }}
               >
-                <Icon className="w-4 h-4" />
+                <Icon style={{ width: 16, height: 16 }} />
               </div>
-              <span style={{ color: active ? '#818cf8' : 'rgba(255,255,255,0.35)' }}>{label}</span>
+              <span style={{
+                fontSize: 10,
+                fontWeight: active ? 500 : 400,
+                letterSpacing: '0.01em',
+                color: active ? '#818cf8' : 'rgba(255,255,255,0.28)',
+              }}>
+                {label}
+              </span>
             </Link>
           )
         })}

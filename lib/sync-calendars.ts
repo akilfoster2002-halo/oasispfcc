@@ -4,7 +4,7 @@
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import { fetchEventAttendance } from './breeze'
+import { fetchEventAttendance, classifyServiceType } from './breeze'
 
 export const CALENDAR_FEEDS: { url: string; group: string }[] = [
   { url: 'https://blwoasischurchinc.breezechms.com/events/feed/MjAzNTg4LzkyMDk1', group: 'MEGA' },
@@ -55,23 +55,6 @@ function parseIcal(ical: string): CalEvent[] {
   return events
 }
 
-function meetingType(name: string): string {
-  const n = name.toLowerCase()
-  if (n.includes('sunday')) return 'Sunday'
-  if (n.includes('wednesday') || n.includes('midweek') || n.includes('wed service')) return 'Wednesday'
-  if (
-    n.includes('cell') || n.includes('bible study') ||
-    n.includes('tcnj') || n.includes('baruch') || n.includes('hunter') ||
-    n.includes('rit') || n.includes('qcc') || n.includes('st. john') ||
-    n.includes('brooklyn') || n.includes('russel') || n.includes('york') ||
-    n.includes('cooper') || n.includes('visionar') || n.includes('setter') ||
-    n.includes('huios') || n.includes('hom usa') || n.includes('ethereal') ||
-    n.includes('sage') || n.includes('devotion') || n.includes('love cell')
-  ) return 'Cell'
-  if (n.includes('leaders') || n.includes('professionals') || n.includes('roundtable')) return 'Leadership'
-  return 'Special'
-}
-
 // Run up to `limit` async tasks concurrently
 async function concurrent<T>(tasks: (() => Promise<T>)[], limit: number): Promise<T[]> {
   const results: T[] = new Array(tasks.length)
@@ -97,6 +80,7 @@ export async function syncCalendarFeed(
   feedUrl: string,
   groupName: string,
   groupId: string | null,
+  churchId: string,
   from: string,
   to: string,
   breezeToUuid: Map<number, string>,
@@ -129,18 +113,17 @@ export async function syncCalendarFeed(
 
   onProgress?.(`  [${groupName}] ${events.length} events to process`)
 
-  // 2. Load existing meetings for this group in range (filter by group to avoid cross-group collision)
-  const { data: existingMeetings } = await supabase
-    .from('meetings')
-    .select('id, name, meeting_date')
+  // 2. Load existing events for this group in range
+  const { data: existingEvents } = await supabase
+    .from('events')
+    .select('id, name, event_date')
     .eq('group_id', groupId ?? '')
-    .gte('meeting_date', from)
-    .lte('meeting_date', to)
+    .gte('event_date', from)
+    .lte('event_date', to)
 
-  // Key includes group to prevent cross-group name collisions
-  const meetingKey = (name: string, date: string) => `${groupName}|${name.toLowerCase().trim()}|${date}`
-  const meetingMap = new Map<string, string>()
-  for (const m of existingMeetings ?? []) meetingMap.set(meetingKey(m.name, m.meeting_date), m.id)
+  const eventKey = (name: string, date: string) => `${groupName}|${name.toLowerCase().trim()}|${date}`
+  const eventMap = new Map<string, string>()
+  for (const e of existingEvents ?? []) eventMap.set(eventKey(e.name, e.event_date), e.id)
 
   // 3. Process events concurrently (5 at a time to respect Breeze rate limits)
   await concurrent(events.map(ev => async () => {
@@ -153,48 +136,51 @@ export async function syncCalendarFeed(
         return
       }
 
-      // Upsert meeting
-      const key = meetingKey(ev.name, ev.date)
-      let meetingId: string | undefined = meetingMap.get(key)
-      if (!meetingId) {
-        const { data: newM, error: mErr } = await supabase
-          .from('meetings')
-          .insert({
-            name: ev.name,
-            meeting_date: ev.date,
-            meeting_type: meetingType(ev.name),
-            group_id: groupId,
-          })
+      // Upsert event
+      const key = eventKey(ev.name, ev.date)
+      let eventId: string | undefined = eventMap.get(key)
+      if (!eventId) {
+        const { data: newE, error: eErr } = await supabase
+          .from('events')
+          .upsert({
+            church_id:          churchId,
+            breeze_instance_id: String(ev.instanceId),
+            name:               ev.name,
+            event_date:         ev.date,
+            service_type:       classifyServiceType(ev.name),
+            group_id:           groupId,
+          }, { onConflict: 'breeze_instance_id' })
           .select('id')
           .single()
-        if (mErr || !newM?.id) {
+        if (eErr || !newE?.id) {
           result.errors++
-          result.errorDetails.push(`Meeting insert failed [${groupName}] ${ev.date} ${ev.name}: ${mErr?.message}`)
+          result.errorDetails.push(`Event upsert failed [${groupName}] ${ev.date} ${ev.name}: ${eErr?.message}`)
           return
         }
-        meetingId = newM.id as string
-        meetingMap.set(key, meetingId)
+        eventId = newE.id as string
+        eventMap.set(key, eventId)
         result.meetingsCreated++
       }
 
-      // Fetch existing attendance for this meeting
+      // Fetch existing attendance for this event
       const { data: existingAtt } = await supabase
         .from('attendance')
-        .select('attendee_id')
-        .eq('meeting_id', meetingId)
-      const alreadyPresent = new Set((existingAtt ?? []).map((a: { attendee_id: string }) => a.attendee_id))
+        .select('person_id')
+        .eq('event_id', eventId)
+      const alreadyPresent = new Set((existingAtt ?? []).map((a: { person_id: string }) => a.person_id))
 
       const toInsert = records
         .map(rec => ({
-          meeting_id: meetingId!,
-          attendee_id: breezeToUuid.get(Number(rec.person_id))!,
-          status: 'present',
+          church_id:           churchId,
+          event_id:            eventId!,
+          person_id:           breezeToUuid.get(Number(rec.person_id))!,
+          attendance_status:   'present',
+          imported_from_breeze: true,
         }))
-        .filter(r => r.attendee_id && !alreadyPresent.has(r.attendee_id))
+        .filter(r => r.person_id && !alreadyPresent.has(r.person_id))
 
       if (toInsert.length === 0) return
 
-      // Insert in batches of 500 to avoid request size limits
       for (let i = 0; i < toInsert.length; i += 500) {
         const batch = toInsert.slice(i, i + 500)
         const { error: aErr } = await supabase.from('attendance').insert(batch)
@@ -221,20 +207,35 @@ export async function syncAllFeeds(
 ): Promise<SyncResult[]> {
   const supabase = createSupabaseAdmin()
 
-  // Load groups once
-  const { data: groupRows } = await supabase.from('groups').select('id, name')
+  // Resolve PFCC church ID
+  const churchSlug = process.env.CHURCH_SLUG ?? 'pfcc'
+  const { data: church } = await supabase
+    .from('churches')
+    .select('id')
+    .eq('slug', churchSlug)
+    .single()
+  if (!church?.id) throw new Error(`Church "${churchSlug}" not found in database`)
+  const churchId = church.id as string
+  onProgress?.(`Church: ${churchSlug} (${churchId})`)
+
+  // Load groups for this church
+  const { data: groupRows } = await supabase
+    .from('groups')
+    .select('id, name')
+    .eq('church_id', churchId)
   const groupMap = new Map<string, string>(
     (groupRows ?? []).map((g: { id: string; name: string }) => [g.name, g.id])
   )
   onProgress?.(`Loaded ${groupMap.size} groups`)
 
-  // Load all attendees once — shared across all group syncs to avoid 8× fetches
+  // Load all people for this church (breeze_id → uuid)
   const breezeToUuid = new Map<number, string>()
   let offset = 0
   while (true) {
     const { data: rows } = await supabase
-      .from('attendees')
+      .from('people')
       .select('id, breeze_id')
+      .eq('church_id', churchId)
       .not('breeze_id', 'is', null)
       .range(offset, offset + 999)
     if (!rows || rows.length === 0) break
@@ -242,23 +243,22 @@ export async function syncAllFeeds(
     if (rows.length < 1000) break
     offset += 1000
   }
-  onProgress?.(`Loaded ${breezeToUuid.size} attendees`)
+  onProgress?.(`Loaded ${breezeToUuid.size} people`)
 
-  // Sync all groups sequentially (Breeze API is shared, concurrent groups would hit rate limits)
   const results: SyncResult[] = []
   for (const feed of CALENDAR_FEEDS) {
     onProgress?.(`\nSyncing ${feed.group}...`)
     const groupId = groupMap.get(feed.group) ?? null
     if (!groupId) {
-      onProgress?.(`  WARNING: group "${feed.group}" not found in database — skipping`)
+      onProgress?.(`  WARNING: group "${feed.group}" not found — skipping`)
       continue
     }
     const r = await syncCalendarFeed(
-      supabase, feed.url, feed.group, groupId, from, to, breezeToUuid, onProgress,
+      supabase, feed.url, feed.group, groupId, churchId, from, to, breezeToUuid, onProgress,
     )
     results.push(r)
     onProgress?.(
-      `  → ${r.meetingsCreated} meetings created, ${r.attendanceAdded} attendance records, ` +
+      `  → ${r.meetingsCreated} events created, ${r.attendanceAdded} attendance records, ` +
       `${r.skippedNoAttendance} skipped (no attendance), ${r.errors} errors`
     )
   }

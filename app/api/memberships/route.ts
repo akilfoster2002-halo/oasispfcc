@@ -29,7 +29,7 @@ export async function GET() {
   const supabase = adminClient()
   const { data: memberships } = await supabase
     .from('church_memberships')
-    .select('*, church:churches(id, name, slug, logo_url, requires_approval)')
+    .select('*, church:churches(id, name, slug)')
     .eq('user_id', user.id)
     .order('created_at', { ascending: true })
 
@@ -51,13 +51,13 @@ export async function POST(req: Request) {
 
   const { data: church } = await supabase
     .from('churches')
-    .select('id, requires_approval')
+    .select('id')
     .eq('slug', churchSlug)
     .single()
 
   if (!church) return Response.json({ error: 'Church not found' }, { status: 404 })
 
-  const status = church.requires_approval ? 'pending' : 'approved'
+  const status = 'approved'
 
   const { data: membership, error } = await supabase
     .from('church_memberships')

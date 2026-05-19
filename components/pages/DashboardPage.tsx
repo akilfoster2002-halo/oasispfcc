@@ -446,50 +446,98 @@ export default function ChatPage() {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
           {loadingMsgs ? (
-            <div className="flex justify-center pt-16">
-              <div className="flex gap-1.5">
+            <div className="flex justify-center pt-20">
+              <div className="flex gap-1.5 items-center">
                 {[0, 1, 2].map(i => (
                   <span
                     key={i}
-                    className="w-2 h-2 rounded-full animate-bounce"
-                    style={{ backgroundColor: 'rgba(129,140,248,0.50)', animationDelay: `${i * 0.15}s` }}
+                    className="rounded-full animate-bounce"
+                    style={{
+                      width: 5, height: 5,
+                      backgroundColor: 'rgba(129,140,248,0.45)',
+                      animationDelay: `${i * 0.14}s`,
+                    }}
                   />
                 ))}
               </div>
             </div>
           ) : isEmpty ? (
-            <div className="flex flex-col items-center justify-center h-full text-center pb-16 space-y-8">
-              <div>
-                <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(52,211,153,0.18) 0%, rgba(34,211,238,0.10) 100%)',
-                    border: '1px solid rgba(52,211,153,0.22)',
-                    boxShadow: '0 0 32px rgba(52,211,153,0.12)',
-                  }}
-                >
-                  <Sparkles className="w-7 h-7" style={{ color: '#34d399' }} />
+            <div className="flex flex-col items-center justify-center h-full text-center" style={{ paddingBottom: 80, gap: 0 }}>
+
+              {/* Atmospheric icon */}
+              <div style={{ position: 'relative', width: 88, height: 88, marginBottom: 28 }}>
+                {/* Outermost ambient ring */}
+                <div style={{
+                  position: 'absolute', inset: -16,
+                  borderRadius: '50%',
+                  background: 'radial-gradient(circle, rgba(52,211,153,0.08) 0%, transparent 70%)',
+                }} />
+                {/* Outer ring */}
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  borderRadius: '50%',
+                  border: '1px solid rgba(52,211,153,0.15)',
+                }} />
+                {/* Icon container */}
+                <div style={{
+                  position: 'absolute', inset: 8,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(145deg, rgba(52,211,153,0.18) 0%, rgba(14,165,233,0.10) 100%)',
+                  border: '1px solid rgba(52,211,153,0.22)',
+                  boxShadow: '0 0 28px rgba(52,211,153,0.14), 0 0 0 1px rgba(52,211,153,0.08) inset',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Sparkles style={{ width: 28, height: 28, color: '#34d399' }} />
                 </div>
-                <h2 className="text-xl font-semibold mb-2" style={{ color: 'rgba(255,255,255,0.90)' }}>
-                  {firstName ? `Hi ${firstName}, how can I help?` : 'How can I help?'}
-                </h2>
-                <p className="text-sm max-w-xs mx-auto" style={{ color: 'rgba(255,255,255,0.40)' }}>
-                  Ask about members, attendance, cells, groups, or any individual.
-                </p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-sm">
+
+              {/* Headline — Space Grotesk */}
+              <h2 className="text-display" style={{ marginBottom: 10 }}>
+                {firstName ? `Good to see you, ${firstName}.` : 'See your church clearly.'}
+              </h2>
+              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.36)', maxWidth: 300, lineHeight: 1.6, marginBottom: 36 }}>
+                Ask anything about your congregation — members, attendance, cells, or trends.
+              </p>
+
+              {/* Suggestion cards */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: 8,
+                width: '100%',
+                maxWidth: 380,
+              }}>
                 {SUGGESTIONS.map(s => (
                   <button
                     key={s}
                     onClick={() => send(s)}
-                    className="px-4 py-2.5 text-sm text-left rounded-xl transition-all duration-200 glass-hover"
                     style={{
-                      background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      color: 'rgba(255,255,255,0.65)',
+                      padding: '12px 14px',
+                      textAlign: 'left',
+                      borderRadius: 14,
+                      background: 'linear-gradient(145deg, rgba(255,255,255,0.050) 0%, rgba(255,255,255,0.018) 100%)',
+                      border: '1px solid rgba(255,255,255,0.068)',
+                      boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset',
+                      color: 'rgba(255,255,255,0.58)',
+                      fontSize: 12,
+                      lineHeight: 1.45,
+                      cursor: 'pointer',
+                      transition: 'color 0.14s ease, background 0.14s ease, border-color 0.14s ease, transform 0.14s ease',
                     }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.90)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.65)' }}
+                    onMouseEnter={e => {
+                      const el = e.currentTarget as HTMLElement
+                      el.style.color = 'rgba(255,255,255,0.88)'
+                      el.style.background = 'linear-gradient(145deg, rgba(255,255,255,0.075) 0%, rgba(255,255,255,0.032) 100%)'
+                      el.style.borderColor = 'rgba(255,255,255,0.10)'
+                      el.style.transform = 'translateY(-1px)'
+                    }}
+                    onMouseLeave={e => {
+                      const el = e.currentTarget as HTMLElement
+                      el.style.color = 'rgba(255,255,255,0.58)'
+                      el.style.background = 'linear-gradient(145deg, rgba(255,255,255,0.050) 0%, rgba(255,255,255,0.018) 100%)'
+                      el.style.borderColor = 'rgba(255,255,255,0.068)'
+                      el.style.transform = 'none'
+                    }}
                   >
                     {s}
                   </button>

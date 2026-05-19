@@ -20,6 +20,22 @@ import {
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
+interface WeeklyCell {
+  cellName: string; groupName: string
+  attThis: number; attLast: number
+  soulWon: number; fsEnrolled: number; substantiations: number; firstTimers: number
+}
+interface WeeklyGroup {
+  groupName: string
+  cellAttThis: number; cellAttLast: number
+  sundayAttThis: number; sundayAttLast: number
+  sunFirstTimersThis: number; sunFirstTimersLast: number
+  wedAttThis: number; wedAttLast: number
+  soulWonThis: number; soulWonLast: number
+  soulTracker: number
+  uniqueThis: number; uniqueLast: number
+}
+
 interface AnalyticsData {
   kpis: { totalMeetings: number; totalAttendance: number; uniqueAttendees: number; avgPerMeeting: number; growthRate: number }
   timeline:       ({ week: string; total: number } & Record<string, number>)[]
@@ -32,6 +48,11 @@ interface AnalyticsData {
   distribution:   { bucket: string; people: number }[]
   retention:      { active: number; lapsing: number; lapsed: number }
   topAttendees:   { name: string; times: number }[]
+  weekly: {
+    range: { thisWeek: { start: string; end: string }; lastWeek: { start: string; end: string } }
+    cells:  WeeklyCell[]
+    groups: WeeklyGroup[]
+  }
 }
 
 interface ChartConfig {
@@ -70,10 +91,11 @@ const C = {
   blue:   '#60a5fa',
 }
 
-const GROUP_COLORS: Record<string, string> = {
-  CharmCity:   C.indigo,
-  LifeSprings: C.green,
-  MEGA:        C.amber,
+const GROUP_PALETTE = [C.indigo, C.green, C.amber, C.teal, C.purple, C.pink, C.blue, C.red]
+function groupColor(name: string): string {
+  let h = 0
+  for (const c of name) h = c.charCodeAt(0) + ((h << 5) - h)
+  return GROUP_PALETTE[Math.abs(h) % GROUP_PALETTE.length]
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -384,6 +406,224 @@ function DynamicChart({ config, data }: { config: ChartConfig; data: Record<stri
   )
 }
 
+// ── Weekly Report ─────────────────────────────────────────────────────────
+
+function fmtDateRange(start: string, end: string) {
+  const s = new Date(start + 'T12:00:00Z')
+  const e = new Date(end   + 'T12:00:00Z')
+  const mo = s.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' })
+  const sd = s.getUTCDate()
+  const ed = e.getUTCDate()
+  const emo = e.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' })
+  return mo === emo ? `${mo} ${sd}–${ed}` : `${mo} ${sd} – ${emo} ${ed}`
+}
+
+function Delta({ cur, prev }: { cur: number; prev: number }) {
+  const diff = cur - prev
+  if (prev === 0 && cur === 0) return <span style={{ color: 'rgba(255,255,255,0.22)' }}>—</span>
+  const up = diff >= 0
+  return (
+    <span style={{ color: up ? C.green : C.red, fontSize: '10px', marginLeft: '4px' }}>
+      {up ? '▲' : '▼'}{Math.abs(diff)}
+    </span>
+  )
+}
+
+function WeeklyReport({
+  weekly,
+  loading,
+}: {
+  weekly: AnalyticsData['weekly']
+  loading: boolean
+}) {
+  const { range, cells, groups } = weekly
+  const tw = fmtDateRange(range.thisWeek.start, range.thisWeek.end)
+  const lw = fmtDateRange(range.lastWeek.start, range.lastWeek.end)
+
+  const thStyle: React.CSSProperties = {
+    padding: '8px 10px',
+    fontSize: '10px',
+    fontWeight: 600,
+    color: 'rgba(255,255,255,0.40)',
+    textAlign: 'left',
+    whiteSpace: 'nowrap',
+    borderBottom: '1px solid rgba(255,255,255,0.08)',
+  }
+  const tdStyle: React.CSSProperties = {
+    padding: '8px 10px',
+    fontSize: '12px',
+    color: 'rgba(255,255,255,0.82)',
+    borderBottom: '1px solid rgba(255,255,255,0.04)',
+    whiteSpace: 'nowrap',
+  }
+  const numTd: React.CSSProperties = { ...tdStyle, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }
+
+  return (
+    <div className="space-y-5">
+      {/* Section header */}
+      <div className="flex items-center gap-2">
+        <div
+          className="w-1 h-5 rounded-full"
+          style={{ background: 'linear-gradient(180deg, #6366f1, #818cf8)' }}
+        />
+        <h2 className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
+          Weekly Report
+        </h2>
+        <span
+          className="text-xs px-2 py-0.5 rounded-full"
+          style={{ background: 'rgba(129,140,248,0.14)', color: '#818cf8', border: '1px solid rgba(129,140,248,0.20)' }}
+        >
+          {tw}
+        </span>
+        <span className="text-xs" style={{ color: 'rgba(255,255,255,0.28)' }}>vs {lw}</span>
+      </div>
+
+      {/* Group summary table */}
+      <CardPad style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <p className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.75)' }}>Group Summary</p>
+          <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.30)' }}>
+            This week vs last week · arrows show change
+          </p>
+        </div>
+        {loading ? (
+          <div className="p-5"><Pulse h={120} /></div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse" style={{ minWidth: 780 }}>
+              <thead>
+                <tr>
+                  <th style={{ ...thStyle, paddingLeft: 20 }}>Group</th>
+                  <th style={{ ...thStyle, textAlign: 'right' }}>Cell Att<br /><span style={{ fontWeight: 400 }}>this / last</span></th>
+                  <th style={{ ...thStyle, textAlign: 'right' }}>Sunday Att<br /><span style={{ fontWeight: 400 }}>this / last</span></th>
+                  <th style={{ ...thStyle, textAlign: 'right' }}>Sun 1st Timers<br /><span style={{ fontWeight: 400 }}>this / last</span></th>
+                  <th style={{ ...thStyle, textAlign: 'right' }}>Wed Att<br /><span style={{ fontWeight: 400 }}>this / last</span></th>
+                  <th style={{ ...thStyle, textAlign: 'right' }}>Soul Won<br /><span style={{ fontWeight: 400 }}>this / last</span></th>
+                  <th style={{ ...thStyle, textAlign: 'right', paddingRight: 20 }}>Unique<br /><span style={{ fontWeight: 400 }}>this / last</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {groups.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ ...tdStyle, textAlign: 'center', padding: '24px', color: 'rgba(255,255,255,0.22)' }}>
+                      No group data for this week
+                    </td>
+                  </tr>
+                ) : groups.map(g => (
+                  <tr key={g.groupName}
+                    className="transition-colors"
+                    style={{ background: 'transparent' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <td style={{ ...tdStyle, paddingLeft: 20 }}>
+                      <span className="font-semibold" style={{ color: groupColor(g.groupName) }}>
+                        {g.groupName}
+                      </span>
+                    </td>
+                    <td style={numTd}>
+                      <span className="font-semibold">{g.cellAttThis}</span>
+                      <Delta cur={g.cellAttThis} prev={g.cellAttLast} />
+                      <span style={{ color: 'rgba(255,255,255,0.28)', marginLeft: 4 }}>/ {g.cellAttLast}</span>
+                    </td>
+                    <td style={numTd}>
+                      <span className="font-semibold">{g.sundayAttThis}</span>
+                      <Delta cur={g.sundayAttThis} prev={g.sundayAttLast} />
+                      <span style={{ color: 'rgba(255,255,255,0.28)', marginLeft: 4 }}>/ {g.sundayAttLast}</span>
+                    </td>
+                    <td style={numTd}>
+                      <span className="font-semibold">{g.sunFirstTimersThis}</span>
+                      <Delta cur={g.sunFirstTimersThis} prev={g.sunFirstTimersLast} />
+                      <span style={{ color: 'rgba(255,255,255,0.28)', marginLeft: 4 }}>/ {g.sunFirstTimersLast}</span>
+                    </td>
+                    <td style={numTd}>
+                      <span className="font-semibold">{g.wedAttThis}</span>
+                      <Delta cur={g.wedAttThis} prev={g.wedAttLast} />
+                      <span style={{ color: 'rgba(255,255,255,0.28)', marginLeft: 4 }}>/ {g.wedAttLast}</span>
+                    </td>
+                    <td style={numTd}>
+                      <span className="font-semibold" style={{ color: g.soulWonThis > 0 ? C.green : undefined }}>
+                        {g.soulWonThis}
+                      </span>
+                      <Delta cur={g.soulWonThis} prev={g.soulWonLast} />
+                      <span style={{ color: 'rgba(255,255,255,0.28)', marginLeft: 4 }}>/ {g.soulWonLast}</span>
+                    </td>
+                    <td style={{ ...numTd, paddingRight: 20 }}>
+                      <span className="font-semibold">{g.uniqueThis}</span>
+                      <Delta cur={g.uniqueThis} prev={g.uniqueLast} />
+                      <span style={{ color: 'rgba(255,255,255,0.28)', marginLeft: 4 }}>/ {g.uniqueLast}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardPad>
+
+      {/* Cell detail table */}
+      <CardPad style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <p className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.75)' }}>Cell Detail</p>
+          <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.30)' }}>
+            Per-cell metrics for the current week
+          </p>
+        </div>
+        {loading ? (
+          <div className="p-5"><Pulse h={160} /></div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse" style={{ minWidth: 680 }}>
+              <thead>
+                <tr>
+                  <th style={{ ...thStyle, paddingLeft: 20 }}>Cell</th>
+                  <th style={thStyle}>Group</th>
+                  <th style={{ ...thStyle, textAlign: 'right' }}>Att This</th>
+                  <th style={{ ...thStyle, textAlign: 'right' }}>Att Last</th>
+                  <th style={{ ...thStyle, textAlign: 'right' }}>Soul Won</th>
+                  <th style={{ ...thStyle, textAlign: 'right' }}>FS Enrolled</th>
+                  <th style={{ ...thStyle, textAlign: 'right' }}>Substantiations</th>
+                  <th style={{ ...thStyle, textAlign: 'right', paddingRight: 20 }}>1st Timers</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cells.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ ...tdStyle, textAlign: 'center', padding: '24px', color: 'rgba(255,255,255,0.22)' }}>
+                      No cell meetings this week
+                    </td>
+                  </tr>
+                ) : cells.map((c, i) => (
+                  <tr key={i}
+                    className="transition-colors"
+                    style={{ background: 'transparent' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <td style={{ ...tdStyle, paddingLeft: 20, fontWeight: 500 }}>{c.cellName}</td>
+                    <td style={{ ...tdStyle, fontSize: '11px', color: groupColor(c.groupName) }}>
+                      {c.groupName}
+                    </td>
+                    <td style={numTd}>
+                      <span className="font-semibold">{c.attThis}</span>
+                      <Delta cur={c.attThis} prev={c.attLast} />
+                    </td>
+                    <td style={{ ...numTd, color: 'rgba(255,255,255,0.40)' }}>{c.attLast}</td>
+                    <td style={{ ...numTd, color: c.soulWon > 0 ? C.green : undefined }}>{c.soulWon}</td>
+                    <td style={{ ...numTd, color: c.fsEnrolled > 0 ? C.teal : undefined }}>{c.fsEnrolled}</td>
+                    <td style={{ ...numTd, color: c.substantiations > 0 ? C.purple : undefined }}>{c.substantiations}</td>
+                    <td style={{ ...numTd, paddingRight: 20 }}>{c.firstTimers}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardPad>
+    </div>
+  )
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function AnalyticsPage() {
@@ -477,7 +717,7 @@ export default function AnalyticsPage() {
             className="flex gap-0.5 p-1 rounded-xl"
             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}
           >
-            {['all', 'CharmCity', 'LifeSprings', 'MEGA'].map(g => (
+            {['all', ...groups].map(g => (
               <button key={g} onClick={() => setGroup(g)} style={pill(group === g)}>
                 {g === 'all' ? 'All' : g}
               </button>
@@ -543,6 +783,11 @@ export default function AnalyticsPage() {
         ) : null}
       </div>
 
+      {/* ── Weekly Report ───────────────────────────────────────────────── */}
+      {data?.weekly && (
+        <WeeklyReport weekly={data.weekly} loading={loading} />
+      )}
+
       {/* ── Attendance trend ─────────────────────────────────────────────── */}
       {!noData && (
         <CardPad>
@@ -596,7 +841,7 @@ export default function AnalyticsPage() {
                     <YAxis tick={{ fontSize: 10, fill: TICK_FILL }} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={TOOLTIP_STYLE} />
                     <Bar dataKey="totalAttendance" name="Check-ins" radius={[6, 6, 0, 0]}>
-                      {data.groups.map(g => <Cell key={g.name} fill={GROUP_COLORS[g.name] ?? C.gray} />)}
+                      {data.groups.map(g => <Cell key={g.name} fill={groupColor(g.name)} />)}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -611,10 +856,10 @@ export default function AnalyticsPage() {
                     <div
                       key={g.name}
                       className="rounded-xl p-3 text-center"
-                      style={{ background: `${GROUP_COLORS[g.name] ?? C.gray}14` }}
+                      style={{ background: `${groupColor(g.name)}14` }}
                     >
                       <div className="text-xs font-medium truncate mb-1"
-                        style={{ color: GROUP_COLORS[g.name] ?? C.gray }}>
+                        style={{ color: groupColor(g.name) }}>
                         {g.name}
                       </div>
                       <div className="text-lg font-bold" style={{ color: 'rgba(255,255,255,0.88)' }}>
@@ -647,8 +892,8 @@ export default function AnalyticsPage() {
                   <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px', color: TICK_FILL }} />
                   {(data.sundayGroups ?? groups).map(g => (
                     <Line key={g} type="monotone" dataKey={g} name={g}
-                      stroke={GROUP_COLORS[g] ?? C.gray} strokeWidth={2}
-                      dot={false} activeDot={{ r: 4, fill: GROUP_COLORS[g] ?? C.gray }} />
+                      stroke={groupColor(g)} strokeWidth={2}
+                      dot={false} activeDot={{ r: 4, fill: groupColor(g) }} />
                   ))}
                 </LineChart>
               </ResponsiveContainer>
@@ -677,7 +922,7 @@ export default function AnalyticsPage() {
                     formatter={(v, name) => [v, name === 'total' ? 'Total check-ins' : String(name)]} />
                   <Bar dataKey="total" name="total" radius={[0, 4, 4, 0]}>
                     {data.cells.slice(0, 15).map(c => (
-                      <Cell key={c.name} fill={GROUP_COLORS[c.group] ?? C.teal} opacity={0.85} />
+                      <Cell key={c.name} fill={groupColor(c.group)} opacity={0.85} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -701,7 +946,7 @@ export default function AnalyticsPage() {
                   const max = data.cells[0]?.total ?? 1
                   const pct = Math.round((c.total / max) * 100)
                   const top = i < 3
-                  const col = GROUP_COLORS[c.group] ?? C.teal
+                  const col = groupColor(c.group)
                   return (
                     <div key={c.name} className="flex items-center gap-2.5">
                       <span className="w-5 text-xs font-bold text-right shrink-0"

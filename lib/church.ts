@@ -7,10 +7,6 @@ export interface Church {
   id: string
   name: string
   slug: string
-  description: string | null
-  logo_url: string | null
-  requires_approval: boolean
-  settings: Record<string, unknown>
   created_at: string
 }
 

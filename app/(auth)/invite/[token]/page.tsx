@@ -3,13 +3,61 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
-import { Church, Check, AlertCircle } from 'lucide-react'
+import { Check, AlertCircle, ArrowRight } from 'lucide-react'
 
 interface InviteInfo {
   email: string
   role: string
   church: { name: string; slug: string }
   status: string
+}
+
+function AquilaMark() {
+  return (
+    <svg width="38" height="38" viewBox="0 0 32 32" fill="none">
+      <defs>
+        <radialGradient id="inv-bg" cx="38%" cy="32%" r="75%">
+          <stop offset="0%" stopColor="#6366f1"/>
+          <stop offset="100%" stopColor="#3730a3"/>
+        </radialGradient>
+        <radialGradient id="inv-iris" cx="40%" cy="38%" r="65%">
+          <stop offset="0%" stopColor="#a5b4fc" stopOpacity="0.95"/>
+          <stop offset="100%" stopColor="#818cf8" stopOpacity="0.85"/>
+        </radialGradient>
+        <filter id="inv-glow">
+          <feGaussianBlur stdDeviation="1.5" result="blur"/>
+          <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+        </filter>
+      </defs>
+      <rect width="32" height="32" rx="9" fill="url(#inv-bg)"/>
+      <rect x="0" y="0" width="32" height="14" rx="9" fill="rgba(255,255,255,0.10)"/>
+      <rect x="0" y="7" width="32" height="7" fill="rgba(255,255,255,0)"/>
+      <circle cx="16" cy="16" r="7" stroke="rgba(255,255,255,0.20)" strokeWidth="1"/>
+      <circle cx="16" cy="16" r="4" fill="url(#inv-iris)" filter="url(#inv-glow)"/>
+      <circle cx="13.5" cy="13.5" r="1.2" fill="rgba(255,255,255,0.55)"/>
+    </svg>
+  )
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '11px 14px',
+  borderRadius: 12,
+  fontSize: 14,
+  outline: 'none',
+  background: 'rgba(255,255,255,0.040)',
+  border: '1px solid rgba(255,255,255,0.090)',
+  color: 'rgba(255,255,255,0.88)',
+  transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+  boxSizing: 'border-box',
+}
+function fi(e: React.FocusEvent<HTMLInputElement>) {
+  e.currentTarget.style.borderColor = 'rgba(99,102,241,0.55)'
+  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.12)'
+}
+function fo(e: React.FocusEvent<HTMLInputElement>) {
+  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.090)'
+  e.currentTarget.style.boxShadow = 'none'
 }
 
 export default function InviteAcceptPage() {
@@ -22,12 +70,12 @@ export default function InviteAcceptPage() {
 
   const [fullName, setFullName] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [email, setEmail] = useState('')
   const [signInPassword, setSignInPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
 
-  // Load invite info
   useEffect(() => {
     fetch(`/api/invites/${token}`)
       .then(r => r.json())
@@ -43,30 +91,19 @@ export default function InviteAcceptPage() {
   async function acceptWithNewAccount(e: React.FormEvent) {
     e.preventDefault()
     if (!invite) return
+    if (password !== confirmPassword) { setFormError('Passwords do not match.'); return }
     setFormError('')
     setSubmitting(true)
     try {
       const supabase = getSupabaseBrowser()
-
-      // Create account
-      const { error: signUpErr } = await supabase.auth.signUp({
-        email: invite.email,
+      // User is already signed in via the Supabase invite email — just set their name and password
+      const { error: updateErr } = await supabase.auth.updateUser({
         password,
-        options: { data: { full_name: fullName, name: fullName } },
+        data: { full_name: fullName, name: fullName },
       })
-      if (signUpErr) { setFormError(signUpErr.message); return }
-
-      // Sign in
-      const { error: signInErr } = await supabase.auth.signInWithPassword({
-        email: invite.email,
-        password,
-      })
-      if (signInErr) { setFormError(signInErr.message); return }
-
-      // Accept the invite
+      if (updateErr) { setFormError(updateErr.message); return }
       const res = await fetch(`/api/invites/${token}/accept`, { method: 'POST' })
       if (!res.ok) { setFormError('Failed to accept invite'); return }
-
       setMode('done')
       setTimeout(() => router.push(`/${invite.church.slug}/dashboard`), 1500)
     } finally {
@@ -82,10 +119,8 @@ export default function InviteAcceptPage() {
       const supabase = getSupabaseBrowser()
       const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password: signInPassword })
       if (signInErr) { setFormError(signInErr.message); return }
-
       const res = await fetch(`/api/invites/${token}/accept`, { method: 'POST' })
       if (!res.ok) { setFormError('Failed to accept invite'); return }
-
       setMode('done')
       setTimeout(() => router.push(`/${invite!.church.slug}/dashboard`), 1500)
     } finally {
@@ -93,127 +128,191 @@ export default function InviteAcceptPage() {
     }
   }
 
-  const inputStyle = {
-    background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.10)',
-    color: 'rgba(255,255,255,0.88)',
-  }
-
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center px-4"
-      style={{ background: 'linear-gradient(180deg, rgba(8,12,26,1) 0%, rgba(10,14,35,1) 100%)' }}
-    >
-      <div className="flex items-center gap-3 mb-10">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-          style={{ background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)', boxShadow: '0 0 16px rgba(129,140,248,0.40)' }}>
-          <Church className="w-4 h-4 text-white" />
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px 16px',
+      background: '#050810',
+      backgroundImage: 'radial-gradient(ellipse 70% 60% at 20% 0%, rgba(79,70,229,0.15) 0%, transparent 65%), radial-gradient(ellipse 55% 45% at 80% 100%, rgba(124,58,237,0.09) 0%, transparent 65%)',
+      fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)',
+      WebkitFontSmoothing: 'antialiased',
+    }}>
+
+      {/* Brand */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 36 }}>
+        <div style={{ position: 'relative' }}>
+          <AquilaMark />
+          <div style={{ position: 'absolute', inset: -8, borderRadius: 20, background: 'radial-gradient(circle, rgba(99,102,241,0.20) 0%, transparent 70%)', pointerEvents: 'none' }} />
         </div>
-        <span className="text-base font-semibold" style={{ color: 'rgba(255,255,255,0.92)' }}>Church-Link</span>
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ fontFamily: 'var(--font-display), var(--font-geist-sans), system-ui', fontSize: 20, fontWeight: 700, letterSpacing: '-0.025em', color: 'rgba(255,255,255,0.94)', margin: 0, lineHeight: 1 }}>
+            Aquila
+          </p>
+          <p style={{ fontSize: 11, color: 'rgba(129,140,248,0.52)', letterSpacing: '0.08em', fontWeight: 500, margin: '4px 0 0' }}>
+            BY OASIS PFCC
+          </p>
+        </div>
       </div>
 
-      <div className="w-full max-w-sm p-8 rounded-3xl"
-        style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)', border: '1px solid rgba(255,255,255,0.09)' }}>
+      {/* Card */}
+      <div style={{
+        width: '100%', maxWidth: 380,
+        background: 'linear-gradient(145deg, rgba(255,255,255,0.052) 0%, rgba(255,255,255,0.018) 100%)',
+        backdropFilter: 'blur(32px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+        border: '1px solid rgba(255,255,255,0.065)',
+        borderRadius: 24,
+        boxShadow: '0 1px 0 rgba(255,255,255,0.07) inset, 0 24px 64px rgba(0,0,0,0.45)',
+        padding: '32px 28px',
+      }}>
 
+        {/* Loading */}
         {mode === 'loading' && !loadError && (
-          <div className="text-center py-8">
-            <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-500 rounded-full animate-spin mx-auto" />
+          <div style={{ textAlign: 'center', padding: '32px 0' }}>
+            <div style={{ width: 28, height: 28, border: '3px solid rgba(129,140,248,0.20)', borderTopColor: '#818cf8', borderRadius: '50%', margin: '0 auto', animation: 'spin 0.8s linear infinite' }} />
           </div>
         )}
 
+        {/* Error */}
         {loadError && (
-          <div className="text-center py-8">
-            <AlertCircle className="w-10 h-10 mx-auto mb-3" style={{ color: '#f87171' }} />
-            <p className="text-sm" style={{ color: '#f87171' }}>{loadError}</p>
-            <p className="text-xs mt-2" style={{ color: 'rgba(255,255,255,0.28)' }}>
-              This invite may have expired or already been used.
-            </p>
+          <div style={{ textAlign: 'center', padding: '24px 0' }}>
+            <div style={{ width: 52, height: 52, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.22)' }}>
+              <AlertCircle style={{ width: 24, height: 24, color: '#f87171' }} />
+            </div>
+            <p style={{ fontSize: 14, fontWeight: 600, color: '#f87171', margin: '0 0 6px' }}>Invalid invite</p>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', margin: 0 }}>{loadError}</p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', marginTop: 6 }}>This invite may have expired or already been used.</p>
           </div>
         )}
 
+        {/* Done */}
         {mode === 'done' && (
-          <div className="text-center py-8">
-            <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-              style={{ background: 'rgba(52,211,153,0.15)', border: '1px solid rgba(52,211,153,0.25)' }}>
-              <Check className="w-7 h-7" style={{ color: '#34d399' }} />
+          <div style={{ textAlign: 'center', padding: '24px 0' }}>
+            <div style={{ width: 60, height: 60, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.25)' }}>
+              <Check style={{ width: 28, height: 28, color: '#34d399' }} />
             </div>
-            <p className="text-base font-semibold" style={{ color: 'rgba(255,255,255,0.90)' }}>
+            <p style={{ fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.92)', margin: '0 0 6px' }}>
               Welcome to {invite?.church.name}!
             </p>
-            <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.35)' }}>Taking you to the dashboard…</p>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', margin: 0 }}>Taking you to the dashboard…</p>
           </div>
         )}
 
+        {/* Invite form */}
         {invite && (mode === 'new-account' || mode === 'sign-in') && (
           <>
-            <div className="mb-6 text-center">
-              <p className="text-xs mb-2" style={{ color: 'rgba(255,255,255,0.35)' }}>You're invited to</p>
-              <p className="text-xl font-bold" style={{ color: 'rgba(255,255,255,0.92)' }}>{invite.church.name}</p>
-              <p className="text-xs mt-1 capitalize" style={{ color: '#818cf8' }}>as {invite.role}</p>
+            {/* Church banner */}
+            <div style={{ marginBottom: 22, padding: '14px 16px', borderRadius: 14, textAlign: 'center', background: 'rgba(129,140,248,0.08)', border: '1px solid rgba(129,140,248,0.20)' }}>
+              <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(129,140,248,0.60)', margin: '0 0 4px' }}>You&apos;re invited to</p>
+              <p style={{ fontSize: 18, fontWeight: 700, color: 'rgba(255,255,255,0.92)', margin: '0 0 3px', letterSpacing: '-0.015em' }}>{invite.church.name}</p>
+              <p style={{ fontSize: 12, color: '#818cf8', margin: 0, textTransform: 'capitalize' }}>as {invite.role}</p>
             </div>
 
-            {/* Tab toggle */}
-            <div className="flex rounded-xl p-1 mb-6"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            {/* Tabs */}
+            <div style={{ display: 'flex', borderRadius: 12, padding: 4, marginBottom: 20, background: 'rgba(255,255,255,0.040)', border: '1px solid rgba(255,255,255,0.065)' }}>
               {(['new-account', 'sign-in'] as const).map(m => (
-                <button key={m} onClick={() => setMode(m)}
-                  className="flex-1 py-2 text-xs font-medium rounded-lg transition-all"
+                <button
+                  key={m}
+                  onClick={() => { setMode(m); setFormError('') }}
                   style={{
-                    background: mode === m ? 'rgba(99,102,241,0.25)' : 'transparent',
-                    border: mode === m ? '1px solid rgba(129,140,248,0.30)' : '1px solid transparent',
-                    color: mode === m ? '#818cf8' : 'rgba(255,255,255,0.40)',
-                  }}>
-                  {m === 'new-account' ? 'Create Account' : 'Sign In'}
+                    flex: 1, padding: '7px 0', borderRadius: 9, fontSize: 12, fontWeight: 500,
+                    border: 'none', cursor: 'pointer', transition: 'all 0.15s ease',
+                    background: mode === m ? 'rgba(99,102,241,0.22)' : 'transparent',
+                    color: mode === m ? '#a5b4fc' : 'rgba(255,255,255,0.38)',
+                    outline: mode === m ? '1px solid rgba(129,140,248,0.30)' : '1px solid transparent',
+                  }}
+                >
+                  {m === 'new-account' ? 'Create Account' : 'Already have one'}
                 </button>
               ))}
             </div>
 
             {formError && (
-              <div className="mb-4 px-4 py-3 rounded-xl text-sm"
-                style={{ background: 'rgba(248,113,113,0.12)', color: '#f87171', border: '1px solid rgba(248,113,113,0.20)' }}>
+              <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 12, fontSize: 13, background: 'rgba(248,113,113,0.10)', color: '#f87171', border: '1px solid rgba(248,113,113,0.22)' }}>
                 {formError}
               </div>
             )}
 
-            {mode === 'new-account' ? (
-              <form onSubmit={acceptWithNewAccount} className="space-y-4">
+            {/* New account */}
+            {mode === 'new-account' && (
+              <form onSubmit={acceptWithNewAccount} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'rgba(255,255,255,0.55)' }}>Full name</label>
-                  <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)}
-                    placeholder="Jane Smith" className="w-full px-4 py-2.5 rounded-xl text-sm outline-none" style={inputStyle} />
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: 'rgba(255,255,255,0.50)' }}>Full name</label>
+                  <input type="text" required autoFocus value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Jane Smith" style={inputStyle} onFocus={fi} onBlur={fo} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'rgba(255,255,255,0.55)' }}>Email</label>
-                  <input type="email" value={invite.email} readOnly
-                    className="w-full px-4 py-2.5 rounded-xl text-sm outline-none opacity-60" style={inputStyle} />
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: 'rgba(255,255,255,0.50)' }}>Email</label>
+                  <input type="email" value={invite.email} readOnly style={{ ...inputStyle, opacity: 0.55, cursor: 'default' }} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'rgba(255,255,255,0.55)' }}>Password</label>
-                  <input type="password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)}
-                    placeholder="Min. 8 characters" className="w-full px-4 py-2.5 rounded-xl text-sm outline-none" style={inputStyle} />
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: 'rgba(255,255,255,0.50)' }}>Create password</label>
+                  <input type="password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)} placeholder="Min. 8 characters" style={inputStyle} onFocus={fi} onBlur={fo} />
                 </div>
-                <button type="submit" disabled={submitting}
-                  className="w-full py-3 rounded-xl text-sm font-semibold transition-all"
-                  style={{ background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)', color: '#fff', opacity: submitting ? 0.6 : 1 }}>
-                  {submitting ? 'Joining…' : `Join ${invite.church.name}`}
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: 'rgba(255,255,255,0.50)' }}>Confirm password</label>
+                  <input
+                    type="password" required minLength={8}
+                    value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                    placeholder="Re-enter your password"
+                    style={{
+                      ...inputStyle,
+                      borderColor: confirmPassword && confirmPassword !== password
+                        ? 'rgba(248,113,113,0.45)'
+                        : confirmPassword && confirmPassword === password
+                        ? 'rgba(52,211,153,0.40)'
+                        : 'rgba(255,255,255,0.090)',
+                    }}
+                    onFocus={fi} onBlur={fo}
+                  />
+                  {confirmPassword && confirmPassword !== password && (
+                    <p style={{ marginTop: 5, fontSize: 12, color: '#f87171' }}>Passwords don&apos;t match</p>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 600,
+                    border: 'none', cursor: submitting ? 'not-allowed' : 'pointer',
+                    background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+                    color: '#fff', boxShadow: '0 4px 18px rgba(99,102,241,0.45)',
+                    opacity: submitting ? 0.65 : 1, marginTop: 4,
+                  }}
+                >
+                  {submitting ? 'Joining…' : <>{`Join ${invite.church.name}`} <ArrowRight style={{ width: 15, height: 15 }} /></>}
                 </button>
               </form>
-            ) : (
-              <form onSubmit={acceptWithExistingAccount} className="space-y-4">
+            )}
+
+            {/* Sign in to existing */}
+            {mode === 'sign-in' && (
+              <form onSubmit={acceptWithExistingAccount} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'rgba(255,255,255,0.55)' }}>Email</label>
-                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
-                    className="w-full px-4 py-2.5 rounded-xl text-sm outline-none" style={inputStyle} />
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: 'rgba(255,255,255,0.50)' }}>Email</label>
+                  <input type="email" required value={email} onChange={e => setEmail(e.target.value)} autoFocus style={inputStyle} onFocus={fi} onBlur={fo} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'rgba(255,255,255,0.55)' }}>Password</label>
-                  <input type="password" required value={signInPassword} onChange={e => setSignInPassword(e.target.value)}
-                    placeholder="Your password" className="w-full px-4 py-2.5 rounded-xl text-sm outline-none" style={inputStyle} />
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: 'rgba(255,255,255,0.50)' }}>Password</label>
+                  <input type="password" required value={signInPassword} onChange={e => setSignInPassword(e.target.value)} placeholder="Your password" style={inputStyle} onFocus={fi} onBlur={fo} />
                 </div>
-                <button type="submit" disabled={submitting}
-                  className="w-full py-3 rounded-xl text-sm font-semibold transition-all"
-                  style={{ background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)', color: '#fff', opacity: submitting ? 0.6 : 1 }}>
-                  {submitting ? 'Joining…' : `Sign In & Join ${invite.church.name}`}
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 600,
+                    border: 'none', cursor: submitting ? 'not-allowed' : 'pointer',
+                    background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+                    color: '#fff', boxShadow: '0 4px 18px rgba(99,102,241,0.45)',
+                    opacity: submitting ? 0.65 : 1, marginTop: 4,
+                  }}
+                >
+                  {submitting ? 'Joining…' : <>{`Sign In & Join`} <ArrowRight style={{ width: 15, height: 15 }} /></>}
                 </button>
               </form>
             )}

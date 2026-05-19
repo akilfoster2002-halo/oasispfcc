@@ -77,15 +77,26 @@ export default function InviteAcceptPage() {
   const [formError, setFormError] = useState('')
 
   useEffect(() => {
-    fetch(`/api/invites/${token}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) { setLoadError(data.error); return }
-        setInvite(data.invite)
-        setEmail(data.invite.email)
-        setMode('new-account')
-      })
-      .catch(() => setLoadError('Failed to load invite'))
+    async function init() {
+      // If Supabase redirected here with a PKCE code, exchange it for a session first
+      const code = new URLSearchParams(window.location.search).get('code')
+      if (code) {
+        await getSupabaseBrowser().auth.exchangeCodeForSession(code)
+        // Remove the code from the URL without triggering a reload
+        window.history.replaceState({}, '', window.location.pathname)
+      }
+
+      fetch(`/api/invites/${token}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) { setLoadError(data.error); return }
+          setInvite(data.invite)
+          setEmail(data.invite.email)
+          setMode('new-account')
+        })
+        .catch(() => setLoadError('Failed to load invite'))
+    }
+    init()
   }, [token])
 
   async function acceptWithNewAccount(e: React.FormEvent) {

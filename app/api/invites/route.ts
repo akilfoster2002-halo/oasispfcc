@@ -130,13 +130,9 @@ export async function POST(req: Request) {
 
   const inviteUrl = `${appUrl}/invite/${inviteToken}`
 
-  // redirectTo tells Supabase where to send the user after clicking the email link.
-  // The auth callback exchanges the code and then forwards to /invite/[token].
-  const redirectTo = `${appUrl}/auth/callback?next=/invite/${inviteToken}`
-
-  // Send the invite email via Supabase — user receives a magic link directly.
+  // Send the invite email via Supabase — redirects directly to the invite page.
   const { error: inviteErr } = await supabase.auth.admin.inviteUserByEmail(email, {
-    redirectTo,
+    redirectTo: inviteUrl,
     data: {
       church_slug: church.slug,
       church_name: church.name,

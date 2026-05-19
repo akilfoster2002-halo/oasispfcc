@@ -327,7 +327,7 @@ export default function OnboardingPage() {
               {/* URL preview + status */}
               <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.22)', margin: 0 }}>
-                  lucidity.app/<span style={{ color: churchId ? 'rgba(255,255,255,0.50)' : 'rgba(255,255,255,0.22)' }}>{churchId || '…'}</span>/dashboard
+                  {typeof window !== 'undefined' ? window.location.hostname : 'aquila.app'}/<span style={{ color: churchId ? 'rgba(255,255,255,0.50)' : 'rgba(255,255,255,0.22)' }}>{churchId || '…'}</span>/dashboard
                 </p>
                 <p style={{ fontSize: 12, margin: 0, color: idOk ? '#34d399' : idBad ? '#f87171' : 'transparent' }}>
                   {idOk ? 'Available ✓' : availability === 'taken' ? 'Already taken' : availability === 'invalid' ? 'Min 3 chars, a–z 0–9 -' : ' '}

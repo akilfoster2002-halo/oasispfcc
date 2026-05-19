@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { Church } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 interface Church {
   id: string
@@ -9,9 +9,8 @@ interface Church {
 }
 
 async function getChurch(slug: string): Promise<Church | null> {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : 'http://localhost:3000'
+  const base = process.env.NEXT_PUBLIC_APP_URL
+    ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
   try {
     const res = await fetch(`${base}/api/churches/${slug}`, { cache: 'no-store' })
@@ -21,6 +20,26 @@ async function getChurch(slug: string): Promise<Church | null> {
   } catch {
     return null
   }
+}
+
+function ChurchInitial({ name }: { name: string }) {
+  const initials = name
+    .split(' ')
+    .slice(0, 2)
+    .map((w: string) => w[0])
+    .join('')
+    .toUpperCase()
+  return (
+    <div style={{
+      width: 64, height: 64, borderRadius: 18,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+      fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em',
+      boxShadow: '0 8px 24px rgba(99,102,241,0.45)',
+    }}>
+      {initials}
+    </div>
+  )
 }
 
 export default async function JoinLandingPage({
@@ -34,36 +53,76 @@ export default async function JoinLandingPage({
   if (!church) notFound()
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md space-y-8 text-center">
-        {/* Church logo / icon */}
-        <div className="flex flex-col items-center gap-4">
-          <div
-            className="w-20 h-20 rounded-2xl flex items-center justify-center shadow"
-            style={{ background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)' }}
-          >
-            <Church className="w-10 h-10 text-white" />
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px 16px',
+      background: '#050810',
+      backgroundImage: 'radial-gradient(ellipse 70% 60% at 20% 0%, rgba(79,70,229,0.15) 0%, transparent 65%), radial-gradient(ellipse 55% 45% at 80% 100%, rgba(124,58,237,0.09) 0%, transparent 65%)',
+      fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)',
+      WebkitFontSmoothing: 'antialiased',
+    }}>
+      <div style={{
+        width: '100%', maxWidth: 380,
+        background: 'linear-gradient(145deg, rgba(255,255,255,0.052) 0%, rgba(255,255,255,0.018) 100%)',
+        backdropFilter: 'blur(32px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+        border: '1px solid rgba(255,255,255,0.065)',
+        borderRadius: 24,
+        boxShadow: '0 1px 0 rgba(255,255,255,0.07) inset, 0 24px 64px rgba(0,0,0,0.45)',
+        padding: '36px 28px',
+      }}>
+        {/* Church info */}
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+            <ChurchInitial name={church.name} />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">{church.name}</h1>
+          <h1 style={{
+            fontFamily: 'var(--font-display), var(--font-geist-sans), system-ui',
+            fontSize: 22, fontWeight: 700, letterSpacing: '-0.020em',
+            color: 'rgba(255,255,255,0.94)', margin: '0 0 6px',
+          }}>
+            {church.name}
+          </h1>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', margin: 0 }}>
+            You&apos;ve been invited to join this church workspace on Aquila
+          </p>
         </div>
 
         {/* Actions */}
-        <div className="space-y-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <Link
             href={`/join/${slug}/create`}
-            className="block w-full py-3 px-4 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 600,
+              background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+              color: '#fff', textDecoration: 'none',
+              boxShadow: '0 4px 18px rgba(99,102,241,0.40)',
+            }}
           >
-            Join {church.name}
+            Create an account
+            <ArrowRight style={{ width: 15, height: 15 }} />
           </Link>
+
           <Link
             href={`/login?next=/join/${slug}/create`}
-            className="block w-full py-3 px-4 bg-white border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 500,
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.09)',
+              color: 'rgba(255,255,255,0.55)', textDecoration: 'none',
+            }}
           >
-            I already have an account — Sign in
+            I already have an account
           </Link>
         </div>
 
-        <p className="text-xs text-gray-400">
+        <p style={{ marginTop: 20, textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.18)' }}>
           By joining, you agree to this platform&apos;s terms of service.
         </p>
       </div>

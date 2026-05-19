@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { type NextRequest, NextResponse } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/signup', '/auth', '/join', '/invite', '/pending-approval', '/select-church', '/api/', '/pricing', '/give']
+const PUBLIC_PATHS = ['/login', '/signup', '/auth', '/join', '/invite', '/pending-approval', '/select-church', '/api/', '/pricing', '/give', '/forgot-password', '/reset-password']
 
 function isPublicPath(pathname: string) {
   if (pathname === '/') return true
@@ -56,7 +56,7 @@ export async function updateSession(request: NextRequest) {
   if (user) {
     // Extract slug from path — first segment that isn't a known top-level page
     const segments = pathname.split('/').filter(Boolean)
-    const topLevelPublic = ['login', 'signup', 'auth', 'join', 'invite', 'onboarding', 'pending-approval', 'select-church', 'api', 'give']
+    const topLevelPublic = ['login', 'signup', 'auth', 'join', 'invite', 'onboarding', 'pending-approval', 'select-church', 'api', 'give', 'forgot-password', 'reset-password']
 
     if (segments.length >= 1 && !topLevelPublic.includes(segments[0])) {
       const slug = segments[0]

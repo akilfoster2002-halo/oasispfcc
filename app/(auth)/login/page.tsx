@@ -4,9 +4,7 @@ import { useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
-import { ArrowRight, ArrowLeft, CheckCircle2, Building2 } from 'lucide-react'
-
-// ─── Brand mark ───────────────────────────────────────────────────────────────
+import { ArrowRight } from 'lucide-react'
 
 function AquilaMark() {
   return (
@@ -34,8 +32,6 @@ function AquilaMark() {
     </svg>
   )
 }
-
-// ─── Shared styles ────────────────────────────────────────────────────────────
 
 const S = {
   wrap: {
@@ -86,68 +82,30 @@ function fo(e: React.FocusEvent<HTMLInputElement>) {
   e.currentTarget.style.boxShadow = 'none'
 }
 
-// ─── Inner content ────────────────────────────────────────────────────────────
-
 function LoginContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const next = searchParams.get('next')
+  const next = searchParams.get('next') ?? '/'
 
-  // Step 1: find the church
-  const [step, setStep] = useState<'church' | 'credentials'>('church')
-  const [churchId, setChurchId] = useState('')
-  const [church, setChurch] = useState<{ id: string; name: string; slug: string } | null>(null)
-  const [lookupLoading, setLookupLoading] = useState(false)
-  const [lookupError, setLookupError] = useState('')
-
-  // Step 2: sign in
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [signInLoading, setSignInLoading] = useState(false)
-  const [signInError, setSignInError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  async function findChurch(e: React.FormEvent) {
-    e.preventDefault()
-    const slug = churchId.trim().toLowerCase()
-    if (!slug) return
-    setLookupLoading(true)
-    setLookupError('')
-    try {
-      const res = await fetch(`/api/churches/${slug}`)
-      if (!res.ok) {
-        setLookupError('No workspace found with that ID. Check the spelling and try again.')
-        return
-      }
-      const data = await res.json()
-      if (!data.church) {
-        setLookupError('No workspace found with that ID. Check the spelling and try again.')
-        return
-      }
-      setChurch(data.church)
-      setStep('credentials')
-    } catch {
-      setLookupError('Something went wrong. Check your connection and try again.')
-    } finally {
-      setLookupLoading(false)
-    }
-  }
+  const urlError = searchParams.get('error')
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault()
-    if (!church) return
-    setSignInLoading(true)
-    setSignInError('')
+    setError('')
+    setLoading(true)
     try {
-      const supabase = getSupabaseBrowser()
-      const { error: err } = await supabase.auth.signInWithPassword({ email, password })
-      if (err) { setSignInError(err.message); return }
-      router.push(next ?? `/${church.slug}/dashboard`)
+      const { error: err } = await getSupabaseBrowser().auth.signInWithPassword({ email, password })
+      if (err) { setError(err.message); return }
+      router.push(next)
     } finally {
-      setSignInLoading(false)
+      setLoading(false)
     }
   }
-
-  const urlError = searchParams.get('error')
 
   return (
     <div style={S.wrap}>
@@ -168,170 +126,72 @@ function LoginContent() {
         </div>
       </div>
 
-      {/* ── Step 1: Church lookup ── */}
-      {step === 'church' && (
-        <div style={S.card}>
-          <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.020em', color: 'rgba(255,255,255,0.94)', margin: '0 0 6px', fontFamily: 'var(--font-display), var(--font-geist-sans), system-ui' }}>
-              Sign in
-            </h1>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', margin: 0 }}>
-              Enter your church workspace ID to continue
-            </p>
-          </div>
-
-          {(urlError || lookupError) && (
-            <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 12, fontSize: 13, background: 'rgba(248,113,113,0.10)', color: '#f87171', border: '1px solid rgba(248,113,113,0.22)' }}>
-              {lookupError || 'Sign-in failed. Please try again.'}
-            </div>
-          )}
-
-          <form onSubmit={findChurch} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: 'rgba(255,255,255,0.50)' }}>
-                Church ID
-              </label>
-              <input
-                type="text"
-                required
-                autoFocus
-                autoComplete="off"
-                value={churchId}
-                onChange={e => { setChurchId(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')); setLookupError('') }}
-                placeholder="e.g. oasis-pfcc"
-                style={S.input}
-                onFocus={fi}
-                onBlur={fo}
-              />
-              <p style={{ marginTop: 6, fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>
-                Your workspace ID was set when your church was created
-              </p>
-            </div>
-
-            <button
-              type="submit"
-              disabled={lookupLoading || !churchId.trim()}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 600,
-                border: 'none', cursor: lookupLoading || !churchId.trim() ? 'not-allowed' : 'pointer',
-                background: churchId.trim() && !lookupLoading ? 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)' : 'rgba(255,255,255,0.06)',
-                color: churchId.trim() && !lookupLoading ? '#fff' : 'rgba(255,255,255,0.30)',
-                boxShadow: churchId.trim() && !lookupLoading ? '0 4px 18px rgba(99,102,241,0.40)' : 'none',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              {lookupLoading ? 'Finding workspace…' : <>Continue <ArrowRight style={{ width: 15, height: 15 }} /></>}
-            </button>
-          </form>
-
-          <p style={{ marginTop: 20, textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.28)' }}>
-            New to Aquila?{' '}
-            <Link href="/signup" style={{ color: '#818cf8', textDecoration: 'none', fontWeight: 500 }}>
-              Create a church
-            </Link>
+      <div style={S.card}>
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.020em', color: 'rgba(255,255,255,0.94)', margin: '0 0 6px', fontFamily: 'var(--font-display), var(--font-geist-sans), system-ui' }}>
+            Sign in
+          </h1>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', margin: 0 }}>
+            Welcome back — enter your credentials to continue
           </p>
         </div>
-      )}
 
-      {/* ── Step 2: Credentials ── */}
-      {step === 'credentials' && church && (
-        <div style={S.card}>
+        {(urlError || error) && (
+          <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 12, fontSize: 13, background: 'rgba(248,113,113,0.10)', color: '#f87171', border: '1px solid rgba(248,113,113,0.22)' }}>
+            {error || 'Sign-in failed. Please try again.'}
+          </div>
+        )}
 
-          {/* Church confirmed banner */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24,
-            padding: '12px 14px', borderRadius: 14,
-            background: 'rgba(52,211,153,0.07)', border: '1px solid rgba(52,211,153,0.18)',
-          }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.22)' }}>
-              <Building2 style={{ width: 16, height: 16, color: '#34d399' }} />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.88)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {church.name}
-              </p>
-              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.32)', margin: '2px 0 0' }}>
-                {church.slug}
-              </p>
-            </div>
-            <CheckCircle2 style={{ width: 16, height: 16, color: '#34d399', flexShrink: 0 }} />
+        <form onSubmit={signIn} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: 'rgba(255,255,255,0.50)' }}>
+              Email
+            </label>
+            <input
+              type="email" required autoFocus autoComplete="email"
+              value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="you@church.org"
+              style={S.input} onFocus={fi} onBlur={fo}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: 'rgba(255,255,255,0.50)' }}>
+              Password
+            </label>
+            <input
+              type="password" required autoComplete="current-password"
+              value={password} onChange={e => setPassword(e.target.value)}
+              placeholder="Your password"
+              style={S.input} onFocus={fi} onBlur={fo}
+            />
           </div>
 
-          <div style={{ textAlign: 'center', marginBottom: 22 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.020em', color: 'rgba(255,255,255,0.94)', margin: '0 0 5px', fontFamily: 'var(--font-display), var(--font-geist-sans), system-ui' }}>
-              Welcome back
-            </h1>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', margin: 0 }}>
-              Enter your credentials to sign in
-            </p>
-          </div>
-
-          {signInError && (
-            <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 12, fontSize: 13, background: 'rgba(248,113,113,0.10)', color: '#f87171', border: '1px solid rgba(248,113,113,0.22)' }}>
-              {signInError}
-            </div>
-          )}
-
-          <form onSubmit={signIn} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: 'rgba(255,255,255,0.50)' }}>
-                Email
-              </label>
-              <input
-                type="email" required autoFocus autoComplete="email"
-                value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="you@church.org"
-                style={S.input} onFocus={fi} onBlur={fo}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: 'rgba(255,255,255,0.50)' }}>
-                Password
-              </label>
-              <input
-                type="password" required autoComplete="current-password"
-                value={password} onChange={e => setPassword(e.target.value)}
-                placeholder="Your password"
-                style={S.input} onFocus={fi} onBlur={fo}
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={signInLoading}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 600,
-                border: 'none', cursor: signInLoading ? 'not-allowed' : 'pointer',
-                background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
-                color: '#fff',
-                boxShadow: '0 4px 18px rgba(99,102,241,0.45)',
-                opacity: signInLoading ? 0.65 : 1,
-                marginTop: 4,
-                transition: 'opacity 0.15s ease',
-              }}
-            >
-              {signInLoading ? 'Signing in…' : <>Sign in <ArrowRight style={{ width: 15, height: 15 }} /></>}
-            </button>
-          </form>
-
-          {/* Back link */}
           <button
-            onClick={() => { setStep('church'); setSignInError(''); setEmail(''); setPassword('') }}
+            type="submit"
+            disabled={loading}
             style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              marginTop: 18, width: '100%', background: 'none', border: 'none',
-              cursor: 'pointer', fontSize: 12, color: 'rgba(255,255,255,0.30)',
-              transition: 'color 0.12s ease',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 600,
+              border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+              background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+              color: '#fff',
+              boxShadow: '0 4px 18px rgba(99,102,241,0.45)',
+              opacity: loading ? 0.65 : 1,
+              marginTop: 4,
+              transition: 'opacity 0.15s ease',
             }}
-            onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.55)')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.30)')}
           >
-            <ArrowLeft style={{ width: 12, height: 12 }} />
-            Not your church? Go back
+            {loading ? 'Signing in…' : <>Sign in <ArrowRight style={{ width: 15, height: 15 }} /></>}
           </button>
-        </div>
-      )}
+        </form>
+
+        <p style={{ marginTop: 20, textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.28)' }}>
+          New to Aquila?{' '}
+          <Link href="/signup" style={{ color: '#818cf8', textDecoration: 'none', fontWeight: 500 }}>
+            Create an account
+          </Link>
+        </p>
+      </div>
     </div>
   )
 }

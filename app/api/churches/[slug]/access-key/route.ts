@@ -1,114 +1,111 @@
-import { createClient } from '@supabase/supabase-js'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { NextRequest } from 'next/server'
-import { randomBytes } from 'crypto'
+import { getSupabaseServer } from '@/lib/supabase-server'
+import { requireChurchAdminBySlug } from '@/lib/require-church-admin'
+import { generateAccessKey, KEY_TTL_MS, minutesLeftUntil } from '@/lib/access-key'
 
-const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // no ambiguous 0/O/1/I
-const KEY_TTL_MS = 60 * 60 * 1000 // 1 hour
-
-function generateKey() {
-  const bytes = randomBytes(8)
-  let key = ''
-  for (let i = 0; i < 8; i++) {
-    if (i === 4) key += '-'
-    key += CHARS[bytes[i] % CHARS.length]
-  }
-  return key
-}
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  )
-}
-
-async function getRequestingAdmin(churchId: string) {
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll: () => cookieStore.getAll() } },
-  )
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-  const { data: m } = await adminClient()
-    .from('church_memberships')
-    .select('role')
-    .eq('user_id', user.id)
-    .eq('church_id', churchId)
-    .eq('status', 'approved')
-    .single()
-  if (!m || !['admin', 'pastor'].includes(m.role)) return null
-  return { userId: user.id }
-}
-
-async function rotateKey(churchId: string) {
-  const key = generateKey()
+/**
+ * Atomic rotate. The `eq('access_key_expires_at', priorExpiresAt)` guards against the
+ * race where two admins fetch an expired key at the same time — only one update lands,
+ * and the loser's response tells them to refetch.
+ *
+ * Pass `priorExpiresAt: null` to force-rotate from POST without caring about the prior value.
+ */
+async function rotateKey(churchId: string, priorExpiresAt: string | null) {
+  const key = generateAccessKey()
   const expiresAt = new Date(Date.now() + KEY_TTL_MS).toISOString()
-  await adminClient()
+  const admin = getSupabaseServer()
+
+  let q = admin
     .from('churches')
     .update({ access_key: key, access_key_expires_at: expiresAt })
     .eq('id', churchId)
+  if (priorExpiresAt !== null) {
+    q = q.eq('access_key_expires_at', priorExpiresAt)
+  }
+  // .select() so we know how many rows actually changed.
+  const { data } = await q.select('access_key, access_key_expires_at')
+  if (!data || data.length === 0) {
+    // Someone else rotated first — return whatever's now current.
+    const { data: current } = await admin
+      .from('churches')
+      .select('access_key, access_key_expires_at')
+      .eq('id', churchId)
+      .single()
+    return {
+      key: current?.access_key as string,
+      expiresAt: current?.access_key_expires_at as string,
+    }
+  }
   return { key, expiresAt }
 }
 
-/** GET /api/churches/[slug]/access-key — returns current key, auto-rotates if expired */
+/** GET /api/churches/[slug]/access-key — read-only.
+ *  Returns the current key or, if expired/missing, rotates once and returns the new one.
+ *  Rotation is still done here (so the UI doesn't need a separate call on first load),
+ *  but it's done atomically via conditional update so simultaneous GETs converge.
+ */
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params
-  const admin = adminClient()
+  const guard = await requireChurchAdminBySlug(slug)
+  if ('error' in guard) {
+    return Response.json(
+      { error: guard.error === 'not_found' ? 'Church not found' : 'Forbidden' },
+      { status: guard.error === 'not_found' ? 404 : 403 },
+    )
+  }
 
+  const admin = getSupabaseServer()
   const { data: church } = await admin
     .from('churches')
-    .select('id, access_key, access_key_expires_at')
-    .eq('slug', slug)
+    .select('access_key, access_key_expires_at')
+    .eq('id', guard.churchId)
     .single()
 
   if (!church) return Response.json({ error: 'Church not found' }, { status: 404 })
 
-  const requester = await getRequestingAdmin(church.id)
-  if (!requester) return Response.json({ error: 'Forbidden' }, { status: 403 })
-
-  // Auto-rotate if missing or expired
-  const expired = !church.access_key || !church.access_key_expires_at
-    || new Date(church.access_key_expires_at) <= new Date()
+  const expired =
+    !church.access_key ||
+    !church.access_key_expires_at ||
+    new Date(church.access_key_expires_at) <= new Date()
 
   let key = church.access_key
   let expiresAt = church.access_key_expires_at
 
   if (expired) {
-    const rotated = await rotateKey(church.id)
+    // Pass the prior value so concurrent rotations don't double-rotate.
+    const rotated = await rotateKey(guard.churchId, church.access_key_expires_at ?? null)
     key = rotated.key
     expiresAt = rotated.expiresAt
   }
 
-  const minutesLeft = Math.max(0, Math.floor((new Date(expiresAt!).getTime() - Date.now()) / 60000))
-  return Response.json({ key, expiresAt, minutesLeft })
+  return Response.json({
+    key,
+    expiresAt,
+    minutesLeft: minutesLeftUntil(expiresAt!),
+  })
 }
 
-/** POST /api/churches/[slug]/access-key — force-regenerate the key */
+/** POST /api/churches/[slug]/access-key — force-rotate. */
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params
-  const { data: church } = await adminClient()
-    .from('churches')
-    .select('id')
-    .eq('slug', slug)
-    .single()
+  const guard = await requireChurchAdminBySlug(slug)
+  if ('error' in guard) {
+    return Response.json(
+      { error: guard.error === 'not_found' ? 'Church not found' : 'Forbidden' },
+      { status: guard.error === 'not_found' ? 404 : 403 },
+    )
+  }
 
-  if (!church) return Response.json({ error: 'Church not found' }, { status: 404 })
-
-  const requester = await getRequestingAdmin(church.id)
-  if (!requester) return Response.json({ error: 'Forbidden' }, { status: 403 })
-
-  const { key, expiresAt } = await rotateKey(church.id)
-  const minutesLeft = 60
-  return Response.json({ key, expiresAt, minutesLeft })
+  const { key, expiresAt } = await rotateKey(guard.churchId, null)
+  return Response.json({
+    key,
+    expiresAt,
+    minutesLeft: minutesLeftUntil(expiresAt),
+  })
 }

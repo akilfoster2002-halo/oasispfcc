@@ -1,14 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  )
-}
+import { getSupabaseServer } from '@/lib/supabase-server'
+import { normalizeAccessKey } from '@/lib/access-key'
 
 /** POST /api/auth/join-with-key — authenticated user joins a church using its access key */
 export async function POST(req: Request) {
@@ -24,13 +17,18 @@ export async function POST(req: Request) {
   const { key } = await req.json()
   if (!key) return Response.json({ error: 'Missing key' }, { status: 400 })
 
-  const admin = adminClient()
+  const normalized = normalizeAccessKey(key)
+  if (!normalized) {
+    return Response.json({ error: 'Access keys are 8 characters, like XXXX-XXXX.' }, { status: 400 })
+  }
+
+  const admin = getSupabaseServer()
 
   // Find the church with this key (must not be expired)
   const { data: church } = await admin
     .from('churches')
     .select('id, slug, name, access_key_expires_at')
-    .eq('access_key', key.replace(/\s/g, '').toUpperCase())
+    .eq('access_key', normalized)
     .single()
 
   if (!church) return Response.json({ error: 'Invalid access key' }, { status: 400 })

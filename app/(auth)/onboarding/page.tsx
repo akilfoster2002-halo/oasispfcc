@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
 import {
   Check, X, Loader2, ArrowRight,
-  Users, CalendarDays, BarChart3, MessageSquare, FileText, Sparkles,
+  Users, CalendarDays, BarChart3, MessageSquare, FileText, Sparkles, Key,
 } from 'lucide-react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -89,7 +89,12 @@ const FEATURES = [
 export default function OnboardingPage() {
   const router = useRouter()
 
-  const [step, setStep] = useState<'welcome' | 'setup' | 'done'>('welcome')
+  const [step, setStep] = useState<'welcome' | 'join' | 'setup' | 'done'>('welcome')
+
+  // Join with key state
+  const [accessKey, setAccessKey] = useState('')
+  const [joining, setJoining] = useState(false)
+  const [joinError, setJoinError] = useState('')
   const [userName, setUserName] = useState('')
 
   // Church setup state
@@ -149,6 +154,24 @@ export default function OnboardingPage() {
       setStep('done')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleJoin(e: React.FormEvent) {
+    e.preventDefault()
+    setJoinError('')
+    setJoining(true)
+    try {
+      const res = await fetch('/api/auth/join-with-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: accessKey }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setJoinError(data.error ?? 'Invalid key'); return }
+      router.push(`/${data.slug}/dashboard`)
+    } finally {
+      setJoining(false)
     }
   }
 
@@ -223,25 +246,120 @@ export default function OnboardingPage() {
             ))}
           </div>
 
-          <button
-            onClick={() => setStep('setup')}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-              padding: '15px 0', borderRadius: 14, fontSize: 16, fontWeight: 700,
-              border: 'none', cursor: 'pointer',
-              background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
-              color: '#fff', letterSpacing: '-0.010em',
-              boxShadow: '0 6px 24px rgba(99,102,241,0.50)',
-              transition: 'opacity 0.15s ease',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '0.90')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-          >
-            <Sparkles style={{ width: 16, height: 16 }} />
-            Set up my church workspace
-            <ArrowRight style={{ width: 16, height: 16 }} />
-          </button>
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <button
+              onClick={() => setStep('setup')}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                padding: '15px 0', borderRadius: 14, fontSize: 16, fontWeight: 700,
+                border: 'none', cursor: 'pointer',
+                background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+                color: '#fff', letterSpacing: '-0.010em',
+                boxShadow: '0 6px 24px rgba(99,102,241,0.50)',
+                transition: 'opacity 0.15s ease',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.90')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            >
+              <Sparkles style={{ width: 16, height: 16 }} />
+              Create a church workspace
+              <ArrowRight style={{ width: 16, height: 16 }} />
+            </button>
+            <button
+              onClick={() => setStep('join')}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                padding: '14px 0', borderRadius: 14, fontSize: 15, fontWeight: 600,
+                border: '1px solid rgba(255,255,255,0.10)', cursor: 'pointer',
+                background: 'rgba(255,255,255,0.04)',
+                color: 'rgba(255,255,255,0.65)', letterSpacing: '-0.010em',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.85)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'rgba(255,255,255,0.65)' }}
+            >
+              <Key style={{ width: 15, height: 15 }} />
+              Join with an access key
+            </button>
+          </div>
         </div>
+      </div>
+    )
+  }
+
+  // ── Step: Join with key ───────────────────────────────────────────────────
+  if (step === 'join') {
+    return (
+      <div style={wrapStyle}>
+        <div style={{ width: '100%', maxWidth: 420 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32 }}>
+            <AquilaMark size={32} />
+            <div>
+              <p style={{ fontFamily: 'var(--font-display), var(--font-geist-sans), system-ui', fontSize: 15, fontWeight: 700, letterSpacing: '-0.020em', color: 'rgba(255,255,255,0.88)', margin: 0 }}>Aquila</p>
+              <p style={{ fontSize: 10, color: 'rgba(129,140,248,0.52)', letterSpacing: '0.08em', fontWeight: 500, margin: 0 }}>BY OASIS PFCC</p>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 28 }}>
+            <h1 style={{ fontFamily: 'var(--font-display), var(--font-geist-sans), system-ui', fontSize: 28, fontWeight: 800, letterSpacing: '-0.025em', color: 'rgba(255,255,255,0.94)', margin: '0 0 8px' }}>
+              Enter your access key
+            </h1>
+            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.40)', margin: 0 }}>
+              Ask your church admin for the current key, then enter it below.
+            </p>
+          </div>
+
+          {joinError && (
+            <div style={{ marginBottom: 20, padding: '10px 16px', borderRadius: 12, fontSize: 13, background: 'rgba(248,113,113,0.10)', color: '#f87171', border: '1px solid rgba(248,113,113,0.22)' }}>
+              {joinError}
+            </div>
+          )}
+
+          <form onSubmit={handleJoin} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: 'rgba(255,255,255,0.55)' }}>
+                Access Key
+              </label>
+              <input
+                type="text"
+                required
+                autoFocus
+                autoComplete="off"
+                value={accessKey}
+                onChange={e => { setAccessKey(e.target.value.toUpperCase()); setJoinError('') }}
+                placeholder="XXXX-XXXX"
+                style={{ ...inputStyle, textAlign: 'center', fontSize: 22, fontWeight: 700, letterSpacing: '0.12em', fontFamily: 'monospace' }}
+                onFocus={fi}
+                onBlur={fo}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={joining || !accessKey.trim()}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: '14px 0', borderRadius: 14, fontSize: 15, fontWeight: 700,
+                border: 'none', cursor: joining || !accessKey.trim() ? 'not-allowed' : 'pointer',
+                background: accessKey.trim() && !joining ? 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)' : 'rgba(255,255,255,0.06)',
+                color: accessKey.trim() && !joining ? '#fff' : 'rgba(255,255,255,0.28)',
+                boxShadow: accessKey.trim() && !joining ? '0 4px 20px rgba(99,102,241,0.45)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {joining ? <><Loader2 style={{ width: 15, height: 15, animation: 'spin 0.8s linear infinite' }} /> Joining…</> : <>Join workspace <ArrowRight style={{ width: 15, height: 15 }} /></>}
+            </button>
+
+            <button type="button" onClick={() => { setStep('welcome'); setJoinError(''); setAccessKey('') }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'rgba(255,255,255,0.30)', padding: 0, transition: 'color 0.12s ease' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.55)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.30)')}
+            >
+              ← Back
+            </button>
+          </form>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     )
   }

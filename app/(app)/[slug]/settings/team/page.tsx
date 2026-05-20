@@ -2,234 +2,153 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { Send, Trash2, Users, Copy, Check } from 'lucide-react'
-
-interface Invite {
-  id: string
-  email: string
-  role: string
-  status: string
-  created_at: string
-  expires_at: string
-}
-
-const ROLES = ['member', 'volunteer', 'leader', 'pastor', 'admin'] as const
-
-const STATUS_STYLE: Record<string, string> = {
-  pending:  'bg-yellow-100 text-yellow-700',
-  accepted: 'bg-green-100 text-green-700',
-  revoked:  'bg-red-100 text-red-700',
-}
+import { Key, Copy, Check, RefreshCw, Clock } from 'lucide-react'
 
 export default function TeamPage() {
   const params = useParams()
   const slug = params.slug as string
 
-  const [churchId, setChurchId] = useState<string | null>(null)
-  const [invites, setInvites] = useState<Invite[]>([])
+  const [keyData, setKeyData] = useState<{ key: string; minutesLeft: number } | null>(null)
   const [loading, setLoading] = useState(true)
-
-  const [email, setEmail] = useState('')
-  const [role, setRole] = useState<typeof ROLES[number]>('member')
-  const [sending, setSending] = useState(false)
-  const [sendError, setSendError] = useState('')
-  const [lastResult, setLastResult] = useState<{ emailSent: boolean; inviteUrl?: string; email: string } | null>(null)
+  const [regenerating, setRegenerating] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [error, setError] = useState('')
 
-  // Fetch church ID
-  useEffect(() => {
-    fetch(`/api/churches/${slug}`)
-      .then(r => r.json())
-      .then(({ church }) => setChurchId(church?.id ?? null))
-  }, [slug])
-
-  // Fetch invites
-  useEffect(() => {
-    if (!churchId) return
+  function fetchKey() {
     setLoading(true)
-    fetch(`/api/invites?churchId=${churchId}`)
+    fetch(`/api/churches/${slug}/access-key`)
       .then(r => r.json())
-      .then(({ invites: inv }) => setInvites(inv ?? []))
-      .finally(() => setLoading(false))
-  }, [churchId])
-
-  async function sendInvite(e: React.FormEvent) {
-    e.preventDefault()
-    if (!churchId) { setSendError('Church not loaded yet — please wait a moment and try again.'); return }
-    setSendError('')
-    setSending(true)
-    setLastResult(null)
-    const sentTo = email
-    try {
-      const res = await fetch('/api/invites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ churchId, email, role }),
+      .then(d => {
+        if (d.error) { setError(d.error); return }
+        setKeyData({ key: d.key, minutesLeft: d.minutesLeft })
       })
-      const data = await res.json()
-      if (!res.ok) { setSendError(data.error ?? 'Failed to send invite'); return }
-      setLastResult({ emailSent: data.emailSent, inviteUrl: data.inviteUrl, email: sentTo })
-      setEmail('')
-      fetch(`/api/invites?churchId=${churchId}`)
-        .then(r => r.json())
-        .then(({ invites: inv }) => setInvites(inv ?? []))
-    } catch {
-      setSendError('Network error — please try again.')
+      .catch(() => setError('Failed to load access key'))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { fetchKey() }, [slug])
+
+  // Countdown timer
+  useEffect(() => {
+    if (!keyData) return
+    const interval = setInterval(() => {
+      setKeyData(prev => {
+        if (!prev) return prev
+        const next = prev.minutesLeft - 1
+        if (next <= 0) { fetchKey(); return prev }
+        return { ...prev, minutesLeft: next }
+      })
+    }, 60000)
+    return () => clearInterval(interval)
+  }, [keyData?.key])
+
+  async function regenerate() {
+    setRegenerating(true)
+    try {
+      const res = await fetch(`/api/churches/${slug}/access-key`, { method: 'POST' })
+      const d = await res.json()
+      if (d.error) { setError(d.error); return }
+      setKeyData({ key: d.key, minutesLeft: d.minutesLeft })
     } finally {
-      setSending(false)
+      setRegenerating(false)
     }
   }
 
-  async function revokeInvite(inviteId: string) {
-    if (!churchId) return
-    await fetch(`/api/invites?inviteId=${inviteId}&churchId=${churchId}`, { method: 'DELETE' })
-    setInvites(prev => prev.map(i => i.id === inviteId ? { ...i, status: 'revoked' } : i))
-  }
-
-  function copyLink() {
-    if (!lastResult?.inviteUrl) return
-    navigator.clipboard.writeText(lastResult.inviteUrl)
+  function copyKey() {
+    if (!keyData) return
+    navigator.clipboard.writeText(keyData.key)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const inputStyle = {
-    background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.10)',
-    color: 'rgba(255,255,255,0.88)',
-  }
+  const urgency = keyData && keyData.minutesLeft <= 10
 
   return (
-    <div className="p-6 md:p-8 max-w-3xl">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(129,140,248,0.15))', border: '1px solid rgba(129,140,248,0.25)' }}>
-          <Users className="w-5 h-5" style={{ color: '#818cf8' }} />
+    <div style={{ padding: '28px 32px', maxWidth: 560, fontFamily: 'var(--font-geist-sans, system-ui)' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 32 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, rgba(99,102,241,0.22), rgba(129,140,248,0.12))', border: '1px solid rgba(129,140,248,0.25)' }}>
+          <Key style={{ width: 20, height: 20, color: '#818cf8' }} />
         </div>
         <div>
-          <h1 className="text-lg font-semibold" style={{ color: 'rgba(255,255,255,0.92)' }}>Team & Invites</h1>
-          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.40)' }}>
-            Invite people to your church by email
-          </p>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: 'rgba(255,255,255,0.92)', margin: 0, letterSpacing: '-0.02em' }}>Church Access Key</h1>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', margin: '2px 0 0' }}>Share this key so members can join your workspace</p>
         </div>
       </div>
 
-      {/* Invite form */}
-      <div className="p-5 rounded-2xl mb-6"
-        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-        <h2 className="text-sm font-semibold mb-4" style={{ color: 'rgba(255,255,255,0.75)' }}>
-          Send an invite
-        </h2>
-        <form onSubmit={sendInvite} className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="member@church.org"
-            className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none"
-            style={inputStyle}
-          />
-          <select
-            value={role}
-            onChange={e => setRole(e.target.value as typeof ROLES[number])}
-            className="px-4 py-2.5 rounded-xl text-sm outline-none capitalize"
-            style={inputStyle}
-          >
-            {ROLES.map(r => <option key={r} value={r} style={{ background: '#0a0e23' }}>{r}</option>)}
-          </select>
-          <button
-            type="submit"
-            disabled={sending || !churchId}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold shrink-0 transition-all"
-            style={{
-              background: sending || !churchId ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
-              color: sending || !churchId ? 'rgba(255,255,255,0.35)' : '#fff',
-              cursor: sending || !churchId ? 'not-allowed' : 'pointer',
-              opacity: 1,
-            }}
-          >
-            <Send className="w-4 h-4" />
-            {sending ? 'Sending…' : 'Send Invite'}
-          </button>
-        </form>
+      {error && (
+        <div style={{ marginBottom: 20, padding: '10px 14px', borderRadius: 12, fontSize: 13, background: 'rgba(248,113,113,0.10)', color: '#f87171', border: '1px solid rgba(248,113,113,0.22)' }}>
+          {error}
+        </div>
+      )}
 
-        {sendError && (
-          <p className="mt-3 text-xs" style={{ color: '#f87171' }}>{sendError}</p>
-        )}
-
-        {lastResult && (
-          <div className="mt-4 flex items-center gap-2 p-3 rounded-xl"
-            style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.20)' }}>
-            {lastResult.emailSent ? (
-              <p className="flex-1 text-xs" style={{ color: '#34d399' }}>
-                Invite email sent to <strong>{lastResult.email}</strong> — they&apos;ll get a link to join.
-              </p>
-            ) : (
-              <>
-                <p className="flex-1 text-xs truncate" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                  Already registered — share this link: <span style={{ color: '#34d399' }}>{lastResult.inviteUrl}</span>
-                </p>
-                <button onClick={copyLink}
-                  className="flex items-center gap-1 text-xs font-medium shrink-0"
-                  style={{ color: copied ? '#34d399' : 'rgba(255,255,255,0.45)' }}>
-                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copied ? 'Copied' : 'Copy'}
-                </button>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Invite list */}
-      <div>
-        <h2 className="text-sm font-semibold mb-3" style={{ color: 'rgba(255,255,255,0.55)' }}>
-          Sent invites
-        </h2>
+      {/* Key card */}
+      <div style={{ background: 'linear-gradient(145deg, rgba(255,255,255,0.052) 0%, rgba(255,255,255,0.018) 100%)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 28, marginBottom: 16 }}>
 
         {loading ? (
-          <div className="space-y-2">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-12 rounded-xl animate-pulse" style={{ background: 'rgba(255,255,255,0.04)' }} />
-            ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ height: 52, borderRadius: 14, background: 'rgba(255,255,255,0.05)' }} />
+            <div style={{ height: 20, width: 160, borderRadius: 8, background: 'rgba(255,255,255,0.04)' }} />
           </div>
-        ) : invites.length === 0 ? (
-          <p className="text-sm py-8 text-center" style={{ color: 'rgba(255,255,255,0.25)' }}>
-            No invites sent yet
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {invites.map(inv => (
-              <div key={inv.id}
-                className="flex items-center gap-4 px-4 py-3 rounded-xl"
-                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: 'rgba(255,255,255,0.85)' }}>
-                    {inv.email}
-                  </p>
-                  <p className="text-xs mt-0.5 capitalize" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                    {inv.role} · sent {new Date(inv.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 capitalize ${STATUS_STYLE[inv.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                  {inv.status}
+        ) : keyData ? (
+          <>
+            {/* Key display */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ flex: 1, padding: '14px 20px', borderRadius: 14, background: 'rgba(99,102,241,0.10)', border: '1px solid rgba(99,102,241,0.22)', textAlign: 'center' }}>
+                <span style={{ fontSize: 28, fontWeight: 800, letterSpacing: '0.12em', color: '#a5b4fc', fontFamily: 'monospace' }}>
+                  {keyData.key}
                 </span>
-                {inv.status === 'pending' && (
-                  <button
-                    onClick={() => revokeInvite(inv.id)}
-                    className="shrink-0 p-1.5 rounded-lg transition-colors"
-                    style={{ color: 'rgba(255,255,255,0.25)' }}
-                    title="Revoke invite"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
               </div>
-            ))}
-          </div>
-        )}
+              <button onClick={copyKey}
+                style={{ width: 48, height: 48, borderRadius: 12, border: '1px solid rgba(255,255,255,0.10)', background: copied ? 'rgba(52,211,153,0.12)' : 'rgba(255,255,255,0.05)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s ease' }}
+                title="Copy key"
+              >
+                {copied
+                  ? <Check style={{ width: 16, height: 16, color: '#34d399' }} />
+                  : <Copy style={{ width: 16, height: 16, color: 'rgba(255,255,255,0.50)' }} />
+                }
+              </button>
+            </div>
+
+            {/* Timer + regenerate */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Clock style={{ width: 13, height: 13, color: urgency ? '#f59e0b' : 'rgba(255,255,255,0.30)' }} />
+                <span style={{ fontSize: 12, color: urgency ? '#f59e0b' : 'rgba(255,255,255,0.35)' }}>
+                  {keyData.minutesLeft <= 1 ? 'Rotating soon…' : `Rotates in ${keyData.minutesLeft} min`}
+                </span>
+              </div>
+              <button onClick={regenerate} disabled={regenerating}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.55)', cursor: regenerating ? 'not-allowed' : 'pointer', opacity: regenerating ? 0.6 : 1, transition: 'all 0.15s ease' }}
+              >
+                <RefreshCw style={{ width: 12, height: 12, animation: regenerating ? 'spin 0.8s linear infinite' : 'none' }} />
+                {regenerating ? 'Rotating…' : 'Rotate now'}
+              </button>
+            </div>
+          </>
+        ) : null}
       </div>
+
+      {/* How it works */}
+      <div style={{ padding: '16px 20px', borderRadius: 14, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 12px' }}>How it works</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[
+            'Share this key with your team via text, announcement, or QR code.',
+            'They create an account on the signup page, then enter this key to join.',
+            'The key rotates every hour — old keys stop working automatically.',
+            'Rotate manually any time if you think a key has been shared too widely.',
+          ].map((text, i) => (
+            <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <span style={{ width: 18, height: 18, borderRadius: 5, background: 'rgba(99,102,241,0.14)', border: '1px solid rgba(99,102,241,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#818cf8', flexShrink: 0, marginTop: 1 }}>{i + 1}</span>
+              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', lineHeight: 1.5 }}>{text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }

@@ -247,8 +247,15 @@ export default function ChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: updated }),
       })
-      const data = await res.json()
-      const reply = data.error ? `Sorry, something went wrong: ${data.error}` : data.reply
+      const rawText = await res.text()
+      let data: { reply?: string; error?: string }
+      try {
+        data = JSON.parse(rawText)
+      } catch {
+        console.error('[chat] non-JSON response:', res.status, rawText.slice(0, 200))
+        throw new Error(`Server returned ${res.status}: ${rawText.slice(0, 80)}`)
+      }
+      const reply = data.error ? `Sorry, something went wrong: ${data.error}` : (data.reply ?? 'No response.')
       setMessages(prev => [...prev, { role: 'assistant', content: reply }])
 
       if (sessionId) {
@@ -256,8 +263,10 @@ export default function ChatPage() {
         await supabase.from('chat_sessions').update({ updated_at: new Date().toISOString() }).eq('id', sessionId)
         loadSessions()
       }
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I couldn't connect. Please try again." }])
+    } catch (err) {
+      console.error('[chat] fetch error:', err)
+      const msg = err instanceof Error ? err.message : String(err)
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${msg}` }])
     } finally {
       setLoading(false)
       setTimeout(() => inputRef.current?.focus(), 50)

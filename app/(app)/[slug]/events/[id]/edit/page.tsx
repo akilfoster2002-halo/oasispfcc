@@ -1,13 +1,17 @@
 'use client'
 
-import { use, useEffect, useState } from 'react'
+import { use, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
+import { generateOccurrences, describeRecurrence, type RecurrenceRule } from '@/lib/recurrence'
 import {
-  ArrowLeft, Calendar, Clock, MapPin, Tag, BarChart2,
+  ArrowLeft, Calendar, Clock, MapPin, Tag, RefreshCw,
+  ChevronDown, ChevronUp, Info,
 } from 'lucide-react'
 import TimePicker, { addMinutes, timeBefore } from '@/components/TimePicker'
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const SERVICE_TYPES = [
   { value: 'sunday_inperson', label: 'Sunday Service (In-Person)' },
@@ -18,6 +22,41 @@ const SERVICE_TYPES = [
   { value: 'prayer',          label: 'Prayer Meeting' },
   { value: 'other',           label: 'Other' },
 ]
+
+const WEEKDAY_LABELS = [
+  { key: 'SUN', label: 'S', full: 'Sunday' },
+  { key: 'MON', label: 'M', full: 'Monday' },
+  { key: 'TUE', label: 'T', full: 'Tuesday' },
+  { key: 'WED', label: 'W', full: 'Wednesday' },
+  { key: 'THU', label: 'T', full: 'Thursday' },
+  { key: 'FRI', label: 'F', full: 'Friday' },
+  { key: 'SAT', label: 'S', full: 'Saturday' },
+]
+
+const DEFAULT_RECURRENCE: RecurrenceRule = {
+  type: 'none',
+  interval: 1,
+  days: [],
+  monthlyType: 'day_of_month',
+  endType: 'never',
+  endDate: '',
+  endCount: 10,
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function monthlyLabel(dateStr: string, type: 'day_of_month' | 'day_of_week'): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr + 'T12:00:00')
+  const day = d.getDate()
+  const weekdayName = d.toLocaleDateString('en-US', { weekday: 'long' })
+  const weekNum = Math.floor((day - 1) / 7) + 1
+  const ordinals = ['1st', '2nd', '3rd', '4th', '5th']
+  if (type === 'day_of_month') return `Monthly on day ${day}`
+  return `Monthly on the ${ordinals[weekNum - 1]} ${weekdayName}`
+}
+
+// ─── Shared styles ────────────────────────────────────────────────────────────
 
 const cardStyle: React.CSSProperties = {
   background: 'linear-gradient(145deg, rgba(255,255,255,0.052) 0%, rgba(255,255,255,0.018) 100%)',
@@ -70,52 +109,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
   )
 }
 
-function NumericField({ label, value, onChange, min = 0 }: {
-  label: string; value: number; onChange: (v: number) => void; min?: number
-}) {
-  const btnStyle: React.CSSProperties = {
-    width: 32, height: 32, borderRadius: 8, fontSize: 18, fontWeight: 400,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)',
-    color: 'rgba(255,255,255,0.65)', cursor: 'pointer', transition: 'background 0.12s ease',
-    flexShrink: 0,
-  }
-  return (
-    <Field label={label}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button
-          type="button"
-          onClick={() => onChange(Math.max(min, value - 1))}
-          style={btnStyle}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.10)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
-        >
-          −
-        </button>
-        <input
-          type="number"
-          min={min}
-          value={value}
-          onChange={e => onChange(Math.max(min, parseInt(e.target.value) || 0))}
-          style={{
-            width: 56, textAlign: 'center', padding: '6px 8px', fontSize: 13,
-            background: 'rgba(255,255,255,0.032)', border: '1px solid rgba(255,255,255,0.08)',
-            color: 'rgba(255,255,255,0.88)', borderRadius: 8, outline: 'none',
-          }}
-        />
-        <button
-          type="button"
-          onClick={() => onChange(value + 1)}
-          style={btnStyle}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.10)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
-        >
-          +
-        </button>
-      </div>
-    </Field>
-  )
-}
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export default function EditEventPage({
   params,
@@ -127,27 +121,36 @@ export default function EditEventPage({
   const router = useRouter()
   const slug = routeParams?.slug as string
 
-  const [groups, setGroups] = useState<{ id: string; name: string }[]>([])
-  const [cells,  setCells]  = useState<{ id: string; name: string; color: string }[]>([])
+  const [groups, setGroups]           = useState<{ id: string; name: string }[]>([])
+  const [cells,  setCells]            = useState<{ id: string; name: string; color: string }[]>([])
   const [loadingEvent, setLoadingEvent] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving]           = useState(false)
+  const [error, setError]             = useState<string | null>(null)
+  const [showRecurrence, setShowRecurrence] = useState(false)
+  const dateInputRef = useRef<HTMLInputElement>(null)
 
-  const [name, setName] = useState('')
+  const [name, setName]               = useState('')
   const [description, setDescription] = useState('')
-  const [location, setLocation] = useState('')
+  const [location, setLocation]       = useState('')
   const [serviceType, setServiceType] = useState('sunday_inperson')
-  const [groupId, setGroupId] = useState('')
-  const [cellId,  setCellId]  = useState('')
-  const [allDay, setAllDay] = useState(false)
-  const [date, setDate] = useState('')
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
+  const [groupId, setGroupId]         = useState('')
+  const [cellId,  setCellId]          = useState('')
+  const [allDay, setAllDay]           = useState(false)
+  const [date, setDate]               = useState('')
+  const [startTime, setStartTime]     = useState('')
+  const [endTime, setEndTime]         = useState('')
 
-  const [firstTimers, setFirstTimers] = useState(0)
-  const [soulWon, setSoulWon] = useState(0)
-  const [fsEnrolled, setFsEnrolled] = useState(0)
-  const [substantiations, setSubstantiations] = useState(0)
+  const [recurrence, setRecurrence]   = useState<RecurrenceRule>(DEFAULT_RECURRENCE)
+
+  const setR = (patch: Partial<RecurrenceRule>) =>
+    setRecurrence(r => ({ ...r, ...patch }))
+
+  const toggleDay = (key: string) =>
+    setR({
+      days: recurrence.days.includes(key)
+        ? recurrence.days.filter(d => d !== key)
+        : [...recurrence.days, key],
+    })
 
   useEffect(() => {
     const load = async () => {
@@ -181,15 +184,31 @@ export default function EditEventPage({
         const t = new Date(ev.event_end_datetime)
         setEndTime(`${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`)
       }
-      setFirstTimers(ev.first_timers ?? 0)
-      setSoulWon(ev.soul_won ?? 0)
-      setFsEnrolled(ev.fs_enrolled ?? 0)
-      setSubstantiations(ev.substantiations ?? 0)
+      if (ev.recurrence_rule) {
+        setRecurrence({ ...DEFAULT_RECURRENCE, ...ev.recurrence_rule })
+        if (ev.recurrence_rule.type !== 'none') setShowRecurrence(true)
+      }
 
       setLoadingEvent(false)
     }
     load()
   }, [slug, eventId])
+
+  const occurrences = useMemo(() => {
+    if (!date || recurrence.type === 'none') return []
+    return generateOccurrences(date, recurrence)
+  }, [date, recurrence])
+
+  const previewLabel = useMemo(() => {
+    if (recurrence.type === 'none') return null
+    const n = occurrences.length
+    if (n === 0) return 'No events generated — check your settings'
+    const last = occurrences[occurrences.length - 1]
+    const lastFmt = new Date(last + 'T12:00:00').toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+    })
+    return `Will create ${n} event${n === 1 ? '' : 's'} · last on ${lastFmt}`
+  }, [occurrences, recurrence.type])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -211,10 +230,7 @@ export default function EditEventPage({
         event_date: date,
         start_time: allDay ? null : startTime || null,
         end_time: allDay ? null : endTime || null,
-        first_timers: firstTimers,
-        soul_won: soulWon,
-        fs_enrolled: fsEnrolled,
-        substantiations,
+        recurrence: recurrence.type !== 'none' ? recurrence : null,
       }),
     })
 
@@ -227,6 +243,8 @@ export default function EditEventPage({
 
     router.push(`/${slug}/events/${eventId}`)
   }
+
+  const isRecurring = recurrence.type !== 'none'
 
   if (loadingEvent) {
     return (
@@ -262,7 +280,7 @@ export default function EditEventPage({
         <div style={{ marginBottom: 28 }}>
           <h1 className="text-display" style={{ marginBottom: 8 }}>Edit Event</h1>
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.44)', margin: 0 }}>
-            Changes apply to this occurrence only.
+            Update details or change the recurrence for this event.
           </p>
         </div>
 
@@ -337,6 +355,7 @@ export default function EditEventPage({
                 <Field label="Date" required>
                   <div style={{ position: 'relative' }}>
                     <input
+                      ref={dateInputRef}
                       type="date"
                       required
                       value={date}
@@ -348,7 +367,7 @@ export default function EditEventPage({
                     />
                     <button
                       type="button"
-                      onClick={() => (document.getElementById('edit-date-input') as HTMLInputElement)?.showPicker()}
+                      onClick={() => dateInputRef.current?.showPicker()}
                       tabIndex={-1}
                       style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#C9A84C', padding: 0 }}
                     >
@@ -448,15 +467,250 @@ export default function EditEventPage({
             </div>
           </div>
 
-          {/* ── Metrics ── */}
-          <div style={cardStyle}>
-            <SectionHeader icon={BarChart2} title="Metrics" />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px 24px' }}>
-              <NumericField label="First Timers"    value={firstTimers}    onChange={setFirstTimers} />
-              <NumericField label="Soul Won"         value={soulWon}        onChange={setSoulWon} />
-              <NumericField label="FS Enrolled"      value={fsEnrolled}     onChange={setFsEnrolled} />
-              <NumericField label="Substantiations"  value={substantiations} onChange={setSubstantiations} />
-            </div>
+          {/* ── Recurrence ── */}
+          <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+
+            <button
+              type="button"
+              onClick={() => setShowRecurrence(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                width: '100%', padding: '20px 24px', textAlign: 'left',
+                background: 'none', border: 'none', cursor: 'pointer',
+                transition: 'background 0.12s ease',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <RefreshCw style={{ width: 14, height: 14, flexShrink: 0, color: '#C9A84C' }} />
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.88)', margin: 0 }}>
+                    Recurrence
+                  </p>
+                  <p style={{ fontSize: 12, marginTop: 2, margin: 0, color: isRecurring ? '#C9A84C' : 'rgba(255,255,255,0.30)' }}>
+                    {isRecurring ? describeRecurrence(recurrence, date) : 'Does not repeat'}
+                  </p>
+                </div>
+              </div>
+              {showRecurrence
+                ? <ChevronUp  style={{ width: 14, height: 14, flexShrink: 0, color: 'rgba(255,255,255,0.28)' }} />
+                : <ChevronDown style={{ width: 14, height: 14, flexShrink: 0, color: 'rgba(255,255,255,0.28)' }} />}
+            </button>
+
+            {showRecurrence && (
+              <div style={{ padding: '0 24px 24px', borderTop: '1px solid rgba(255,255,255,0.055)', display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+                {/* Repeat type */}
+                <div style={{ paddingTop: 20 }}>
+                  <p className="text-label" style={{ marginBottom: 12 }}>Repeat</p>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {(['none', 'daily', 'weekly', 'monthly'] as const).map(t => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setR({ type: t })}
+                        style={{
+                          padding: '8px 16px', borderRadius: 12, fontSize: 13, fontWeight: 500,
+                          border: 'none', cursor: 'pointer', transition: 'all 0.12s ease',
+                          backgroundColor: recurrence.type === t ? '#A88A35' : 'rgba(255,255,255,0.06)',
+                          color: recurrence.type === t ? '#fff' : 'rgba(255,255,255,0.55)',
+                          boxShadow: recurrence.type === t ? '0 2px 8px rgba(201,168,76,0.35)' : 'none',
+                        }}
+                      >
+                        {t === 'none' ? 'None' : t.charAt(0).toUpperCase() + t.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Interval */}
+                {recurrence.type !== 'none' && (
+                  <div>
+                    <p className="text-label" style={{ marginBottom: 12 }}>Frequency</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>Every</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={99}
+                        value={recurrence.interval}
+                        onChange={e => setR({ interval: Math.max(1, parseInt(e.target.value) || 1) })}
+                        style={{
+                          width: 56, padding: '6px 8px', textAlign: 'center', fontSize: 13,
+                          background: 'rgba(255,255,255,0.032)', border: '1px solid rgba(255,255,255,0.08)',
+                          color: 'rgba(255,255,255,0.88)', borderRadius: 10, outline: 'none',
+                        }}
+                      />
+                      <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)' }}>
+                        {recurrence.type === 'daily'   && (recurrence.interval === 1 ? 'day' : 'days')}
+                        {recurrence.type === 'weekly'  && (recurrence.interval === 1 ? 'week' : 'weeks')}
+                        {recurrence.type === 'monthly' && (recurrence.interval === 1 ? 'month' : 'months')}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Weekly day picker */}
+                {recurrence.type === 'weekly' && (
+                  <div>
+                    <p className="text-label" style={{ marginBottom: 12 }}>On days</p>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {WEEKDAY_LABELS.map(({ key, label, full }) => {
+                        const active = recurrence.days.includes(key)
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            title={full}
+                            onClick={() => toggleDay(key)}
+                            style={{
+                              width: 36, height: 36, borderRadius: 10, fontSize: 12, fontWeight: 700,
+                              border: 'none', cursor: 'pointer', transition: 'all 0.12s ease',
+                              backgroundColor: active ? '#A88A35' : 'rgba(255,255,255,0.06)',
+                              color: active ? '#fff' : 'rgba(255,255,255,0.40)',
+                              boxShadow: active ? '0 2px 6px rgba(201,168,76,0.30)' : 'none',
+                            }}
+                          >
+                            {label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {recurrence.days.length === 0 && (
+                      <p style={{ fontSize: 12, marginTop: 8, color: 'rgba(255,255,255,0.28)', margin: '8px 0 0' }}>
+                        No days selected — will default to the event start day
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Monthly type */}
+                {recurrence.type === 'monthly' && (
+                  <div>
+                    <p className="text-label" style={{ marginBottom: 12 }}>Repeat on</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {(['day_of_month', 'day_of_week'] as const).map(t => (
+                        <label
+                          key={t}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 12,
+                            padding: '12px 16px', borderRadius: 12, cursor: 'pointer',
+                            border: `1px solid ${recurrence.monthlyType === t ? 'rgba(201,168,76,0.50)' : 'rgba(255,255,255,0.08)'}`,
+                            background: recurrence.monthlyType === t ? 'rgba(201,168,76,0.08)' : 'rgba(255,255,255,0.02)',
+                            transition: 'all 0.12s ease',
+                          }}
+                        >
+                          <input
+                            type="radio"
+                            name="monthlyType"
+                            checked={recurrence.monthlyType === t}
+                            onChange={() => setR({ monthlyType: t })}
+                            style={{ accentColor: '#A88A35' }}
+                          />
+                          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.72)' }}>
+                            {monthlyLabel(date, t)}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* End condition */}
+                {recurrence.type !== 'none' && (
+                  <div>
+                    <p className="text-label" style={{ marginBottom: 12 }}>Ends</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+                      <label style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '12px 16px', borderRadius: 12, cursor: 'pointer',
+                        border: `1px solid ${recurrence.endType === 'never' ? 'rgba(201,168,76,0.50)' : 'rgba(255,255,255,0.08)'}`,
+                        background: recurrence.endType === 'never' ? 'rgba(201,168,76,0.08)' : 'rgba(255,255,255,0.02)',
+                        transition: 'all 0.12s ease',
+                      }}>
+                        <input type="radio" name="endType" checked={recurrence.endType === 'never'} onChange={() => setR({ endType: 'never' })} style={{ accentColor: '#A88A35' }} />
+                        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.72)', flex: 1 }}>Never</span>
+                        {recurrence.endType === 'never' && (
+                          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.30)' }}>up to 2 years</span>
+                        )}
+                      </label>
+
+                      <label style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '12px 16px', borderRadius: 12, cursor: 'pointer',
+                        border: `1px solid ${recurrence.endType === 'on_date' ? 'rgba(201,168,76,0.50)' : 'rgba(255,255,255,0.08)'}`,
+                        background: recurrence.endType === 'on_date' ? 'rgba(201,168,76,0.08)' : 'rgba(255,255,255,0.02)',
+                        transition: 'all 0.12s ease',
+                      }}>
+                        <input type="radio" name="endType" checked={recurrence.endType === 'on_date'} onChange={() => setR({ endType: 'on_date' })} style={{ accentColor: '#A88A35' }} />
+                        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.72)', flexShrink: 0 }}>On date</span>
+                        <div style={{ marginLeft: 'auto', position: 'relative' }} onClick={e => e.stopPropagation()}>
+                          <input
+                            type="date"
+                            value={recurrence.endDate}
+                            onChange={e => setR({ endDate: e.target.value, endType: 'on_date' })}
+                            min={date}
+                            id="edit-end-date-input"
+                            style={{
+                              fontSize: 13, borderRadius: 8, padding: '4px 32px 4px 8px',
+                              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)',
+                              color: 'rgba(255,255,255,0.80)', outline: 'none', colorScheme: 'dark',
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => (document.getElementById('edit-end-date-input') as HTMLInputElement)?.showPicker()}
+                            tabIndex={-1}
+                            style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#C9A84C', padding: 0 }}
+                          >
+                            <Calendar style={{ width: 13, height: 13 }} />
+                          </button>
+                        </div>
+                      </label>
+
+                      <label style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '12px 16px', borderRadius: 12, cursor: 'pointer',
+                        border: `1px solid ${recurrence.endType === 'after_count' ? 'rgba(201,168,76,0.50)' : 'rgba(255,255,255,0.08)'}`,
+                        background: recurrence.endType === 'after_count' ? 'rgba(201,168,76,0.08)' : 'rgba(255,255,255,0.02)',
+                        transition: 'all 0.12s ease',
+                      }}>
+                        <input type="radio" name="endType" checked={recurrence.endType === 'after_count'} onChange={() => setR({ endType: 'after_count' })} style={{ accentColor: '#A88A35' }} />
+                        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.72)', flexShrink: 0 }}>After</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={500}
+                          value={recurrence.endCount}
+                          onChange={e => setR({ endCount: Math.max(1, parseInt(e.target.value) || 1), endType: 'after_count' })}
+                          style={{
+                            width: 56, fontSize: 13, textAlign: 'center', padding: '4px 8px',
+                            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)',
+                            color: 'rgba(255,255,255,0.80)', borderRadius: 8, outline: 'none',
+                          }}
+                          onClick={e => e.stopPropagation()}
+                        />
+                        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.72)', flexShrink: 0 }}>occurrences</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Preview */}
+                {previewLabel && (
+                  <div style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 8,
+                    padding: '12px 16px', borderRadius: 12, fontSize: 13,
+                    background: 'rgba(201,168,76,0.10)', border: '1px solid rgba(201,168,76,0.25)',
+                  }}>
+                    <Info style={{ width: 14, height: 14, flexShrink: 0, marginTop: 1, color: '#C9A84C' }} />
+                    <span style={{ color: 'rgba(255,248,225,0.80)' }}>{previewLabel}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ── Submit ── */}
@@ -465,9 +719,7 @@ export default function EditEventPage({
               type="submit"
               disabled={saving || !name.trim() || !date}
               className="btn-primary"
-              style={{
-                flex: 1, padding: '12px 0', borderRadius: 14, fontSize: 14, fontWeight: 600,
-              }}
+              style={{ flex: 1, padding: '12px 0', borderRadius: 14, fontSize: 14, fontWeight: 600 }}
             >
               {saving ? 'Saving…' : 'Save Changes'}
             </button>
@@ -481,14 +733,8 @@ export default function EditEventPage({
                 background: 'rgba(255,255,255,0.04)',
                 transition: 'background 0.12s ease, color 0.12s ease',
               }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.07)'
-                e.currentTarget.style.color = 'rgba(255,255,255,0.80)'
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-                e.currentTarget.style.color = 'rgba(255,255,255,0.55)'
-              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'rgba(255,255,255,0.80)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)' }}
             >
               Cancel
             </Link>

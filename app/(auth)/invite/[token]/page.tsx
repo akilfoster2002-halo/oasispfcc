@@ -17,12 +17,12 @@ function AquilaMark() {
     <svg width="38" height="38" viewBox="0 0 32 32" fill="none">
       <defs>
         <radialGradient id="inv-bg" cx="38%" cy="32%" r="75%">
-          <stop offset="0%" stopColor="#6366f1"/>
-          <stop offset="100%" stopColor="#3730a3"/>
+          <stop offset="0%" stopColor="#A88A35"/>
+          <stop offset="100%" stopColor="#0C1829"/>
         </radialGradient>
         <radialGradient id="inv-iris" cx="40%" cy="38%" r="65%">
-          <stop offset="0%" stopColor="#a5b4fc" stopOpacity="0.95"/>
-          <stop offset="100%" stopColor="#818cf8" stopOpacity="0.85"/>
+          <stop offset="0%" stopColor="#C9A84C" stopOpacity="0.95"/>
+          <stop offset="100%" stopColor="#C9A84C" stopOpacity="0.85"/>
         </radialGradient>
         <filter id="inv-glow">
           <feGaussianBlur stdDeviation="1.5" result="blur"/>
@@ -52,8 +52,8 @@ const inputStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 }
 function fi(e: React.FocusEvent<HTMLInputElement>) {
-  e.currentTarget.style.borderColor = 'rgba(99,102,241,0.55)'
-  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.12)'
+  e.currentTarget.style.borderColor = 'rgba(201,168,76,0.55)'
+  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.12)'
 }
 function fo(e: React.FocusEvent<HTMLInputElement>) {
   e.currentTarget.style.borderColor = 'rgba(255,255,255,0.090)'
@@ -148,7 +148,7 @@ export default function InviteAcceptPage() {
       justifyContent: 'center',
       padding: '24px 16px',
       background: '#050810',
-      backgroundImage: 'radial-gradient(ellipse 70% 60% at 20% 0%, rgba(79,70,229,0.15) 0%, transparent 65%), radial-gradient(ellipse 55% 45% at 80% 100%, rgba(124,58,237,0.09) 0%, transparent 65%)',
+      backgroundImage: 'radial-gradient(ellipse 70% 60% at 20% 0%, rgba(79,127,196,0.15) 0%, transparent 65%), radial-gradient(ellipse 55% 45% at 80% 100%, rgba(79,127,196,0.09) 0%, transparent 65%)',
       fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)',
       WebkitFontSmoothing: 'antialiased',
     }}>
@@ -157,13 +157,13 @@ export default function InviteAcceptPage() {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 36 }}>
         <div style={{ position: 'relative' }}>
           <AquilaMark />
-          <div style={{ position: 'absolute', inset: -8, borderRadius: 20, background: 'radial-gradient(circle, rgba(99,102,241,0.20) 0%, transparent 70%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', inset: -8, borderRadius: 20, background: 'radial-gradient(circle, rgba(201,168,76,0.20) 0%, transparent 70%)', pointerEvents: 'none' }} />
         </div>
         <div style={{ textAlign: 'center' }}>
           <p style={{ fontFamily: 'var(--font-display), var(--font-geist-sans), system-ui', fontSize: 20, fontWeight: 700, letterSpacing: '-0.025em', color: 'rgba(255,255,255,0.94)', margin: 0, lineHeight: 1 }}>
             Aquila
           </p>
-          <p style={{ fontSize: 11, color: 'rgba(129,140,248,0.52)', letterSpacing: '0.08em', fontWeight: 500, margin: '4px 0 0' }}>
+          <p style={{ fontSize: 11, color: 'rgba(201,168,76,0.52)', letterSpacing: '0.08em', fontWeight: 500, margin: '4px 0 0' }}>
             BY OASIS PFCC
           </p>
         </div>
@@ -184,7 +184,7 @@ export default function InviteAcceptPage() {
         {/* Loading */}
         {mode === 'loading' && !loadError && (
           <div style={{ textAlign: 'center', padding: '32px 0' }}>
-            <div style={{ width: 28, height: 28, border: '3px solid rgba(129,140,248,0.20)', borderTopColor: '#818cf8', borderRadius: '50%', margin: '0 auto', animation: 'spin 0.8s linear infinite' }} />
+            <div style={{ width: 28, height: 28, border: '3px solid rgba(201,168,76,0.20)', borderTopColor: '#C9A84C', borderRadius: '50%', margin: '0 auto', animation: 'spin 0.8s linear infinite' }} />
           </div>
         )}
 
@@ -217,10 +217,10 @@ export default function InviteAcceptPage() {
         {invite && (mode === 'new-account' || mode === 'sign-in') && (
           <>
             {/* Church banner */}
-            <div style={{ marginBottom: 22, padding: '14px 16px', borderRadius: 14, textAlign: 'center', background: 'rgba(129,140,248,0.08)', border: '1px solid rgba(129,140,248,0.20)' }}>
-              <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(129,140,248,0.60)', margin: '0 0 4px' }}>You&apos;re invited to</p>
+            <div style={{ marginBottom: 22, padding: '14px 16px', borderRadius: 14, textAlign: 'center', background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.20)' }}>
+              <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(201,168,76,0.60)', margin: '0 0 4px' }}>You&apos;re invited to</p>
               <p style={{ fontSize: 18, fontWeight: 700, color: 'rgba(255,255,255,0.92)', margin: '0 0 3px', letterSpacing: '-0.015em' }}>{invite.church.name}</p>
-              <p style={{ fontSize: 12, color: '#818cf8', margin: 0, textTransform: 'capitalize' }}>as {invite.role}</p>
+              <p style={{ fontSize: 12, color: '#C9A84C', margin: 0, textTransform: 'capitalize' }}>as {invite.role}</p>
             </div>
 
             {/* Tabs */}
@@ -232,9 +232,9 @@ export default function InviteAcceptPage() {
                   style={{
                     flex: 1, padding: '7px 0', borderRadius: 9, fontSize: 12, fontWeight: 500,
                     border: 'none', cursor: 'pointer', transition: 'all 0.15s ease',
-                    background: mode === m ? 'rgba(99,102,241,0.22)' : 'transparent',
-                    color: mode === m ? '#a5b4fc' : 'rgba(255,255,255,0.38)',
-                    outline: mode === m ? '1px solid rgba(129,140,248,0.30)' : '1px solid transparent',
+                    background: mode === m ? 'rgba(201,168,76,0.22)' : 'transparent',
+                    color: mode === m ? '#C9A84C' : 'rgba(255,255,255,0.38)',
+                    outline: mode === m ? '1px solid rgba(201,168,76,0.30)' : '1px solid transparent',
                   }}
                 >
                   {m === 'new-account' ? 'Create Account' : 'Already have one'}
@@ -290,8 +290,8 @@ export default function InviteAcceptPage() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                     padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 600,
                     border: 'none', cursor: submitting ? 'not-allowed' : 'pointer',
-                    background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
-                    color: '#fff', boxShadow: '0 4px 18px rgba(99,102,241,0.45)',
+                    background: 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)',
+                    color: '#fff', boxShadow: '0 4px 18px rgba(201,168,76,0.45)',
                     opacity: submitting ? 0.65 : 1, marginTop: 4,
                   }}
                 >
@@ -318,8 +318,8 @@ export default function InviteAcceptPage() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                     padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 600,
                     border: 'none', cursor: submitting ? 'not-allowed' : 'pointer',
-                    background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
-                    color: '#fff', boxShadow: '0 4px 18px rgba(99,102,241,0.45)',
+                    background: 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)',
+                    color: '#fff', boxShadow: '0 4px 18px rgba(201,168,76,0.45)',
                     opacity: submitting ? 0.65 : 1, marginTop: 4,
                   }}
                 >

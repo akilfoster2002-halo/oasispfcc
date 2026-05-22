@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { ROLES, roleColor, roleLabel, type Role } from '@/lib/roles'
+import { Badge } from '@/components/ui'
 
 export interface Member {
   id: string
@@ -18,8 +19,11 @@ export interface Member {
 interface MemberRowProps {
   member: Member
   slug: string
-  /** Receives the new role. Parent decides whether to commit or roll back. */
-  onRoleChange: (membershipId: string, prevRole: string, nextRole: string) => Promise<{ ok: boolean; error?: string }>
+  onRoleChange: (
+    membershipId: string,
+    prevRole: string,
+    nextRole: string,
+  ) => Promise<{ ok: boolean; error?: string }>
 }
 
 function timeAgo(iso: string): string {
@@ -61,77 +65,124 @@ export function MemberRow({ member, onRoleChange }: MemberRowProps) {
     .join('')
     .toUpperCase()
 
-  const joinedLabel = member.joinedVia === 'access_key' ? 'key' : member.joinedVia ?? ''
-
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-      <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(129,140,248,0.12))', border: '1px solid rgba(129,140,248,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#a5b4fc', flexShrink: 0 }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14,
+        padding: '14px 4px',
+        borderBottom: '1px solid var(--ds-border)',
+      }}
+    >
+      {/* Avatar */}
+      <div
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 11,
+          background: 'linear-gradient(135deg, rgba(142,150,248,0.22), rgba(108,112,232,0.10))',
+          border: '1px solid rgba(142,150,248,0.18)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 13,
+          fontWeight: 600,
+          color: 'var(--ds-accent)',
+          flexShrink: 0,
+          letterSpacing: '0.02em',
+        }}
+      >
         {initials || '?'}
       </div>
 
+      {/* Name + email + joined */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.88)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{member.name}</p>
-          {joinedLabel && (
-            <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '2px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.35)', flexShrink: 0 }}>
-              {joinedLabel}
-            </span>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 14,
+              fontWeight: 500,
+              color: 'var(--ds-text)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              letterSpacing: '-0.005em',
+            }}
+          >
+            {member.name}
+          </p>
+          {member.joinedVia === 'access_key' && (
+            <Badge tone="neutral" style={{ height: 18, fontSize: 10 }}>via key</Badge>
           )}
         </div>
-        <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.32)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <p
+          style={{
+            margin: '2px 0 0',
+            fontSize: 12.5,
+            color: 'var(--ds-text-tertiary)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
           {member.email}
           {member.createdAt && (
-            <span style={{ color: 'rgba(255,255,255,0.20)' }}> · joined {timeAgo(member.createdAt)}</span>
+            <span style={{ color: 'var(--ds-text-faint)' }}> · joined {timeAgo(member.createdAt)}</span>
           )}
         </p>
         {errorFlash && (
-          <p style={{ margin: '4px 0 0', fontSize: 11, color: '#f87171' }}>{errorFlash}</p>
+          <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--ds-danger)' }}>{errorFlash}</p>
         )}
       </div>
 
+      {/* Role dropdown */}
       <div style={{ position: 'relative', flexShrink: 0 }}>
         <button
           onClick={() => setOpen(v => !v)}
           disabled={saving}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '5px 10px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-            border: '1px solid rgba(255,255,255,0.10)',
-            background: 'rgba(255,255,255,0.05)',
-            color: roleColor(member.role),
-            cursor: saving ? 'not-allowed' : 'pointer',
-            opacity: saving ? 0.5 : 1,
-            transition: 'all 0.15s ease',
-          }}
+          className="ds-btn ds-btn-secondary ds-btn-sm"
+          style={{ color: roleColor(member.role), borderColor: 'var(--ds-border)' }}
         >
           {saving ? '…' : roleLabel(member.role)}
-          {!saving && <ChevronDown style={{ width: 11, height: 11 }} />}
+          {!saving && <ChevronDown style={{ width: 12, height: 12, opacity: 0.55 }} />}
         </button>
 
         {open && (
           <>
-            <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setOpen(false)} />
-            <div style={{
-              position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 20,
-              background: '#111827', border: '1px solid rgba(255,255,255,0.10)',
-              borderRadius: 12, overflow: 'hidden', minWidth: 130,
-              boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
-            }}>
+            <div
+              style={{ position: 'fixed', inset: 0, zIndex: 10 }}
+              onClick={() => setOpen(false)}
+            />
+            <div
+              className="ds-menu"
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: 'calc(100% + 6px)',
+                zIndex: 20,
+                minWidth: 140,
+              }}
+            >
               {ROLES.map(r => (
                 <button
                   key={r.value}
                   onClick={() => changeRole(r.value)}
-                  style={{
-                    display: 'block', width: '100%', textAlign: 'left',
-                    padding: '9px 14px', fontSize: 13, fontWeight: r.value === member.role ? 700 : 500,
-                    color: r.value === member.role ? r.color : 'rgba(255,255,255,0.65)',
-                    background: r.value === member.role ? 'rgba(255,255,255,0.05)' : 'transparent',
-                    border: 'none', cursor: 'pointer',
-                    transition: 'background 0.1s ease',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = r.value === member.role ? 'rgba(255,255,255,0.05)' : 'transparent')}
+                  className={`ds-menu-item ${r.value === member.role ? 'ds-menu-item-active' : ''}`}
+                  style={r.value === member.role ? { color: r.color } : undefined}
                 >
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: r.color,
+                      opacity: r.value === member.role ? 1 : 0.55,
+                      flexShrink: 0,
+                    }}
+                  />
                   {r.label}
                 </button>
               ))}

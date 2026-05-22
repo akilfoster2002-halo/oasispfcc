@@ -53,7 +53,7 @@ function monthlyLabel(dateStr: string, type: 'day_of_month' | 'day_of_week'): st
 function SectionHeader({ icon: Icon, title }: { icon: React.ElementType; title: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
-      <Icon style={{ width: 14, height: 14, flexShrink: 0, color: '#818cf8' }} />
+      <Icon style={{ width: 14, height: 14, flexShrink: 0, color: '#C9A84C' }} />
       <h2 className="text-label">{title}</h2>
     </div>
   )
@@ -266,8 +266,8 @@ export default function NewEventPage() {
                   placeholder="Sunday Service"
                   style={inputStyle}
                   onFocus={e => {
-                    e.currentTarget.style.borderColor = 'rgba(99,102,241,0.50)'
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.10)'
+                    e.currentTarget.style.borderColor = 'rgba(201,168,76,0.50)'
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.10)'
                   }}
                   onBlur={e => {
                     e.currentTarget.style.borderColor = 'rgba(255,255,255,0.080)'
@@ -283,8 +283,8 @@ export default function NewEventPage() {
                   rows={3}
                   style={{ ...inputStyle, resize: 'none' }}
                   onFocus={e => {
-                    e.currentTarget.style.borderColor = 'rgba(99,102,241,0.50)'
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.10)'
+                    e.currentTarget.style.borderColor = 'rgba(201,168,76,0.50)'
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.10)'
                   }}
                   onBlur={e => {
                     e.currentTarget.style.borderColor = 'rgba(255,255,255,0.080)'
@@ -308,7 +308,7 @@ export default function NewEventPage() {
               >
                 <div style={{
                   width: 40, height: 24, borderRadius: 99, position: 'relative',
-                  backgroundColor: allDay ? '#6366f1' : 'rgba(255,255,255,0.12)',
+                  backgroundColor: allDay ? '#A88A35' : 'rgba(255,255,255,0.12)',
                   transition: 'background-color 0.15s ease', flexShrink: 0,
                 }}>
                   <span style={{
@@ -334,8 +334,8 @@ export default function NewEventPage() {
                       onChange={e => setDate(e.target.value)}
                       style={{ ...inputStyle, paddingRight: 40, colorScheme: 'dark' }}
                       onFocus={e => {
-                        e.currentTarget.style.borderColor = 'rgba(99,102,241,0.50)'
-                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.10)'
+                        e.currentTarget.style.borderColor = 'rgba(201,168,76,0.50)'
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.10)'
                       }}
                       onBlur={e => {
                         e.currentTarget.style.borderColor = 'rgba(255,255,255,0.080)'
@@ -348,7 +348,7 @@ export default function NewEventPage() {
                       tabIndex={-1}
                       style={{
                         position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                        background: 'none', border: 'none', cursor: 'pointer', color: '#818cf8', padding: 0,
+                        background: 'none', border: 'none', cursor: 'pointer', color: '#C9A84C', padding: 0,
                       }}
                     >
                       <Calendar style={{ width: 14, height: 14 }} />
@@ -390,8 +390,8 @@ export default function NewEventPage() {
                     placeholder="Add a location or link…"
                     style={{ ...inputStyle, paddingLeft: 36 }}
                     onFocus={e => {
-                      e.currentTarget.style.borderColor = 'rgba(99,102,241,0.50)'
-                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.10)'
+                      e.currentTarget.style.borderColor = 'rgba(201,168,76,0.50)'
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.10)'
                     }}
                     onBlur={e => {
                       e.currentTarget.style.borderColor = 'rgba(255,255,255,0.080)'
@@ -469,12 +469,12 @@ export default function NewEventPage() {
               onMouseLeave={e => (e.currentTarget.style.background = 'none')}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <RefreshCw style={{ width: 14, height: 14, flexShrink: 0, color: '#818cf8' }} />
+                <RefreshCw style={{ width: 14, height: 14, flexShrink: 0, color: '#C9A84C' }} />
                 <div>
                   <p style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.88)', margin: 0 }}>
                     Recurrence
                   </p>
-                  <p style={{ fontSize: 12, marginTop: 2, margin: 0, color: isRecurring ? '#818cf8' : 'rgba(255,255,255,0.30)' }}>
+                  <p style={{ fontSize: 12, marginTop: 2, margin: 0, color: isRecurring ? '#C9A84C' : 'rgba(255,255,255,0.30)' }}>
                     {isRecurring ? describeRecurrence(recurrence, date) : 'Does not repeat'}
                   </p>
                 </div>
@@ -499,9 +499,9 @@ export default function NewEventPage() {
                         style={{
                           padding: '8px 16px', borderRadius: 12, fontSize: 13, fontWeight: 500,
                           border: 'none', cursor: 'pointer', transition: 'all 0.12s ease',
-                          backgroundColor: recurrence.type === t ? '#6366f1' : 'rgba(255,255,255,0.06)',
+                          backgroundColor: recurrence.type === t ? '#A88A35' : 'rgba(255,255,255,0.06)',
                           color: recurrence.type === t ? '#fff' : 'rgba(255,255,255,0.55)',
-                          boxShadow: recurrence.type === t ? '0 2px 8px rgba(99,102,241,0.35)' : 'none',
+                          boxShadow: recurrence.type === t ? '0 2px 8px rgba(201,168,76,0.35)' : 'none',
                         }}
                       >
                         {t === 'none' ? 'None' : t.charAt(0).toUpperCase() + t.slice(1)}
@@ -553,9 +553,9 @@ export default function NewEventPage() {
                             style={{
                               width: 36, height: 36, borderRadius: 10, fontSize: 12, fontWeight: 700,
                               border: 'none', cursor: 'pointer', transition: 'all 0.12s ease',
-                              backgroundColor: active ? '#6366f1' : 'rgba(255,255,255,0.06)',
+                              backgroundColor: active ? '#A88A35' : 'rgba(255,255,255,0.06)',
                               color: active ? '#fff' : 'rgba(255,255,255,0.40)',
-                              boxShadow: active ? '0 2px 6px rgba(99,102,241,0.30)' : 'none',
+                              boxShadow: active ? '0 2px 6px rgba(201,168,76,0.30)' : 'none',
                             }}
                           >
                             {label}
@@ -582,8 +582,8 @@ export default function NewEventPage() {
                           style={{
                             display: 'flex', alignItems: 'center', gap: 12,
                             padding: '12px 16px', borderRadius: 12, cursor: 'pointer',
-                            border: `1px solid ${recurrence.monthlyType === t ? 'rgba(99,102,241,0.50)' : 'rgba(255,255,255,0.08)'}`,
-                            background: recurrence.monthlyType === t ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)',
+                            border: `1px solid ${recurrence.monthlyType === t ? 'rgba(201,168,76,0.50)' : 'rgba(255,255,255,0.08)'}`,
+                            background: recurrence.monthlyType === t ? 'rgba(201,168,76,0.08)' : 'rgba(255,255,255,0.02)',
                             transition: 'all 0.12s ease',
                           }}
                         >
@@ -592,7 +592,7 @@ export default function NewEventPage() {
                             name="monthlyType"
                             checked={recurrence.monthlyType === t}
                             onChange={() => setR({ monthlyType: t })}
-                            style={{ accentColor: '#6366f1' }}
+                            style={{ accentColor: '#A88A35' }}
                           />
                           <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.72)' }}>
                             {monthlyLabel(date, t)}
@@ -612,11 +612,11 @@ export default function NewEventPage() {
                       <label style={{
                         display: 'flex', alignItems: 'center', gap: 12,
                         padding: '12px 16px', borderRadius: 12, cursor: 'pointer',
-                        border: `1px solid ${recurrence.endType === 'never' ? 'rgba(99,102,241,0.50)' : 'rgba(255,255,255,0.08)'}`,
-                        background: recurrence.endType === 'never' ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${recurrence.endType === 'never' ? 'rgba(201,168,76,0.50)' : 'rgba(255,255,255,0.08)'}`,
+                        background: recurrence.endType === 'never' ? 'rgba(201,168,76,0.08)' : 'rgba(255,255,255,0.02)',
                         transition: 'all 0.12s ease',
                       }}>
-                        <input type="radio" name="endType" checked={recurrence.endType === 'never'} onChange={() => setR({ endType: 'never' })} style={{ accentColor: '#6366f1' }} />
+                        <input type="radio" name="endType" checked={recurrence.endType === 'never'} onChange={() => setR({ endType: 'never' })} style={{ accentColor: '#A88A35' }} />
                         <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.72)', flex: 1 }}>Never</span>
                         {recurrence.endType === 'never' && (
                           <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.30)' }}>up to 2 years</span>
@@ -626,11 +626,11 @@ export default function NewEventPage() {
                       <label style={{
                         display: 'flex', alignItems: 'center', gap: 12,
                         padding: '12px 16px', borderRadius: 12, cursor: 'pointer',
-                        border: `1px solid ${recurrence.endType === 'on_date' ? 'rgba(99,102,241,0.50)' : 'rgba(255,255,255,0.08)'}`,
-                        background: recurrence.endType === 'on_date' ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${recurrence.endType === 'on_date' ? 'rgba(201,168,76,0.50)' : 'rgba(255,255,255,0.08)'}`,
+                        background: recurrence.endType === 'on_date' ? 'rgba(201,168,76,0.08)' : 'rgba(255,255,255,0.02)',
                         transition: 'all 0.12s ease',
                       }}>
-                        <input type="radio" name="endType" checked={recurrence.endType === 'on_date'} onChange={() => setR({ endType: 'on_date' })} style={{ accentColor: '#6366f1' }} />
+                        <input type="radio" name="endType" checked={recurrence.endType === 'on_date'} onChange={() => setR({ endType: 'on_date' })} style={{ accentColor: '#A88A35' }} />
                         <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.72)', flexShrink: 0 }}>On date</span>
                         <div style={{ marginLeft: 'auto', position: 'relative' }} onClick={e => e.stopPropagation()}>
                           <input
@@ -649,7 +649,7 @@ export default function NewEventPage() {
                             type="button"
                             onClick={() => (document.getElementById('end-date-input') as HTMLInputElement)?.showPicker()}
                             tabIndex={-1}
-                            style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#818cf8', padding: 0 }}
+                            style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#C9A84C', padding: 0 }}
                           >
                             <Calendar style={{ width: 13, height: 13 }} />
                           </button>
@@ -659,11 +659,11 @@ export default function NewEventPage() {
                       <label style={{
                         display: 'flex', alignItems: 'center', gap: 12,
                         padding: '12px 16px', borderRadius: 12, cursor: 'pointer',
-                        border: `1px solid ${recurrence.endType === 'after_count' ? 'rgba(99,102,241,0.50)' : 'rgba(255,255,255,0.08)'}`,
-                        background: recurrence.endType === 'after_count' ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${recurrence.endType === 'after_count' ? 'rgba(201,168,76,0.50)' : 'rgba(255,255,255,0.08)'}`,
+                        background: recurrence.endType === 'after_count' ? 'rgba(201,168,76,0.08)' : 'rgba(255,255,255,0.02)',
                         transition: 'all 0.12s ease',
                       }}>
-                        <input type="radio" name="endType" checked={recurrence.endType === 'after_count'} onChange={() => setR({ endType: 'after_count' })} style={{ accentColor: '#6366f1' }} />
+                        <input type="radio" name="endType" checked={recurrence.endType === 'after_count'} onChange={() => setR({ endType: 'after_count' })} style={{ accentColor: '#A88A35' }} />
                         <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.72)', flexShrink: 0 }}>After</span>
                         <input
                           type="number"
@@ -688,9 +688,9 @@ export default function NewEventPage() {
                 {previewLabel && (
                   <div style={{
                     display: 'flex', alignItems: 'flex-start', gap: 8, padding: '12px 16px', borderRadius: 12, fontSize: 13,
-                    background: 'rgba(99,102,241,0.10)', border: '1px solid rgba(129,140,248,0.25)',
+                    background: 'rgba(201,168,76,0.10)', border: '1px solid rgba(201,168,76,0.25)',
                   }}>
-                    <Info style={{ width: 14, height: 14, flexShrink: 0, marginTop: 1, color: '#818cf8' }} />
+                    <Info style={{ width: 14, height: 14, flexShrink: 0, marginTop: 1, color: '#C9A84C' }} />
                     <span style={{ color: 'rgba(165,180,252,0.90)' }}>{previewLabel}</span>
                   </div>
                 )}

@@ -6,12 +6,12 @@ function AquilaMark({ size = 36 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
       <defs>
         <radialGradient id="lm-bg" cx="38%" cy="32%" r="75%">
-          <stop offset="0%" stopColor="#6366f1" />
-          <stop offset="100%" stopColor="#3730a3" />
+          <stop offset="0%" stopColor="#A88A35" />
+          <stop offset="100%" stopColor="#0C1829" />
         </radialGradient>
         <radialGradient id="lm-iris" cx="40%" cy="38%" r="65%">
-          <stop offset="0%" stopColor="#a5b4fc" stopOpacity="0.95" />
-          <stop offset="100%" stopColor="#818cf8" stopOpacity="0.85" />
+          <stop offset="0%" stopColor="#C9A84C" stopOpacity="0.95" />
+          <stop offset="100%" stopColor="#C9A84C" stopOpacity="0.85" />
         </radialGradient>
         <filter id="lm-glow">
           <feGaussianBlur stdDeviation="1.2" result="blur" />
@@ -115,7 +115,7 @@ export default function LandingPage() {
               <p style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em', color: 'rgba(255,255,255,0.94)', margin: 0, lineHeight: 1, fontFamily: 'var(--font-display, var(--font-geist-sans))' }}>
                 Aquila
               </p>
-              <p style={{ fontSize: 10, color: 'rgba(129,140,248,0.50)', letterSpacing: '0.07em', fontWeight: 500, margin: '3px 0 0', textTransform: 'uppercase' }}>
+              <p style={{ fontSize: 10, color: 'rgba(201,168,76,0.50)', letterSpacing: '0.07em', fontWeight: 500, margin: '3px 0 0', textTransform: 'uppercase' }}>
                 by Oasis PFCC
               </p>
             </div>
@@ -131,9 +131,9 @@ export default function LandingPage() {
             <Link href="/signup" style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '8px 18px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-              background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+              background: 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)',
               color: '#fff', textDecoration: 'none',
-              boxShadow: '0 4px 16px rgba(99,102,241,0.35)',
+              boxShadow: '0 4px 16px rgba(201,168,76,0.35)',
             }}>
               Get started
               <ArrowRight style={{ width: 13, height: 13 }} />
@@ -150,8 +150,8 @@ export default function LandingPage() {
       }}>
         {/* Background radial glows */}
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-          <div style={{ position: 'absolute', top: -180, left: '50%', width: 800, height: 800, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 65%)', transform: 'translateX(-50%)' }} />
-          <div style={{ position: 'absolute', top: 80, left: '12%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 65%)' }} />
+          <div style={{ position: 'absolute', top: -180, left: '50%', width: 800, height: 800, borderRadius: '50%', background: 'radial-gradient(circle, rgba(201,168,76,0.14) 0%, transparent 65%)', transform: 'translateX(-50%)' }} />
+          <div style={{ position: 'absolute', top: 80, left: '12%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,127,196,0.08) 0%, transparent 65%)' }} />
           <div style={{ position: 'absolute', top: 60, right: '8%', width: 350, height: 350, borderRadius: '50%', background: 'radial-gradient(circle, rgba(64,104,226,0.07) 0%, transparent 65%)' }} />
         </div>
 
@@ -162,14 +162,14 @@ export default function LandingPage() {
               position: 'absolute',
               width: size, height: size,
               borderRadius: '50%',
-              border: `1px solid rgba(129,140,248,${0.06 - i * 0.012})`,
+              border: `1px solid rgba(201,168,76,${0.06 - i * 0.012})`,
               top: '50%', left: '50%',
               transform: 'translate(-50%, -50%)',
             }} />
           ))}
           {/* Pulsing ring */}
-          <div className="ring-pulse" style={{ position: 'absolute', width: 320, height: 320, borderRadius: '50%', border: '1px solid rgba(129,140,248,0.15)', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
-          <div className="ring-pulse-delay" style={{ position: 'absolute', width: 320, height: 320, borderRadius: '50%', border: '1px solid rgba(129,140,248,0.10)', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
+          <div className="ring-pulse" style={{ position: 'absolute', width: 320, height: 320, borderRadius: '50%', border: '1px solid rgba(201,168,76,0.15)', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
+          <div className="ring-pulse-delay" style={{ position: 'absolute', width: 320, height: 320, borderRadius: '50%', border: '1px solid rgba(201,168,76,0.10)', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
         </div>
 
         {/* Badge */}
@@ -177,12 +177,12 @@ export default function LandingPage() {
           position: 'relative', zIndex: 1,
           display: 'inline-flex', alignItems: 'center', gap: 8,
           padding: '6px 14px', borderRadius: 100, marginBottom: 32,
-          background: 'rgba(99,102,241,0.10)',
-          border: '1px solid rgba(129,140,248,0.22)',
+          background: 'rgba(201,168,76,0.10)',
+          border: '1px solid rgba(201,168,76,0.22)',
           fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase',
-          color: '#a5b4fc',
+          color: '#C9A84C',
         }}>
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#818cf8', boxShadow: '0 0 8px #818cf8' }} />
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#C9A84C', boxShadow: '0 0 8px #C9A84C' }} />
           Ministry Intelligence Platform
         </div>
 
@@ -200,7 +200,7 @@ export default function LandingPage() {
         }}>
           See your church{' '}
           <span style={{
-            background: 'linear-gradient(135deg, #a5b4fc 0%, #818cf8 40%, #6366f1 100%)',
+            background: 'linear-gradient(135deg, #C9A84C 0%, #C9A84C 40%, #A88A35 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
@@ -227,9 +227,9 @@ export default function LandingPage() {
           <Link href="/pricing" style={{
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '14px 28px', borderRadius: 14, fontSize: 14, fontWeight: 600,
-            background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+            background: 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)',
             color: '#fff', textDecoration: 'none',
-            boxShadow: '0 8px 32px rgba(99,102,241,0.45)',
+            boxShadow: '0 8px 32px rgba(201,168,76,0.45)',
           }}>
             See pricing
             <ArrowRight style={{ width: 15, height: 15 }} />
@@ -257,16 +257,16 @@ export default function LandingPage() {
       </section>
 
       {/* ── Divider ── */}
-      <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, rgba(129,140,248,0.12), transparent)', margin: '0 auto', width: '100%', maxWidth: 1100 }} />
+      <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.12), transparent)', margin: '0 auto', width: '100%', maxWidth: 1100 }} />
 
       {/* ── Features ── */}
       <section style={{ padding: '100px 24px', position: 'relative' }}>
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-          <div style={{ position: 'absolute', bottom: 0, right: '10%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.07) 0%, transparent 65%)' }} />
+          <div style={{ position: 'absolute', bottom: 0, right: '10%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(201,168,76,0.07) 0%, transparent 65%)' }} />
         </div>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 64 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'rgba(129,140,248,0.60)', marginBottom: 14 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'rgba(201,168,76,0.60)', marginBottom: 14 }}>
               Everything you need
             </p>
             <h2 style={{
@@ -295,10 +295,10 @@ export default function LandingPage() {
                 <div style={{
                   width: 42, height: 42, borderRadius: 12,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  background: 'linear-gradient(135deg, rgba(99,102,241,0.20) 0%, rgba(129,140,248,0.10) 100%)',
-                  border: '1px solid rgba(129,140,248,0.20)',
+                  background: 'linear-gradient(135deg, rgba(201,168,76,0.20) 0%, rgba(201,168,76,0.10) 100%)',
+                  border: '1px solid rgba(201,168,76,0.20)',
                 }}>
-                  <Icon style={{ width: 18, height: 18, color: '#818cf8' }} />
+                  <Icon style={{ width: 18, height: 18, color: '#C9A84C' }} />
                 </div>
                 <div>
                   <h3 style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.90)', margin: '0 0 8px', letterSpacing: '-0.01em' }}>
@@ -321,7 +321,7 @@ export default function LandingPage() {
       <section style={{ padding: '100px 24px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 64 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'rgba(129,140,248,0.60)', marginBottom: 14 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase', color: 'rgba(201,168,76,0.60)', marginBottom: 14 }}>
               Getting started
             </p>
             <h2 style={{
@@ -342,12 +342,12 @@ export default function LandingPage() {
                 <div style={{
                   width: 52, height: 52, borderRadius: 16,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(129,140,248,0.08) 100%)',
-                  border: '1px solid rgba(129,140,248,0.20)',
+                  background: 'linear-gradient(135deg, rgba(201,168,76,0.15) 0%, rgba(201,168,76,0.08) 100%)',
+                  border: '1px solid rgba(201,168,76,0.20)',
                 }}>
                   <span style={{
                     fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em',
-                    background: 'linear-gradient(135deg, #a5b4fc 0%, #818cf8 100%)',
+                    background: 'linear-gradient(135deg, #C9A84C 0%, #C9A84C 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
@@ -379,11 +379,11 @@ export default function LandingPage() {
           textAlign: 'center',
           position: 'relative',
           overflow: 'hidden',
-          background: 'linear-gradient(145deg, rgba(99,102,241,0.12) 0%, rgba(55,48,163,0.08) 50%, rgba(5,8,16,0.95) 100%)',
-          border: '1px solid rgba(129,140,248,0.18)',
+          background: 'linear-gradient(145deg, rgba(201,168,76,0.12) 0%, rgba(55,48,163,0.08) 50%, rgba(5,8,16,0.95) 100%)',
+          border: '1px solid rgba(201,168,76,0.18)',
         }}>
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-            <div style={{ position: 'absolute', top: -80, left: '50%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 65%)', transform: 'translateX(-50%)' }} />
+            <div style={{ position: 'absolute', top: -80, left: '50%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(201,168,76,0.18) 0%, transparent 65%)', transform: 'translateX(-50%)' }} />
           </div>
 
           <div style={{ position: 'relative' }}>
@@ -406,9 +406,9 @@ export default function LandingPage() {
               <Link href="/signup" style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '14px 32px', borderRadius: 14, fontSize: 14, fontWeight: 600,
-                background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+                background: 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)',
                 color: '#fff', textDecoration: 'none',
-                boxShadow: '0 8px 32px rgba(99,102,241,0.40)',
+                boxShadow: '0 8px 32px rgba(201,168,76,0.40)',
               }}>
                 Create your workspace — free
                 <ArrowRight style={{ width: 15, height: 15 }} />

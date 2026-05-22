@@ -136,8 +136,8 @@ export default function FillFormPage({
   }
 
   const focusIn = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    e.currentTarget.style.borderColor = 'rgba(99,102,241,0.50)'
-    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.10)'
+    e.currentTarget.style.borderColor = 'rgba(201,168,76,0.50)'
+    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.10)'
   }
   const focusOut = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     e.currentTarget.style.borderColor = 'rgba(255,255,255,0.080)'
@@ -282,9 +282,9 @@ export default function FillFormPage({
                         onClick={() => setValue(field.id, opt)}
                         style={{
                           padding: '8px 18px', borderRadius: 10, fontSize: 13, fontWeight: 500,
-                          border: `1px solid ${active ? 'rgba(99,102,241,0.55)' : 'rgba(255,255,255,0.10)'}`,
-                          background: active ? 'rgba(99,102,241,0.14)' : 'rgba(255,255,255,0.04)',
-                          color: active ? '#a5b4fc' : 'rgba(255,255,255,0.55)',
+                          border: `1px solid ${active ? 'rgba(201,168,76,0.55)' : 'rgba(255,255,255,0.10)'}`,
+                          background: active ? 'rgba(201,168,76,0.14)' : 'rgba(255,255,255,0.04)',
+                          color: active ? '#C9A84C' : 'rgba(255,255,255,0.55)',
                           cursor: 'pointer', transition: 'all 0.12s ease',
                         }}
                       >

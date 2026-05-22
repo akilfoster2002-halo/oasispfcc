@@ -459,7 +459,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           <div style={{ ...cardStyle, padding: 24, marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20 }}>
               <div style={{ width: 52, textAlign: 'center', flexShrink: 0 }}>
-                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#818cf8', margin: 0 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#C9A84C', margin: 0 }}>
                   {dateObj.toLocaleDateString('en-US', { month: 'short' })}
                 </p>
                 <p style={{ fontSize: 40, fontWeight: 700, lineHeight: 1.1, color: 'rgba(255,255,255,0.92)', margin: '2px 0', fontFamily: 'var(--font-display), system-ui' }}>
@@ -540,10 +540,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   >
                     <div style={{
                       width: 32, height: 32, borderRadius: '50%',
-                      background: 'linear-gradient(135deg, rgba(99,102,241,0.30) 0%, rgba(129,140,248,0.20) 100%)',
-                      border: '1px solid rgba(129,140,248,0.25)',
+                      background: 'linear-gradient(135deg, rgba(201,168,76,0.30) 0%, rgba(201,168,76,0.20) 100%)',
+                      border: '1px solid rgba(201,168,76,0.25)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0, fontSize: 12, fontWeight: 600, color: '#a5b4fc',
+                      flexShrink: 0, fontSize: 12, fontWeight: 600, color: '#C9A84C',
                     }}>
                       {(a.first_name[0] ?? '?')}{(a.last_name[0] ?? '')}
                     </div>
@@ -584,11 +584,11 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6,
                     padding: '7px 14px', borderRadius: 10, fontSize: 13, fontWeight: 500,
-                    background: 'rgba(129,140,248,0.10)', border: '1px solid rgba(129,140,248,0.22)',
-                    color: '#a5b4fc', cursor: 'pointer', transition: 'background 0.12s ease',
+                    background: 'rgba(201,168,76,0.10)', border: '1px solid rgba(201,168,76,0.22)',
+                    color: '#C9A84C', cursor: 'pointer', transition: 'background 0.12s ease',
                   }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(129,140,248,0.18)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(129,140,248,0.10)')}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(201,168,76,0.18)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(201,168,76,0.10)')}
                 >
                   <FileText style={{ width: 13, height: 13 }} />
                   Submit Report
@@ -621,7 +621,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                               background: 'none', border: 'none', cursor: 'pointer',
                             }}
                           >
-                            <FileText style={{ width: 13, height: 13, color: '#818cf8', flexShrink: 0 }} />
+                            <FileText style={{ width: 13, height: 13, color: '#C9A84C', flexShrink: 0 }} />
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.88)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</p>
                               {f.description && <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: '1px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.description}</p>}
@@ -668,7 +668,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     fontSize: 13, color: 'rgba(255,255,255,0.40)', textAlign: 'center',
                   }}>
                     No forms yet.{' '}
-                    <Link href={`/${slug}/forms`} style={{ color: '#818cf8', textDecoration: 'none' }}>Create one →</Link>
+                    <Link href={`/${slug}/forms`} style={{ color: '#C9A84C', textDecoration: 'none' }}>Create one →</Link>
                   </div>
                 )}
               </div>
@@ -706,8 +706,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                         onClick={() => setExpandedResponse(isExpanded ? null : r.id)}
                         style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '14px 18px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
                       >
-                        <div style={{ width: 32, height: 32, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(129,140,248,0.10)', border: '1px solid rgba(129,140,248,0.18)' }}>
-                          <ClipboardList style={{ width: 14, height: 14, color: '#818cf8' }} />
+                        <div style={{ width: 32, height: 32, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(201,168,76,0.10)', border: '1px solid rgba(201,168,76,0.18)' }}>
+                          <ClipboardList style={{ width: 14, height: 14, color: '#C9A84C' }} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.80)', margin: 0 }}>
@@ -1048,11 +1048,11 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                               display: 'flex', alignItems: 'center', gap: 8,
                               padding: '7px 10px', borderRadius: 9, fontSize: 13, fontWeight: 500,
                               textDecoration: 'none',
-                              background: 'rgba(129,140,248,0.07)', border: '1px solid rgba(129,140,248,0.16)',
-                              color: '#a5b4fc', transition: 'background 0.12s ease',
+                              background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.16)',
+                              color: '#C9A84C', transition: 'background 0.12s ease',
                             }}
-                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(129,140,248,0.13)')}
-                            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(129,140,248,0.07)')}
+                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(201,168,76,0.13)')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(201,168,76,0.07)')}
                           >
                             <FileText style={{ width: 13, height: 13, flexShrink: 0 }} />
                             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>

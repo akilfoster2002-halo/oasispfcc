@@ -42,8 +42,8 @@ const inputBase: React.CSSProperties = {
 }
 
 function focusIn(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
-  e.currentTarget.style.borderColor = 'rgba(99,102,241,0.50)'
-  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.10)'
+  e.currentTarget.style.borderColor = 'rgba(201,168,76,0.50)'
+  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.10)'
 }
 function focusOut(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
   e.currentTarget.style.borderColor = 'rgba(255,255,255,0.080)'
@@ -53,7 +53,7 @@ function focusOut(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | H
 function SectionHeader({ icon: Icon, title }: { icon: React.ElementType; title: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
-      <Icon style={{ width: 14, height: 14, flexShrink: 0, color: '#818cf8' }} />
+      <Icon style={{ width: 14, height: 14, flexShrink: 0, color: '#C9A84C' }} />
       <h2 className="text-label">{title}</h2>
     </div>
   )
@@ -319,7 +319,7 @@ export default function EditEventPage({
               >
                 <div style={{
                   width: 40, height: 24, borderRadius: 99, position: 'relative',
-                  backgroundColor: allDay ? '#6366f1' : 'rgba(255,255,255,0.12)',
+                  backgroundColor: allDay ? '#A88A35' : 'rgba(255,255,255,0.12)',
                   transition: 'background-color 0.15s ease', flexShrink: 0,
                 }}>
                   <span style={{
@@ -350,7 +350,7 @@ export default function EditEventPage({
                       type="button"
                       onClick={() => (document.getElementById('edit-date-input') as HTMLInputElement)?.showPicker()}
                       tabIndex={-1}
-                      style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#818cf8', padding: 0 }}
+                      style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#C9A84C', padding: 0 }}
                     >
                       <Calendar style={{ width: 14, height: 14 }} />
                     </button>

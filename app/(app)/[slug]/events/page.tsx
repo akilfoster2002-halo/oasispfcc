@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useParams } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Plus, X, Calendar as CalIcon, CheckSquare as CheckIcon } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, X, Calendar as CalIcon, CheckSquare as CheckIcon, Trash2 } from 'lucide-react'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
 import Link from 'next/link'
 
 const PALETTE = [
-  '#818cf8', '#34d399', '#fbbf24', '#f472b6',
+  '#C9A84C', '#34d399', '#fbbf24', '#f472b6',
   '#38bdf8', '#a78bfa', '#fb923c', '#2dd4bf',
 ]
 
@@ -51,6 +51,18 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<CalEvent[]>([])
   const [hidden, setHidden] = useState<Set<string>>(new Set())
   const [selected, setSelected] = useState<CalEvent | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  async function deleteEvent(ev: CalEvent) {
+    setDeleting(true)
+    try {
+      await getSupabaseBrowser().from('events').delete().eq('id', ev.id)
+      setEvents(prev => prev.filter(e => e.id !== ev.id))
+      setSelected(null)
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   useEffect(() => {
     getSupabaseBrowser()
@@ -198,7 +210,7 @@ export default function CalendarPage() {
                   <span style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     width: 20, height: 20, borderRadius: '50%', fontSize: 10,
-                    backgroundColor: isToday(day) ? '#6366f1' : 'transparent',
+                    backgroundColor: isToday(day) ? '#A88A35' : 'transparent',
                     color: isToday(day) ? '#fff' : 'rgba(255,255,255,0.55)',
                     fontWeight: isToday(day) ? 700 : 400,
                   }}>{day}</span>
@@ -287,7 +299,7 @@ export default function CalendarPage() {
                   {day !== null && (
                     <>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 2, paddingRight: 2 }}>
-                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: '50%', fontSize: 12, backgroundColor: current ? '#6366f1' : 'transparent', color: current ? '#fff' : 'rgba(255,255,255,0.55)', fontWeight: current ? 700 : 500, boxShadow: current ? '0 0 10px rgba(99,102,241,0.40)' : 'none' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: '50%', fontSize: 12, backgroundColor: current ? '#A88A35' : 'transparent', color: current ? '#fff' : 'rgba(255,255,255,0.55)', fontWeight: current ? 700 : 500, boxShadow: current ? '0 0 10px rgba(201,168,76,0.40)' : 'none' }}>
                           {day}
                         </span>
                       </div>
@@ -354,6 +366,13 @@ export default function CalendarPage() {
                 onMouseLeave={e => (e.currentTarget.style.background = 'rgba(52,211,153,0.12)')}
                 onClick={() => setSelected(null)}
               ><CheckIcon style={{ width: 14, height: 14 }} /> Check In</Link>
+              <button
+                onClick={() => deleteEvent(selected)}
+                disabled={deleting}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '10px 0', borderRadius: 12, fontSize: 13, fontWeight: 600, border: '1px solid rgba(248,113,113,0.22)', background: 'rgba(248,113,113,0.08)', color: '#f87171', cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.6 : 1, transition: 'all 0.15s ease' }}
+                onMouseEnter={e => !deleting && (e.currentTarget.style.background = 'rgba(248,113,113,0.16)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.08)')}
+              ><Trash2 style={{ width: 14, height: 14 }} />{deleting ? 'Deleting…' : 'Delete Event'}</button>
             </div>
           </div>
         </div>

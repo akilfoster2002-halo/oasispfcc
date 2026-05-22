@@ -5,7 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
 import { ArrowRight, Eye, EyeOff } from 'lucide-react'
-import { AuthShell, authStyles, inputFocus, inputBlur } from '../_components/AuthShell'
+import { AuthShell } from '../_components/AuthShell'
+import { Button, FieldGroup, IconButton, Input } from '@/components/ui'
 
 function LoginContent() {
   const searchParams = useSearchParams()
@@ -36,7 +37,6 @@ function LoginContent() {
         }
         return
       }
-      // Middleware handles routing to the right church dashboard
       router.push(next ?? '/')
       router.refresh()
     } finally {
@@ -46,7 +46,7 @@ function LoginContent() {
 
   const urlError = searchParams.get('error')
   const displayError = error || (urlError ? 'Sign-in failed. Please try again.' : '')
-  const submitReady = !loading && !!email.trim() && !!password
+  const canSubmit = !loading && !!email.trim() && !!password
 
   return (
     <AuthShell
@@ -54,18 +54,18 @@ function LoginContent() {
       subtitle="Sign in to your Aquila workspace"
       error={displayError}
       footer={
-        <p style={{ marginTop: 20, textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.28)' }}>
+        <p style={{ marginTop: 24, textAlign: 'center', fontSize: 13, color: 'var(--ds-text-tertiary)' }}>
           Don&apos;t have an account?{' '}
-          <Link href="/signup" style={{ color: '#818cf8', textDecoration: 'none', fontWeight: 500 }}>
+          <Link href="/signup" style={{ color: 'var(--ds-accent)', textDecoration: 'none', fontWeight: 500 }}>
             Create one
           </Link>
         </p>
       }
     >
-      <form onSubmit={handleSignIn} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div>
-          <label style={authStyles.label}>Email</label>
-          <input
+      <form onSubmit={handleSignIn} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <FieldGroup label="Email" htmlFor="email">
+          <Input
+            id="email"
             type="email"
             required
             autoFocus
@@ -73,65 +73,50 @@ function LoginContent() {
             value={email}
             onChange={e => { setEmail(e.target.value); setError('') }}
             placeholder="you@church.org"
-            style={authStyles.input}
-            onFocus={inputFocus}
-            onBlur={inputBlur}
+          />
+        </FieldGroup>
+
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <label htmlFor="password" className="ds-label" style={{ marginBottom: 0 }}>Password</label>
+            <Link href="/forgot-password" style={{ fontSize: 13, color: 'var(--ds-accent)', textDecoration: 'none', fontWeight: 500 }}>
+              Forgot?
+            </Link>
+          </div>
+          <Input
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            required
+            autoComplete="current-password"
+            value={password}
+            onChange={e => { setPassword(e.target.value); setError('') }}
+            placeholder="Your password"
+            rightAdornment={
+              <IconButton
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                tabIndex={-1}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                style={{ width: 32, height: 32 }}
+              >
+                {showPassword ? <EyeOff style={{ width: 15, height: 15 }} /> : <Eye style={{ width: 15, height: 15 }} />}
+              </IconButton>
+            }
           />
         </div>
 
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <label style={{ ...authStyles.label, marginBottom: 0 }}>Password</label>
-            <Link href="/forgot-password" style={{ fontSize: 12, color: '#818cf8', textDecoration: 'none', fontWeight: 500 }}>
-              Forgot password?
-            </Link>
-          </div>
-          <div style={{ position: 'relative' }}>
-            <input
-              type={showPassword ? 'text' : 'password'}
-              required
-              autoComplete="current-password"
-              value={password}
-              onChange={e => { setPassword(e.target.value); setError('') }}
-              placeholder="Your password"
-              style={{ ...authStyles.input, paddingRight: 42 }}
-              onFocus={inputFocus}
-              onBlur={inputBlur}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(v => !v)}
-              style={{
-                position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                background: 'none', border: 'none', cursor: 'pointer', padding: 2,
-                color: 'rgba(255,255,255,0.30)', display: 'flex', alignItems: 'center',
-              }}
-              tabIndex={-1}
-            >
-              {showPassword ? <EyeOff style={{ width: 15, height: 15 }} /> : <Eye style={{ width: 15, height: 15 }} />}
-            </button>
-          </div>
-        </div>
-
-        <button
+        <Button
           type="submit"
-          disabled={!submitReady}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 600,
-            border: 'none', cursor: submitReady ? 'pointer' : 'not-allowed',
-            background: submitReady
-              ? 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)'
-              : 'rgba(255,255,255,0.06)',
-            color: submitReady ? '#fff' : 'rgba(255,255,255,0.28)',
-            boxShadow: submitReady ? '0 4px 18px rgba(99,102,241,0.40)' : 'none',
-            marginTop: 4,
-            transition: 'all 0.15s ease',
-            opacity: loading ? 0.65 : 1,
-          }}
+          variant="primary"
+          size="lg"
+          fullWidth
+          disabled={!canSubmit}
+          loading={loading}
+          rightIcon={!loading ? <ArrowRight style={{ width: 16, height: 16 }} /> : undefined}
+          style={{ marginTop: 8 }}
         >
-          {loading ? 'Signing in…' : <>Sign in <ArrowRight style={{ width: 15, height: 15 }} /></>}
-        </button>
+          {loading ? 'Signing in…' : 'Sign in'}
+        </Button>
       </form>
     </AuthShell>
   )

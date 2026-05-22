@@ -55,7 +55,7 @@ export default function UsersSettingsPage() {
         <div className="flex gap-1.5">
           {[0, 1, 2].map(i => (
             <span key={i} className="w-2 h-2 rounded-full animate-bounce"
-              style={{ backgroundColor: 'rgba(129,140,248,0.50)', animationDelay: `${i * 0.15}s` }} />
+              style={{ backgroundColor: 'rgba(201,168,76,0.50)', animationDelay: `${i * 0.15}s` }} />
           ))}
         </div>
       </div>
@@ -69,11 +69,11 @@ export default function UsersSettingsPage() {
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center"
           style={{
-            background: 'linear-gradient(135deg, rgba(99,102,241,0.25) 0%, rgba(129,140,248,0.15) 100%)',
-            border: '1px solid rgba(129,140,248,0.25)',
+            background: 'linear-gradient(135deg, rgba(201,168,76,0.25) 0%, rgba(201,168,76,0.15) 100%)',
+            border: '1px solid rgba(201,168,76,0.25)',
           }}
         >
-          <Shield className="w-5 h-5" style={{ color: '#818cf8' }} />
+          <Shield className="w-5 h-5" style={{ color: '#C9A84C' }} />
         </div>
         <div>
           <h1 className="text-lg font-semibold" style={{ color: 'rgba(255,255,255,0.92)' }}>
@@ -88,7 +88,7 @@ export default function UsersSettingsPage() {
       {/* Role legend */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         {[
-          { label: 'Master', desc: 'Sees all groups, all data, all conversations', color: '#818cf8' },
+          { label: 'Master', desc: 'Sees all groups, all data, all conversations', color: '#C9A84C' },
           { label: 'Group', desc: 'Sees only their assigned group\'s data and messages', color: '#34d399' },
         ].map(r => (
           <div
@@ -138,9 +138,9 @@ export default function UsersSettingsPage() {
                   <div
                     className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-semibold"
                     style={{
-                      background: 'linear-gradient(135deg, rgba(99,102,241,0.25) 0%, rgba(129,140,248,0.15) 100%)',
-                      border: '1px solid rgba(129,140,248,0.20)',
-                      color: '#818cf8',
+                      background: 'linear-gradient(135deg, rgba(201,168,76,0.25) 0%, rgba(201,168,76,0.15) 100%)',
+                      border: '1px solid rgba(201,168,76,0.20)',
+                      color: '#C9A84C',
                     }}
                   >
                     {(u.name || u.email || '?')[0].toUpperCase()}
@@ -167,12 +167,12 @@ export default function UsersSettingsPage() {
                       className="appearance-none text-xs font-medium px-3 py-1.5 pr-7 rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{
                         background: currentRole === 'master'
-                          ? 'rgba(99,102,241,0.15)'
+                          ? 'rgba(201,168,76,0.15)'
                           : 'rgba(52,211,153,0.12)',
                         border: currentRole === 'master'
-                          ? '1px solid rgba(129,140,248,0.30)'
+                          ? '1px solid rgba(201,168,76,0.30)'
                           : '1px solid rgba(52,211,153,0.25)',
-                        color: currentRole === 'master' ? '#818cf8' : '#34d399',
+                        color: currentRole === 'master' ? '#C9A84C' : '#34d399',
                         outline: 'none',
                       }}
                     >
@@ -180,7 +180,7 @@ export default function UsersSettingsPage() {
                       <option value="group">Group</option>
                     </select>
                     <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none"
-                      style={{ color: currentRole === 'master' ? '#818cf8' : '#34d399' }} />
+                      style={{ color: currentRole === 'master' ? '#C9A84C' : '#34d399' }} />
                   </div>
 
                   {/* Group selector (only for group role) */}
@@ -212,7 +212,7 @@ export default function UsersSettingsPage() {
                   {/* Saved indicator */}
                   {isSavingThis ? (
                     <span className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin shrink-0"
-                      style={{ borderColor: 'rgba(129,140,248,0.60)', borderTopColor: 'transparent' }} />
+                      style={{ borderColor: 'rgba(201,168,76,0.60)', borderTopColor: 'transparent' }} />
                   ) : u.profile ? (
                     <Check className="w-4 h-4 shrink-0" style={{ color: 'rgba(52,211,153,0.60)' }} />
                   ) : (

@@ -13,7 +13,7 @@ interface GroupRow {
 }
 
 const GROUP_PALETTE = [
-  '#818cf8', '#34d399', '#fbbf24', '#22d3ee',
+  '#C9A84C', '#34d399', '#fbbf24', '#22d3ee',
   '#a78bfa', '#f472b6', '#60a5fa', '#f87171',
 ]
 function groupColor(name: string): string {
@@ -69,8 +69,8 @@ export default function GroupsPage() {
           className="flex items-center gap-2 rounded-xl text-sm font-medium text-white transition-all"
           style={{
             padding: '8px 16px',
-            background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
-            boxShadow: '0 4px 14px rgba(99,102,241,0.28)',
+            background: 'linear-gradient(135deg, #A88A35 0%, #A88A35 100%)',
+            boxShadow: '0 4px 14px rgba(201,168,76,0.28)',
             letterSpacing: '-0.01em',
           }}
         >
@@ -102,7 +102,7 @@ export default function GroupsPage() {
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.38)', fontWeight: 500 }}>No groups yet</p>
           <Link
             href={`/${slug}/groups/new`}
-            style={{ fontSize: 13, color: '#818cf8', marginTop: 6, display: 'inline-block' }}
+            style={{ fontSize: 13, color: '#C9A84C', marginTop: 6, display: 'inline-block' }}
           >
             Create your first group →
           </Link>

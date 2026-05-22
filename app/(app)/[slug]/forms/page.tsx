@@ -129,11 +129,11 @@ export default function FormsPage() {
               <div style={{
                 width: 40, height: 40, borderRadius: 12, flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: form.is_preset ? 'rgba(129,140,248,0.12)' : 'rgba(52,211,153,0.10)',
-                border: form.is_preset ? '1px solid rgba(129,140,248,0.20)' : '1px solid rgba(52,211,153,0.18)',
+                background: form.is_preset ? 'rgba(201,168,76,0.12)' : 'rgba(52,211,153,0.10)',
+                border: form.is_preset ? '1px solid rgba(201,168,76,0.20)' : '1px solid rgba(52,211,153,0.18)',
               }}>
                 {form.is_preset
-                  ? <Lock style={{ width: 16, height: 16, color: '#818cf8' }} />
+                  ? <Lock style={{ width: 16, height: 16, color: '#C9A84C' }} />
                   : <FileText style={{ width: 16, height: 16, color: '#34d399' }} />
                 }
               </div>
@@ -145,7 +145,7 @@ export default function FormsPage() {
                     {form.name}
                   </p>
                   {form.is_preset && (
-                    <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 99, background: 'rgba(129,140,248,0.12)', color: '#818cf8', border: '1px solid rgba(129,140,248,0.20)', flexShrink: 0, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 99, background: 'rgba(201,168,76,0.12)', color: '#C9A84C', border: '1px solid rgba(201,168,76,0.20)', flexShrink: 0, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                       Preset
                     </span>
                   )}

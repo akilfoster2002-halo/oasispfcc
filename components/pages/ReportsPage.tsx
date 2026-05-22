@@ -80,7 +80,7 @@ const RANGES = [
 ]
 
 const C = {
-  indigo: '#818cf8',
+  indigo: '#C9A84C',
   green:  '#34d399',
   amber:  '#fbbf24',
   teal:   '#22d3ee',
@@ -464,14 +464,14 @@ function WeeklyReport({
       <div className="flex items-center gap-2">
         <div
           className="w-1 h-5 rounded-full"
-          style={{ background: 'linear-gradient(180deg, #6366f1, #818cf8)' }}
+          style={{ background: 'linear-gradient(180deg, #A88A35, #C9A84C)' }}
         />
         <h2 className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
           Weekly Report
         </h2>
         <span
           className="text-xs px-2 py-0.5 rounded-full"
-          style={{ background: 'rgba(129,140,248,0.14)', color: '#818cf8', border: '1px solid rgba(129,140,248,0.20)' }}
+          style={{ background: 'rgba(201,168,76,0.14)', color: '#C9A84C', border: '1px solid rgba(201,168,76,0.20)' }}
         >
           {tw}
         </span>
@@ -685,10 +685,10 @@ export default function AnalyticsPage() {
   // Filter pill styles
   const pill = (active: boolean) => ({
     background: active
-      ? 'linear-gradient(135deg, rgba(129,140,248,0.22) 0%, rgba(99,102,241,0.15) 100%)'
+      ? 'linear-gradient(135deg, rgba(201,168,76,0.22) 0%, rgba(201,168,76,0.15) 100%)'
       : 'transparent',
-    border: active ? '1px solid rgba(129,140,248,0.28)' : '1px solid transparent',
-    color:   active ? '#818cf8' : 'rgba(255,255,255,0.45)',
+    border: active ? '1px solid rgba(201,168,76,0.28)' : '1px solid transparent',
+    color:   active ? '#C9A84C' : 'rgba(255,255,255,0.45)',
     borderRadius: '10px',
     padding: '6px 14px',
     fontSize: '12px',
@@ -752,7 +752,7 @@ export default function AnalyticsPage() {
           <div className="text-center py-14">
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-              style={{ background: 'rgba(129,140,248,0.12)', border: '1px solid rgba(129,140,248,0.20)' }}
+              style={{ background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.20)' }}
             >
               <BarChart2 className="w-7 h-7" style={{ color: C.indigo }} />
             </div>
@@ -1206,12 +1206,12 @@ export default function AnalyticsPage() {
           <div
             className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
             style={{
-              background: 'linear-gradient(135deg, rgba(99,102,241,0.30) 0%, rgba(167,139,250,0.18) 100%)',
-              border: '1px solid rgba(129,140,248,0.25)',
-              boxShadow: '0 0 16px rgba(129,140,248,0.15)',
+              background: 'linear-gradient(135deg, rgba(201,168,76,0.30) 0%, rgba(201,168,76,0.18) 100%)',
+              border: '1px solid rgba(201,168,76,0.25)',
+              boxShadow: '0 0 16px rgba(201,168,76,0.15)',
             }}
           >
-            <Sparkles className="w-4 h-4" style={{ color: '#818cf8' }} strokeWidth={2} />
+            <Sparkles className="w-4 h-4" style={{ color: '#C9A84C' }} strokeWidth={2} />
           </div>
           <div>
             <h2 className="text-base font-semibold" style={{ color: 'rgba(255,255,255,0.88)' }}>
@@ -1241,8 +1241,8 @@ export default function AnalyticsPage() {
               onMouseEnter={e => {
                 if (!aiLoading) {
                   (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.85)'
-                  ;(e.currentTarget as HTMLElement).style.background = 'rgba(129,140,248,0.12)'
-                  ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(129,140,248,0.22)'
+                  ;(e.currentTarget as HTMLElement).style.background = 'rgba(201,168,76,0.12)'
+                  ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(201,168,76,0.22)'
                 }
               }}
               onMouseLeave={e => {
@@ -1279,9 +1279,9 @@ export default function AnalyticsPage() {
               style={{
                 background: aiLoading || !aiPrompt.trim()
                   ? 'rgba(255,255,255,0.06)'
-                  : 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+                  : 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)',
                 color: aiLoading || !aiPrompt.trim() ? 'rgba(255,255,255,0.28)' : '#FFFFFF',
-                boxShadow: aiLoading || !aiPrompt.trim() ? 'none' : '0 4px 16px rgba(99,102,241,0.40)',
+                boxShadow: aiLoading || !aiPrompt.trim() ? 'none' : '0 4px 16px rgba(201,168,76,0.40)',
                 cursor: aiLoading || !aiPrompt.trim() ? 'not-allowed' : 'pointer',
               }}
             >
@@ -1332,8 +1332,8 @@ export default function AnalyticsPage() {
             <div
               className="mt-5 pt-4 rounded-xl p-4"
               style={{
-                background: 'linear-gradient(135deg, rgba(129,140,248,0.10) 0%, rgba(99,102,241,0.06) 100%)',
-                border: '1px solid rgba(129,140,248,0.16)',
+                background: 'linear-gradient(135deg, rgba(201,168,76,0.10) 0%, rgba(201,168,76,0.06) 100%)',
+                border: '1px solid rgba(201,168,76,0.16)',
               }}
             >
               <div className="flex items-start gap-2.5">

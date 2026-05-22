@@ -92,7 +92,7 @@ export default function NewGroupPage() {
                 color: 'rgba(255,255,255,0.88)', borderRadius: 12, padding: '10px 14px', fontSize: 14, outline: 'none',
                 transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
               }}
-              onFocus={e => { e.currentTarget.style.borderColor = 'rgba(99,102,241,0.50)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.10)' }}
+              onFocus={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.50)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.10)' }}
               onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.080)'; e.currentTarget.style.boxShadow = 'none' }}
             />
           </div>

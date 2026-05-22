@@ -64,8 +64,8 @@ const cardStyle: React.CSSProperties = {
 }
 
 function focusIn(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
-  e.currentTarget.style.borderColor = 'rgba(99,102,241,0.50)'
-  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.10)'
+  e.currentTarget.style.borderColor = 'rgba(201,168,76,0.50)'
+  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.10)'
 }
 function focusOut(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
   e.currentTarget.style.borderColor = 'rgba(255,255,255,0.080)'
@@ -341,9 +341,9 @@ function PublicFormInner({ formId }: { formId: string }) {
                       onClick={() => setValue(field.id, opt)}
                       style={{
                         padding: '8px 20px', borderRadius: 10, fontSize: 13, fontWeight: 500,
-                        border: `1px solid ${active ? 'rgba(99,102,241,0.55)' : 'rgba(255,255,255,0.10)'}`,
-                        background: active ? 'rgba(99,102,241,0.14)' : 'rgba(255,255,255,0.04)',
-                        color: active ? '#a5b4fc' : 'rgba(255,255,255,0.55)',
+                        border: `1px solid ${active ? 'rgba(201,168,76,0.55)' : 'rgba(255,255,255,0.10)'}`,
+                        background: active ? 'rgba(201,168,76,0.14)' : 'rgba(255,255,255,0.04)',
+                        color: active ? '#C9A84C' : 'rgba(255,255,255,0.55)',
                         cursor: 'pointer', transition: 'all 0.12s ease',
                       }}
                     >
@@ -379,7 +379,7 @@ function PublicFormInner({ formId }: { formId: string }) {
 export default function PublicFormPage({ params }: { params: Promise<{ formId: string }> }) {
   const { formId } = use(params)
   return (
-    <div style={{ minHeight: '100vh', background: '#050810', backgroundImage: 'radial-gradient(ellipse 65% 55% at 0% 0%, rgba(79,70,229,0.13) 0%, transparent 65%), radial-gradient(ellipse 55% 45% at 100% 100%, rgba(124,58,237,0.09) 0%, transparent 65%)', color: 'rgba(255,255,255,0.90)', fontFamily: 'system-ui, sans-serif', WebkitFontSmoothing: 'antialiased' }}>
+    <div style={{ minHeight: '100vh', background: '#050810', backgroundImage: 'radial-gradient(ellipse 65% 55% at 0% 0%, rgba(79,127,196,0.13) 0%, transparent 65%), radial-gradient(ellipse 55% 45% at 100% 100%, rgba(79,127,196,0.09) 0%, transparent 65%)', color: 'rgba(255,255,255,0.90)', fontFamily: 'system-ui, sans-serif', WebkitFontSmoothing: 'antialiased' }}>
       <Suspense fallback={
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 600, margin: '0 auto', padding: '48px 16px' }}>
           {[1, 2, 3].map(i => <div key={i} className="shimmer" style={{ height: 96, borderRadius: 20, background: 'rgba(255,255,255,0.04)' }} />)}

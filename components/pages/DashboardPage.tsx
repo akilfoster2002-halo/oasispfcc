@@ -60,9 +60,9 @@ function MessageBubble({ message }: { message: Message }) {
         <div
           className="max-w-[75%] px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm leading-relaxed"
           style={{
-            background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
-            color: 'rgba(255,255,255,0.95)',
-            boxShadow: '0 4px 20px rgba(99,102,241,0.35)',
+            background: 'linear-gradient(135deg, #C9A84C 0%, #DDB95A 100%)',
+            color: 'rgba(6,7,14,0.95)',
+            boxShadow: '0 4px 20px rgba(201,168,76,0.30)',
           }}
         >
           {message.content}
@@ -70,11 +70,11 @@ function MessageBubble({ message }: { message: Message }) {
         <div
           className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5"
           style={{
-            background: 'linear-gradient(135deg, rgba(99,102,241,0.30) 0%, rgba(129,140,248,0.15) 100%)',
-            border: '1px solid rgba(129,140,248,0.30)',
+            background: 'linear-gradient(135deg, rgba(201,168,76,0.25) 0%, rgba(221,185,90,0.12) 100%)',
+            border: '1px solid rgba(201,168,76,0.30)',
           }}
         >
-          <User className="w-3.5 h-3.5" style={{ color: '#818cf8' }} />
+          <User className="w-3.5 h-3.5" style={{ color: '#C9A84C' }} />
         </div>
       </div>
     )
@@ -129,7 +129,7 @@ function TypingIndicator() {
             <span
               key={i}
               className="w-1.5 h-1.5 rounded-full animate-bounce"
-              style={{ backgroundColor: 'rgba(129,140,248,0.60)', animationDelay: `${i * 0.15}s` }}
+              style={{ backgroundColor: 'rgba(201,168,76,0.60)', animationDelay: `${i * 0.15}s` }}
             />
           ))}
         </div>
@@ -277,12 +277,12 @@ export default function ChatPage() {
           onClick={newChat}
           className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
           style={{
-            background: 'linear-gradient(135deg, rgba(99,102,241,0.25) 0%, rgba(129,140,248,0.15) 100%)',
-            border: '1px solid rgba(129,140,248,0.25)',
-            color: '#818cf8',
+            background: 'linear-gradient(135deg, rgba(201,168,76,0.18) 0%, rgba(221,185,90,0.10) 100%)',
+            border: '1px solid rgba(201,168,76,0.28)',
+            color: '#C9A84C',
           }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, rgba(99,102,241,0.35) 0%, rgba(129,140,248,0.22) 100%)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, rgba(99,102,241,0.25) 0%, rgba(129,140,248,0.15) 100%)' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, rgba(201,168,76,0.28) 0%, rgba(221,185,90,0.18) 100%)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, rgba(201,168,76,0.18) 0%, rgba(221,185,90,0.10) 100%)' }}
         >
           <Plus className="w-4 h-4 shrink-0" />
           New Chat
@@ -308,10 +308,10 @@ export default function ChatPage() {
                 className="flex items-center gap-2 px-2 py-2 rounded-xl cursor-pointer group transition-all duration-150"
                 style={{
                   background: activeSessionId === s.id
-                    ? 'linear-gradient(135deg, rgba(99,102,241,0.18) 0%, rgba(129,140,248,0.10) 100%)'
+                    ? 'linear-gradient(135deg, rgba(201,168,76,0.14) 0%, rgba(221,185,90,0.07) 100%)'
                     : 'transparent',
-                  border: activeSessionId === s.id ? '1px solid rgba(129,140,248,0.18)' : '1px solid transparent',
-                  color: activeSessionId === s.id ? '#818cf8' : 'rgba(255,255,255,0.52)',
+                  border: activeSessionId === s.id ? '1px solid rgba(201,168,76,0.22)' : '1px solid transparent',
+                  color: activeSessionId === s.id ? '#C9A84C' : 'rgba(255,255,255,0.52)',
                 }}
                 onMouseEnter={e => {
                   if (activeSessionId !== s.id) {
@@ -454,7 +454,7 @@ export default function ChatPage() {
                     className="rounded-full animate-bounce"
                     style={{
                       width: 5, height: 5,
-                      backgroundColor: 'rgba(129,140,248,0.45)',
+                      backgroundColor: 'rgba(201,168,76,0.50)',
                       animationDelay: `${i * 0.14}s`,
                     }}
                   />
@@ -587,11 +587,11 @@ export default function ChatPage() {
               disabled={!input.trim() || loading}
               className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 disabled:opacity-30"
               style={{
-                background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
-                boxShadow: '0 4px 16px rgba(99,102,241,0.40)',
+                background: 'linear-gradient(135deg, #C9A84C 0%, #A88A35 100%)',
+                boxShadow: '0 4px 16px rgba(201,168,76,0.35)',
               }}
             >
-              <Send className="w-3.5 h-3.5 text-white" />
+              <Send className="w-3.5 h-3.5" style={{ color: 'rgba(6,7,14,0.90)' }} />
             </button>
           </div>
           <p className="text-center text-[10px] mt-2" style={{ color: 'rgba(255,255,255,0.18)' }}>

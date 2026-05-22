@@ -37,7 +37,7 @@ export default function MobileNav() {
               key={path}
               href={href}
               className="flex-1 flex flex-col items-center justify-center gap-[5px] transition-all duration-150"
-              style={{ color: active ? '#818cf8' : 'rgba(255,255,255,0.28)' }}
+              style={{ color: active ? '#C9A84C' : 'rgba(255,255,255,0.28)' }}
             >
               <div
                 style={{
@@ -47,7 +47,7 @@ export default function MobileNav() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: active ? 'rgba(99,102,241,0.14)' : 'transparent',
+                  background: active ? 'rgba(201,168,76,0.14)' : 'transparent',
                   transition: 'background 0.15s ease',
                 }}
               >
@@ -57,7 +57,7 @@ export default function MobileNav() {
                 fontSize: 10,
                 fontWeight: active ? 500 : 400,
                 letterSpacing: '0.01em',
-                color: active ? '#818cf8' : 'rgba(255,255,255,0.28)',
+                color: active ? '#C9A84C' : 'rgba(255,255,255,0.28)',
               }}>
                 {label}
               </span>

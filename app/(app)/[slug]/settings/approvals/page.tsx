@@ -76,8 +76,8 @@ export default function ApprovalsPage() {
     <div className="p-6 md:p-8 max-w-4xl">
       <div className="flex items-center gap-3 mb-6">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(129,140,248,0.15))', border: '1px solid rgba(129,140,248,0.25)' }}>
-          <Shield className="w-5 h-5" style={{ color: '#818cf8' }} />
+          style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.25), rgba(201,168,76,0.15))', border: '1px solid rgba(201,168,76,0.25)' }}>
+          <Shield className="w-5 h-5" style={{ color: '#C9A84C' }} />
         </div>
         <div>
           <h1 className="text-lg font-semibold" style={{ color: 'rgba(255,255,255,0.92)' }}>
@@ -97,9 +97,9 @@ export default function ApprovalsPage() {
             onClick={() => setFilter(f)}
             className="px-4 py-1.5 text-sm font-medium rounded-full transition-all"
             style={{
-              background: filter === f ? 'rgba(99,102,241,0.20)' : 'rgba(255,255,255,0.05)',
-              border: filter === f ? '1px solid rgba(129,140,248,0.30)' : '1px solid rgba(255,255,255,0.08)',
-              color: filter === f ? '#818cf8' : 'rgba(255,255,255,0.45)',
+              background: filter === f ? 'rgba(201,168,76,0.20)' : 'rgba(255,255,255,0.05)',
+              border: filter === f ? '1px solid rgba(201,168,76,0.30)' : '1px solid rgba(255,255,255,0.08)',
+              color: filter === f ? '#C9A84C' : 'rgba(255,255,255,0.45)',
             }}
           >
             {f === 'pending' ? `Pending (${members.filter(m => m.status === 'pending').length})` : 'All Members'}
@@ -129,7 +129,7 @@ export default function ApprovalsPage() {
               {/* Avatar */}
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold text-white"
-                style={{ background: 'linear-gradient(135deg, #6366f1, #818cf8)' }}
+                style={{ background: 'linear-gradient(135deg, #A88A35, #C9A84C)' }}
               >
                 {(m.name || m.email).slice(0, 2).toUpperCase()}
               </div>

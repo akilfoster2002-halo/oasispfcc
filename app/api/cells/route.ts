@@ -75,7 +75,7 @@ export async function POST(req: Request) {
       meeting_day: meetingDay ?? null,
       meeting_time: meetingTime ?? null,
       location: location ?? null,
-      color: color ?? '#6366f1',
+      color: color ?? '#A88A35',
       is_active: true,
     })
     .select()

@@ -56,7 +56,7 @@ type Tab = 'details' | 'attendance' | 'notes' | 'followups'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const PALETTE = ['#6366f1', '#059669', '#d97706', '#7c3aed', '#db2777', '#0891b2']
+const PALETTE = ['#A88A35', '#059669', '#d97706', '#4F7FC4', '#db2777', '#0891b2']
 function avatarColor(name: string) {
   let h = 0
   for (const c of name) h = c.charCodeAt(0) + ((h << 5) - h)
@@ -166,7 +166,7 @@ function EditableField({
           onChange={e => setDraft(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false) }}
           className="flex-1 text-sm px-2 py-1 rounded-lg outline-none focus:ring-2 focus:ring-indigo-200"
-          style={{ border: '1px solid #6366f1', color: '#111827' }}
+          style={{ border: '1px solid #A88A35', color: '#111827' }}
         />
         <button onClick={save} disabled={saving} className="hover:opacity-70 shrink-0">
           <Check className="w-4 h-4" style={{ color: '#059669' }} />

@@ -108,10 +108,10 @@ function FollowUpCard({
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
         <div style={{
           width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-          background: 'linear-gradient(135deg, rgba(99,102,241,0.30) 0%, rgba(129,140,248,0.20) 100%)',
-          border: '1px solid rgba(129,140,248,0.28)',
+          background: 'linear-gradient(135deg, rgba(201,168,76,0.30) 0%, rgba(201,168,76,0.20) 100%)',
+          border: '1px solid rgba(201,168,76,0.28)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 14, fontWeight: 700, color: '#a5b4fc',
+          fontSize: 14, fontWeight: 700, color: '#C9A84C',
         }}>
           {item.person_name.charAt(0)}
         </div>
@@ -126,8 +126,8 @@ function FollowUpCard({
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <span style={{
             fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 99,
-            background: 'rgba(129,140,248,0.12)', color: '#818cf8',
-            border: '1px solid rgba(129,140,248,0.22)',
+            background: 'rgba(201,168,76,0.12)', color: '#C9A84C',
+            border: '1px solid rgba(201,168,76,0.22)',
           }}>
             First Timer
           </span>
@@ -147,10 +147,10 @@ function FollowUpCard({
             autoFocus
             style={{
               width: '100%', padding: '10px 14px', borderRadius: 12, fontSize: 13,
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(99,102,241,0.40)',
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.40)',
               color: 'rgba(255,255,255,0.88)', outline: 'none', resize: 'vertical',
               boxSizing: 'border-box', lineHeight: 1.6,
-              boxShadow: '0 0 0 3px rgba(99,102,241,0.10)',
+              boxShadow: '0 0 0 3px rgba(201,168,76,0.10)',
             }}
           />
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
@@ -159,8 +159,8 @@ function FollowUpCard({
               disabled={saving}
               style={{
                 padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                background: 'rgba(99,102,241,0.20)', border: '1px solid rgba(99,102,241,0.35)',
-                color: '#a5b4fc', cursor: 'pointer',
+                background: 'rgba(201,168,76,0.20)', border: '1px solid rgba(201,168,76,0.35)',
+                color: '#C9A84C', cursor: 'pointer',
               }}
             >
               {saving ? 'Saving…' : 'Save'}
@@ -197,9 +197,9 @@ function FollowUpCard({
             style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 600,
-              background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+              background: 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)',
               color: '#fff', border: 'none', cursor: actionLoading ? 'not-allowed' : 'pointer',
-              boxShadow: '0 3px 10px rgba(99,102,241,0.35)',
+              boxShadow: '0 3px 10px rgba(201,168,76,0.35)',
               opacity: actionLoading === 'send' ? 0.65 : 1,
               transition: 'opacity 0.12s ease',
             }}
@@ -307,16 +307,16 @@ export default function MessagingPage({ churchId }: { churchId: string }) {
       style={{
         padding: '8px 18px', borderRadius: 10, fontSize: 13, fontWeight: 500,
         border: 'none', cursor: 'pointer', transition: 'all 0.12s ease',
-        background: tab === t ? 'rgba(99,102,241,0.18)' : 'transparent',
-        color: tab === t ? '#a5b4fc' : 'rgba(255,255,255,0.40)',
-        outline: tab === t ? '1px solid rgba(129,140,248,0.30)' : '1px solid transparent',
+        background: tab === t ? 'rgba(201,168,76,0.18)' : 'transparent',
+        color: tab === t ? '#C9A84C' : 'rgba(255,255,255,0.40)',
+        outline: tab === t ? '1px solid rgba(201,168,76,0.30)' : '1px solid transparent',
       }}
     >
       {label}
       {count !== undefined && count > 0 && (
         <span style={{
           marginLeft: 6, padding: '1px 6px', borderRadius: 99, fontSize: 11, fontWeight: 700,
-          background: 'rgba(99,102,241,0.25)', color: '#818cf8',
+          background: 'rgba(201,168,76,0.25)', color: '#C9A84C',
         }}>
           {count}
         </span>
@@ -413,7 +413,7 @@ export default function MessagingPage({ churchId }: { churchId: string }) {
                 >
                   <ArrowLeft style={{ width: 16, height: 16 }} />
                 </button>
-                <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(99,102,241,0.20)', border: '1px solid rgba(129,140,248,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#a5b4fc', flexShrink: 0 }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(201,168,76,0.20)', border: '1px solid rgba(201,168,76,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#C9A84C', flexShrink: 0 }}>
                   {activeConv.name.charAt(0)}
                 </div>
                 <div>
@@ -435,7 +435,7 @@ export default function MessagingPage({ churchId }: { churchId: string }) {
                     <div style={{
                       maxWidth: '72%', padding: '9px 13px', borderRadius: 14,
                       fontSize: 13, lineHeight: 1.55,
-                      background: m.direction === 'outbound' ? 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)' : 'rgba(255,255,255,0.07)',
+                      background: m.direction === 'outbound' ? 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)' : 'rgba(255,255,255,0.07)',
                       color: m.direction === 'outbound' ? '#fff' : 'rgba(255,255,255,0.80)',
                       border: m.direction === 'inbound' ? '1px solid rgba(255,255,255,0.08)' : 'none',
                     }}>
@@ -468,7 +468,7 @@ export default function MessagingPage({ churchId }: { churchId: string }) {
                   style={{
                     width: 38, height: 38, borderRadius: 10, flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: reply.trim() ? 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)' : 'rgba(255,255,255,0.06)',
+                    background: reply.trim() ? 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)' : 'rgba(255,255,255,0.06)',
                     border: 'none', cursor: reply.trim() ? 'pointer' : 'not-allowed',
                   }}
                 >
@@ -515,7 +515,7 @@ export default function MessagingPage({ churchId }: { churchId: string }) {
                       onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.055)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.030)')}
                     >
-                      <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(129,140,248,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#a5b4fc' }}>
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: 'rgba(201,168,76,0.18)', border: '1px solid rgba(201,168,76,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#C9A84C' }}>
                         {c.name.charAt(0)}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>

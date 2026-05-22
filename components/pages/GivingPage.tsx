@@ -22,10 +22,10 @@ const METHODS = ['cash', 'check', 'online', 'card', 'other'] as const
 const METHOD_LABEL: Record<string, string> = { cash: 'Cash', check: 'Check', online: 'Online', card: 'Card', other: 'Other' }
 const METHOD_COLOR: Record<string, string> = {
   cash: 'rgba(52,211,153,0.15)', check: 'rgba(251,191,36,0.15)',
-  online: 'rgba(129,140,248,0.15)', card: 'rgba(96,165,250,0.15)', other: 'rgba(255,255,255,0.08)',
+  online: 'rgba(201,168,76,0.15)', card: 'rgba(96,165,250,0.15)', other: 'rgba(255,255,255,0.08)',
 }
 const METHOD_TEXT: Record<string, string> = {
-  cash: '#34d399', check: '#fbbf24', online: '#818cf8', card: '#60a5fa', other: 'rgba(255,255,255,0.45)',
+  cash: '#34d399', check: '#fbbf24', online: '#C9A84C', card: '#60a5fa', other: 'rgba(255,255,255,0.45)',
 }
 
 function fmt(n: number) {
@@ -167,7 +167,7 @@ export default function GivingPage() {
           >
             <Link2 style={{ width: 14, height: 14 }} /> {linkCopied ? 'Copied!' : 'Give Link'}
           </button>
-          <button onClick={() => setShowForm(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', borderRadius: 11, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #6366f1, #818cf8)', color: '#fff', boxShadow: '0 4px 14px rgba(99,102,241,0.35)' }}>
+          <button onClick={() => setShowForm(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', borderRadius: 11, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #A88A35, #C9A84C)', color: '#fff', boxShadow: '0 4px 14px rgba(201,168,76,0.35)' }}>
             <Plus style={{ width: 15, height: 15 }} /> Record Gift
           </button>
         </div>
@@ -177,7 +177,7 @@ export default function GivingPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 24 }}>
         {[
           { icon: DollarSign, label: 'Total Given', value: fmt(totalGiven), color: '#34d399', bg: 'rgba(52,211,153,0.10)', border: 'rgba(52,211,153,0.18)' },
-          { icon: Users, label: 'Unique Givers', value: uniqueGivers.toString(), color: '#818cf8', bg: 'rgba(129,140,248,0.10)', border: 'rgba(129,140,248,0.18)' },
+          { icon: Users, label: 'Unique Givers', value: uniqueGivers.toString(), color: '#C9A84C', bg: 'rgba(201,168,76,0.10)', border: 'rgba(201,168,76,0.18)' },
           { icon: TrendingUp, label: 'Avg per Gift', value: filtered.length ? fmt(totalGiven / filtered.length) : '$0', color: '#60a5fa', bg: 'rgba(96,165,250,0.10)', border: 'rgba(96,165,250,0.18)' },
           { icon: Calendar, label: 'Total Records', value: filtered.length.toString(), color: '#fbbf24', bg: 'rgba(251,191,36,0.10)', border: 'rgba(251,191,36,0.18)' },
         ].map(s => (
@@ -205,7 +205,7 @@ export default function GivingPage() {
         </div>
         <div style={{ display: 'flex', borderRadius: 10, padding: 3, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
           {(['all', 'by-person'] as const).map(v => (
-            <button key={v} onClick={() => setView(v)} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer', background: view === v ? 'rgba(99,102,241,0.22)' : 'transparent', color: view === v ? '#a5b4fc' : 'rgba(255,255,255,0.38)' }}>
+            <button key={v} onClick={() => setView(v)} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer', background: view === v ? 'rgba(201,168,76,0.22)' : 'transparent', color: view === v ? '#C9A84C' : 'rgba(255,255,255,0.38)' }}>
               {v === 'all' ? 'All Gifts' : 'By Person'}
             </button>
           ))}
@@ -226,7 +226,7 @@ export default function GivingPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {filtered.map(g => (
               <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '13px 16px', borderRadius: 14, background: 'rgba(255,255,255,0.034)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <div style={{ width: 38, height: 38, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'rgba(129,140,248,0.14)', fontSize: 12, fontWeight: 700, color: '#a5b4fc' }}>
+                <div style={{ width: 38, height: 38, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'rgba(201,168,76,0.14)', fontSize: 12, fontWeight: 700, color: '#C9A84C' }}>
                   {initials(g.person_name)}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -252,7 +252,7 @@ export default function GivingPage() {
             {byPerson.map(({ name, total, gifts: pg }) => (
               <details key={name} style={{ borderRadius: 14, background: 'rgba(255,255,255,0.034)', border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
                 <summary style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', cursor: 'pointer', listStyle: 'none' }}>
-                  <div style={{ width: 38, height: 38, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'rgba(129,140,248,0.14)', fontSize: 12, fontWeight: 700, color: '#a5b4fc' }}>
+                  <div style={{ width: 38, height: 38, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'rgba(201,168,76,0.14)', fontSize: 12, fontWeight: 700, color: '#C9A84C' }}>
                     {initials(name)}
                   </div>
                   <div style={{ flex: 1 }}>
@@ -354,7 +354,7 @@ export default function GivingPage() {
                 <button type="button" onClick={() => { setShowForm(false); setPersonSearch(''); setFName('') }} style={{ flex: 1, padding: '12px 0', borderRadius: 11, fontSize: 13, fontWeight: 600, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.50)', cursor: 'pointer' }}>
                   Cancel
                 </button>
-                <button type="submit" disabled={fSaving} style={{ flex: 2, padding: '12px 0', borderRadius: 11, fontSize: 13, fontWeight: 600, border: 'none', cursor: fSaving ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg, #6366f1, #818cf8)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, opacity: fSaving ? 0.65 : 1 }}>
+                <button type="submit" disabled={fSaving} style={{ flex: 2, padding: '12px 0', borderRadius: 11, fontSize: 13, fontWeight: 600, border: 'none', cursor: fSaving ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg, #A88A35, #C9A84C)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, opacity: fSaving ? 0.65 : 1 }}>
                   {fSaving ? 'Saving…' : <><Check style={{ width: 14, height: 14 }} /> Save Gift</>}
                 </button>
               </div>

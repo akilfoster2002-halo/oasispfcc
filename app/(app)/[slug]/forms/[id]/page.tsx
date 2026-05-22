@@ -56,7 +56,7 @@ function TypeIcon({ type }: { type: FieldType }) {
     text: Type, number: Hash, textarea: AlignLeft, radio: ToggleLeft,
   }
   const Icon = icons[type]
-  return <Icon style={{ width: 13, height: 13, color: '#818cf8', flexShrink: 0 }} />
+  return <Icon style={{ width: 13, height: 13, color: '#C9A84C', flexShrink: 0 }} />
 }
 
 function FieldEditor({
@@ -83,8 +83,8 @@ function FieldEditor({
   }
 
   const focus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    e.currentTarget.style.borderColor = 'rgba(99,102,241,0.50)'
-    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.10)'
+    e.currentTarget.style.borderColor = 'rgba(201,168,76,0.50)'
+    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.10)'
   }
   const blur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     e.currentTarget.style.borderColor = 'rgba(255,255,255,0.080)'
@@ -251,7 +251,7 @@ function FieldEditor({
           >
             <div style={{
               width: 32, height: 19, borderRadius: 99, position: 'relative', flexShrink: 0,
-              backgroundColor: field.required ? '#6366f1' : 'rgba(255,255,255,0.12)',
+              backgroundColor: field.required ? '#A88A35' : 'rgba(255,255,255,0.12)',
               transition: 'background-color 0.15s ease',
             }}>
               <span style={{
@@ -393,7 +393,7 @@ export default function FormBuilderPage({ params }: { params: Promise<{ id: stri
                 onChange={e => setName(e.target.value)}
                 placeholder="Form name"
                 style={inputStyle}
-                onFocus={e => { e.currentTarget.style.borderColor = 'rgba(99,102,241,0.50)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.10)' }}
+                onFocus={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.50)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.10)' }}
                 onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.080)'; e.currentTarget.style.boxShadow = 'none' }}
               />
             </div>
@@ -405,7 +405,7 @@ export default function FormBuilderPage({ params }: { params: Promise<{ id: stri
                 onChange={e => setDescription(e.target.value)}
                 placeholder="Brief description of this form's purpose…"
                 style={inputStyle}
-                onFocus={e => { e.currentTarget.style.borderColor = 'rgba(99,102,241,0.50)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.10)' }}
+                onFocus={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.50)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.10)' }}
                 onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.080)'; e.currentTarget.style.boxShadow = 'none' }}
               />
             </div>
@@ -456,7 +456,7 @@ export default function FormBuilderPage({ params }: { params: Promise<{ id: stri
                   color: 'rgba(255,255,255,0.60)', cursor: 'pointer',
                   transition: 'background 0.12s ease, color 0.12s ease, border-color 0.12s ease',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(129,140,248,0.10)'; e.currentTarget.style.color = '#a5b4fc'; e.currentTarget.style.borderColor = 'rgba(129,140,248,0.22)' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(201,168,76,0.10)'; e.currentTarget.style.color = '#C9A84C'; e.currentTarget.style.borderColor = 'rgba(201,168,76,0.22)' }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.60)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)' }}
               >
                 <Icon style={{ width: 13, height: 13 }} />

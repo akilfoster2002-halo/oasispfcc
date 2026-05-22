@@ -10,12 +10,17 @@ import {
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
 import { useUserProfile } from '@/lib/use-user-profile'
 
-const NAV = [
+// ── Navigation manifest ────────────────────────────────────────────────────────
+
+const CORE_NAV = [
   { path: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: 'people',    label: 'People',    icon: Users },
   { path: 'groups',    label: 'Groups',    icon: Layers },
   { path: 'cells',     label: 'Cells',     icon: Home },
   { path: 'events',    label: 'Events',    icon: CalendarDays },
+]
+
+const TOOLS_NAV = [
   { path: 'forms',     label: 'Forms',     icon: FileText },
   { path: 'reports',   label: 'Analytics', icon: BarChart3 },
   { path: 'giving',    label: 'Giving',    icon: Heart },
@@ -23,115 +28,169 @@ const NAV = [
 ]
 
 const ADMIN_NAV = [
-  { path: 'settings/team',      label: 'Team & Invites', icon: UserPlus },
-  { path: 'settings/users',     label: 'User Access',    icon: Settings },
-  { path: 'settings/approvals', label: 'Approvals',      icon: CheckSquare },
+  { path: 'settings/team',      label: 'Team',      icon: UserPlus },
+  { path: 'settings/users',     label: 'Access',    icon: Settings },
+  { path: 'settings/approvals', label: 'Approvals', icon: CheckSquare },
 ]
 
-/* ── Brand mark: lens / iris — represents clarity of vision ─────────────────── */
+// ── Brand mark ─────────────────────────────────────────────────────────────────
+// Iris / lens — vision, clarity, oversight
+
 function AquilaMark() {
   return (
-    <div style={{ position: 'relative', width: 32, height: 32, flexShrink: 0 }}>
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <div style={{ position: 'relative', width: 30, height: 30, flexShrink: 0 }}>
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
         <defs>
-          <radialGradient id="mark-bg" cx="38%" cy="32%" r="75%">
-            <stop offset="0%" stopColor="#6366f1" stopOpacity="1"/>
-            <stop offset="100%" stopColor="#3730a3" stopOpacity="1"/>
+          <radialGradient id="aq-bg" cx="38%" cy="28%" r="78%">
+            <stop offset="0%" stopColor="#1B2E5A"/>
+            <stop offset="100%" stopColor="#0C1835"/>
           </radialGradient>
-          <radialGradient id="mark-iris" cx="40%" cy="38%" r="65%">
-            <stop offset="0%" stopColor="#a5b4fc" stopOpacity="0.95"/>
-            <stop offset="100%" stopColor="#818cf8" stopOpacity="0.85"/>
+          <radialGradient id="aq-iris" cx="38%" cy="36%" r="68%">
+            <stop offset="0%" stopColor="#C9A84C" stopOpacity="0.95"/>
+            <stop offset="60%" stopColor="#A88A35" stopOpacity="0.80"/>
+            <stop offset="100%" stopColor="#7B6220" stopOpacity="0.65"/>
           </radialGradient>
-          <filter id="mark-glow">
-            <feGaussianBlur stdDeviation="1.5" result="blur"/>
+          <radialGradient id="aq-ring" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="rgba(201,168,76,0.00)"/>
+            <stop offset="100%" stopColor="rgba(201,168,76,0.30)"/>
+          </radialGradient>
+          <filter id="aq-glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="1.8" result="blur"/>
             <feComposite in="SourceGraphic" in2="blur" operator="over"/>
           </filter>
         </defs>
-        {/* Outer shell */}
-        <rect width="32" height="32" rx="9" fill="url(#mark-bg)"/>
-        {/* Top highlight — frosted edge */}
-        <rect x="0" y="0" width="32" height="14" rx="9" fill="rgba(255,255,255,0.10)"/>
-        <rect x="0" y="7" width="32" height="7" fill="rgba(255,255,255,0)" />
-        {/* Iris ring */}
-        <circle cx="16" cy="16" r="7" stroke="rgba(255,255,255,0.20)" strokeWidth="1"/>
-        {/* Core dot */}
-        <circle cx="16" cy="16" r="4" fill="url(#mark-iris)" filter="url(#mark-glow)"/>
-        {/* Specular glint */}
-        <circle cx="13.5" cy="13.5" r="1.2" fill="rgba(255,255,255,0.55)"/>
+        {/* Base — deep aegean night */}
+        <rect width="32" height="32" rx="9" fill="url(#aq-bg)"/>
+        {/* Frosted top-edge — light on stone */}
+        <rect x="0" y="0" width="32" height="13" rx="9" fill="rgba(255,252,245,0.07)"/>
+        <rect x="0" y="6" width="32" height="7" fill="rgba(0,0,0,0)"/>
+        {/* Outer iris ring — gold breath */}
+        <circle cx="16" cy="16" r="7.5" stroke="rgba(201,168,76,0.25)" strokeWidth="1"/>
+        {/* Iris core — gold */}
+        <circle cx="16" cy="16" r="4.2" fill="url(#aq-iris)" filter="url(#aq-glow)"/>
+        {/* Specular — light catching the surface */}
+        <circle cx="13.8" cy="13.5" r="1.1" fill="rgba(255,248,220,0.65)"/>
+        {/* Subtle bottom warmth */}
+        <ellipse cx="16" cy="28" rx="10" ry="3" fill="rgba(201,168,76,0.06)"/>
       </svg>
     </div>
   )
 }
 
-/* ── Nav item ─────────────────────────────────────────────────────────────────── */
-function NavItem({
-  href, label, icon: Icon, active, small = false,
-}: {
-  href: string; label: string; icon: React.ElementType; active: boolean; small?: boolean
-}) {
-  const baseColor   = 'rgba(255,255,255,0.36)'
-  const activeColor = 'rgba(255,255,255,0.92)'
-  const hoverColor  = 'rgba(255,255,255,0.68)'
+// ── Section label ──────────────────────────────────────────────────────────────
 
+function NavSection({ label }: { label: string }) {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      padding: '10px 12px 4px',
+    }}>
+      <span style={{
+        fontSize: 9,
+        fontWeight: 700,
+        letterSpacing: '0.13em',
+        textTransform: 'uppercase',
+        color: 'rgba(201,168,76,0.38)',
+      }}>{label}</span>
+      <div style={{
+        flex: 1,
+        height: 1,
+        background: 'linear-gradient(90deg, rgba(201,168,76,0.15) 0%, transparent 100%)',
+      }}/>
+    </div>
+  )
+}
+
+// ── Nav item ───────────────────────────────────────────────────────────────────
+
+function NavItem({
+  href,
+  label,
+  icon: Icon,
+  active,
+  small = false,
+}: {
+  href: string
+  label: string
+  icon: React.ElementType
+  active: boolean
+  small?: boolean
+}) {
   return (
     <Link
       href={href}
       style={{
+        position: 'relative',
         display: 'flex',
         alignItems: 'center',
-        gap: 10,
-        padding: small ? '6px 10px' : '7px 10px',
-        borderRadius: 10,
-        color: active ? activeColor : baseColor,
-        background: active ? 'rgba(99,102,241,0.12)' : 'transparent',
+        gap: 9,
+        padding: small ? '5px 12px' : '6px 12px',
+        marginLeft: 8,
+        marginRight: 8,
+        borderRadius: 9,
+        color: active ? 'rgba(255,248,225,0.92)' : 'rgba(255,255,255,0.34)',
+        background: active
+          ? 'linear-gradient(135deg, rgba(201,168,76,0.09) 0%, rgba(201,168,76,0.04) 100%)'
+          : 'transparent',
         fontSize: small ? 12 : 13,
         fontWeight: active ? 500 : 400,
-        letterSpacing: '-0.006em',
+        letterSpacing: '-0.007em',
         textDecoration: 'none',
-        transition: 'color 0.12s ease, background 0.12s ease',
+        transition: 'color 140ms ease, background 140ms ease',
+        borderLeft: active ? '2px solid rgba(201,168,76,0.55)' : '2px solid transparent',
+        borderRight: '2px solid transparent',
       }}
       onMouseEnter={e => {
         if (!active) {
           const el = e.currentTarget as HTMLElement
-          el.style.color = hoverColor
-          el.style.background = 'rgba(255,255,255,0.042)'
+          el.style.color = 'rgba(255,248,225,0.62)'
+          el.style.background = 'rgba(255,248,225,0.04)'
         }
       }}
       onMouseLeave={e => {
         if (!active) {
           const el = e.currentTarget as HTMLElement
-          el.style.color = baseColor
+          el.style.color = 'rgba(255,255,255,0.34)'
           el.style.background = 'transparent'
         }
       }}
     >
+      {/* Active gold indicator bar */}
+      {active && (
+        <div style={{
+          position: 'absolute',
+          left: -1,
+          top: '20%',
+          bottom: '20%',
+          width: 2,
+          borderRadius: 99,
+          background: 'linear-gradient(180deg, #DDB95A 0%, #C9A84C 100%)',
+          boxShadow: '0 0 8px rgba(201,168,76,0.60)',
+        }}/>
+      )}
+
       <Icon style={{
         width: small ? 13 : 14,
         height: small ? 13 : 14,
         flexShrink: 0,
-        color: active ? '#818cf8' : 'inherit',
-        opacity: active ? 1 : 0.65,
-        transition: 'color 0.12s ease',
+        color: active ? '#C9A84C' : 'inherit',
+        opacity: active ? 1 : 0.55,
+        transition: 'color 140ms ease, opacity 140ms ease',
       }}/>
+
       <span style={{ flex: 1 }}>{label}</span>
-      {active && (
-        <span style={{
-          width: 4, height: 4,
-          borderRadius: '50%',
-          background: '#818cf8',
-          boxShadow: '0 0 6px rgba(129,140,248,0.90)',
-          flexShrink: 0,
-        }}/>
-      )}
     </Link>
   )
 }
 
-/* ── Sidebar ──────────────────────────────────────────────────────────────────── */
+// ── Sidebar ─────────────────────────────────────────────────────────────────────
+
 export default function Sidebar() {
-  const pathname = usePathname()
-  const router   = useRouter()
-  const params   = useParams()
+  const pathname   = usePathname()
+  const router     = useRouter()
+  const params     = useParams()
   const { isMaster } = useUserProfile()
   const slug = (params?.slug as string) ?? pathname.split('/')[1] ?? ''
 
@@ -144,110 +203,161 @@ export default function Sidebar() {
     <aside
       className="hidden md:flex fixed inset-y-0 left-0 flex-col z-50"
       style={{
-        width: 220,
-        background: 'linear-gradient(180deg, rgba(5,8,16,0.980) 0%, rgba(4,6,14,0.995) 100%)',
-        backdropFilter: 'blur(40px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-        borderRight: '1px solid rgba(255,255,255,0.052)',
-        /* Subtle inner glow on the right edge */
-        boxShadow: '1px 0 0 rgba(255,255,255,0.028)',
+        width: 228,
+        /* Obsidian depth — warmer than pure black */
+        background: 'linear-gradient(180deg, #0A0B14 0%, #07080F 60%, #06070D 100%)',
+        backdropFilter: 'blur(48px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(48px) saturate(160%)',
+        borderRight: '1px solid rgba(255,252,245,0.055)',
+        /* Subtle inner warmth on right edge — the glow of the platform within */
+        boxShadow:
+          '1px 0 0 rgba(201,168,76,0.06), ' +
+          'inset -1px 0 20px rgba(201,168,76,0.015)',
       }}
     >
-      {/* ── Brand ──────────────────────────────────────────────────────────── */}
+      {/* ── Brand ───────────────────────────────────────────────────────────── */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 11,
-        height: 58,
-        padding: '0 14px',
-        borderBottom: '1px solid rgba(255,255,255,0.042)',
+        gap: 12,
+        height: 64,
+        padding: '0 16px',
+        borderBottom: '1px solid rgba(255,252,245,0.048)',
         flexShrink: 0,
+        /* Subtle marble-warm top highlight */
+        background: 'linear-gradient(180deg, rgba(255,252,245,0.025) 0%, transparent 100%)',
       }}>
         <AquilaMark />
-        <div style={{ minWidth: 0 }}>
+
+        <div style={{ minWidth: 0, flex: 1 }}>
+          {/* Wordmark — Cormorant Garamond, weight 300, classical */}
           <p style={{
-            fontFamily: 'var(--font-display), var(--font-geist-sans), system-ui',
-            fontSize: 15,
-            fontWeight: 600,
-            letterSpacing: '-0.025em',
-            color: 'rgba(255,255,255,0.94)',
+            fontFamily: 'var(--font-cormorant, "Cormorant Garamond"), Georgia, serif',
+            fontSize: 20,
+            fontWeight: 300,
+            letterSpacing: '0.04em',
+            color: 'rgba(255,248,225,0.94)',
             lineHeight: 1,
             margin: 0,
           }}>
             Aquila
           </p>
+          {/* Church identifier — spaced caps, muted gold */}
           <p style={{
-            fontSize: 10,
-            marginTop: 4,
-            color: 'rgba(129,140,248,0.52)',
-            letterSpacing: '0.06em',
-            fontWeight: 500,
+            fontSize: 9,
+            marginTop: 5,
+            color: 'rgba(201,168,76,0.45)',
+            letterSpacing: '0.12em',
+            fontWeight: 600,
+            textTransform: 'uppercase',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            margin: '4px 0 0',
+            margin: '5px 0 0',
           }}>
-            {slug.toUpperCase() || 'PLATFORM'}
+            {slug ? slug.replace(/-/g, ' ') : 'Platform'}
           </p>
         </div>
       </div>
 
-      {/* ── Main nav ───────────────────────────────────────────────────────── */}
+      {/* ── Main navigation ─────────────────────────────────────────────────── */}
       <nav style={{
         flex: 1,
-        padding: '12px 8px',
+        paddingTop: 8,
+        paddingBottom: 8,
         display: 'flex',
         flexDirection: 'column',
-        gap: 1,
         overflowY: 'auto',
       }}>
-        {NAV.map(({ path, label, icon }) => {
-          const href = `/${slug}/${path}`
-          return (
-            <NavItem
-              key={path}
-              href={href}
-              label={label}
-              icon={icon}
-              active={pathname === href || pathname.startsWith(href + '/')}
-            />
-          )
-        })}
+        <NavSection label="Core" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, marginBottom: 4 }}>
+          {CORE_NAV.map(({ path, label, icon }) => {
+            const href = `/${slug}/${path}`
+            return (
+              <NavItem
+                key={path}
+                href={href}
+                label={label}
+                icon={icon}
+                active={pathname === href || pathname.startsWith(href + '/')}
+              />
+            )
+          })}
+        </div>
+
+        {/* Thin gold-tinted rule between groups */}
+        <div style={{
+          margin: '6px 16px',
+          height: 1,
+          background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.12) 40%, rgba(201,168,76,0.12) 60%, transparent)',
+        }}/>
+
+        <NavSection label="Tools" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {TOOLS_NAV.map(({ path, label, icon }) => {
+            const href = `/${slug}/${path}`
+            return (
+              <NavItem
+                key={path}
+                href={href}
+                label={label}
+                icon={icon}
+                active={pathname === href || pathname.startsWith(href + '/')}
+              />
+            )
+          })}
+        </div>
       </nav>
 
-      {/* ── Footer ─────────────────────────────────────────────────────────── */}
+      {/* ── Footer — admin + sign out ────────────────────────────────────────── */}
       <div style={{
-        padding: '8px 8px 14px',
-        borderTop: '1px solid rgba(255,255,255,0.042)',
+        paddingTop: 8,
+        paddingBottom: 16,
+        borderTop: '1px solid rgba(255,252,245,0.042)',
         display: 'flex',
         flexDirection: 'column',
-        gap: 1,
         flexShrink: 0,
+        /* Subtle warm glow rising from footer */
+        background: 'linear-gradient(0deg, rgba(201,168,76,0.012) 0%, transparent 100%)',
       }}>
-        {isMaster && ADMIN_NAV.map(({ path, label, icon }) => {
-          const href = `/${slug}/${path}`
-          return (
-            <NavItem
-              key={path}
-              href={href}
-              label={label}
-              icon={icon}
-              active={pathname.startsWith(href)}
-              small
-            />
-          )
-        })}
+        {isMaster && (
+          <>
+            <NavSection label="Admin" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1, marginBottom: 6 }}>
+              {ADMIN_NAV.map(({ path, label, icon }) => {
+                const href = `/${slug}/${path}`
+                return (
+                  <NavItem
+                    key={path}
+                    href={href}
+                    label={label}
+                    icon={icon}
+                    active={pathname.startsWith(href)}
+                    small
+                  />
+                )
+              })}
+            </div>
+            <div style={{
+              margin: '4px 16px 8px',
+              height: 1,
+              background: 'rgba(255,252,245,0.038)',
+            }}/>
+          </>
+        )}
 
+        {/* Sign out */}
         <button
           onClick={handleSignOut}
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
-            width: '100%',
-            padding: '6px 10px',
-            borderRadius: 10,
-            color: 'rgba(255,255,255,0.26)',
+            gap: 9,
+            marginLeft: 8,
+            marginRight: 8,
+            padding: '5px 12px',
+            borderRadius: 9,
+            color: 'rgba(255,255,255,0.22)',
             background: 'transparent',
             border: 'none',
             fontSize: 12,
@@ -255,16 +365,16 @@ export default function Sidebar() {
             letterSpacing: '-0.006em',
             cursor: 'pointer',
             textAlign: 'left',
-            transition: 'color 0.12s ease, background 0.12s ease',
+            transition: 'color 140ms ease, background 140ms ease',
           }}
           onMouseEnter={e => {
             const el = e.currentTarget as HTMLElement
-            el.style.color = 'rgba(255,255,255,0.55)'
-            el.style.background = 'rgba(255,255,255,0.038)'
+            el.style.color = 'rgba(241,117,117,0.70)'
+            el.style.background = 'rgba(241,117,117,0.06)'
           }}
           onMouseLeave={e => {
             const el = e.currentTarget as HTMLElement
-            el.style.color = 'rgba(255,255,255,0.26)'
+            el.style.color = 'rgba(255,255,255,0.22)'
             el.style.background = 'transparent'
           }}
         >

@@ -33,9 +33,9 @@ function ChurchInitial({ name }: { name: string }) {
     <div style={{
       width: 64, height: 64, borderRadius: 18,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+      background: 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)',
       fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em',
-      boxShadow: '0 8px 24px rgba(99,102,241,0.45)',
+      boxShadow: '0 8px 24px rgba(201,168,76,0.45)',
     }}>
       {initials}
     </div>
@@ -61,7 +61,7 @@ export default async function JoinLandingPage({
       justifyContent: 'center',
       padding: '24px 16px',
       background: '#050810',
-      backgroundImage: 'radial-gradient(ellipse 70% 60% at 20% 0%, rgba(79,70,229,0.15) 0%, transparent 65%), radial-gradient(ellipse 55% 45% at 80% 100%, rgba(124,58,237,0.09) 0%, transparent 65%)',
+      backgroundImage: 'radial-gradient(ellipse 70% 60% at 20% 0%, rgba(79,127,196,0.15) 0%, transparent 65%), radial-gradient(ellipse 55% 45% at 80% 100%, rgba(79,127,196,0.09) 0%, transparent 65%)',
       fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)',
       WebkitFontSmoothing: 'antialiased',
     }}>
@@ -99,9 +99,9 @@ export default async function JoinLandingPage({
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 600,
-              background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+              background: 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)',
               color: '#fff', textDecoration: 'none',
-              boxShadow: '0 4px 18px rgba(99,102,241,0.40)',
+              boxShadow: '0 4px 18px rgba(201,168,76,0.40)',
             }}
           >
             Create an account

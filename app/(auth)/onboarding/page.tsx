@@ -28,12 +28,12 @@ function AquilaMark({ size = 44 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
       <defs>
         <radialGradient id="ob-bg" cx="38%" cy="32%" r="75%">
-          <stop offset="0%" stopColor="#6366f1"/>
-          <stop offset="100%" stopColor="#3730a3"/>
+          <stop offset="0%" stopColor="#A88A35"/>
+          <stop offset="100%" stopColor="#0C1829"/>
         </radialGradient>
         <radialGradient id="ob-iris" cx="40%" cy="38%" r="65%">
-          <stop offset="0%" stopColor="#a5b4fc" stopOpacity="0.95"/>
-          <stop offset="100%" stopColor="#818cf8" stopOpacity="0.85"/>
+          <stop offset="0%" stopColor="#C9A84C" stopOpacity="0.95"/>
+          <stop offset="100%" stopColor="#C9A84C" stopOpacity="0.85"/>
         </radialGradient>
         <filter id="ob-glow">
           <feGaussianBlur stdDeviation="1.5" result="blur"/>
@@ -66,8 +66,8 @@ const inputStyle: React.CSSProperties = {
   letterSpacing: '-0.010em',
 }
 function fi(e: React.FocusEvent<HTMLInputElement>) {
-  e.currentTarget.style.borderColor = 'rgba(99,102,241,0.55)'
-  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.12)'
+  e.currentTarget.style.borderColor = 'rgba(201,168,76,0.55)'
+  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.12)'
 }
 function fo(e: React.FocusEvent<HTMLInputElement>) {
   e.currentTarget.style.borderColor = 'rgba(255,255,255,0.090)'
@@ -186,7 +186,7 @@ export default function OnboardingPage() {
     justifyContent: 'center',
     padding: '24px 16px',
     background: '#050810',
-    backgroundImage: 'radial-gradient(ellipse 70% 55% at 15% 0%, rgba(79,70,229,0.16) 0%, transparent 65%), radial-gradient(ellipse 55% 45% at 85% 100%, rgba(124,58,237,0.10) 0%, transparent 65%)',
+    backgroundImage: 'radial-gradient(ellipse 70% 55% at 15% 0%, rgba(79,127,196,0.16) 0%, transparent 65%), radial-gradient(ellipse 55% 45% at 85% 100%, rgba(79,127,196,0.10) 0%, transparent 65%)',
     fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)',
     WebkitFontSmoothing: 'antialiased',
   }
@@ -200,13 +200,13 @@ export default function OnboardingPage() {
           {/* Mark + glow */}
           <div style={{ position: 'relative', marginBottom: 28 }}>
             <AquilaMark size={52} />
-            <div style={{ position: 'absolute', inset: -16, borderRadius: 28, background: 'radial-gradient(circle, rgba(99,102,241,0.25) 0%, transparent 70%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', inset: -16, borderRadius: 28, background: 'radial-gradient(circle, rgba(201,168,76,0.25) 0%, transparent 70%)', pointerEvents: 'none' }} />
           </div>
 
           {/* Headline */}
           <div style={{ textAlign: 'center', marginBottom: 36 }}>
             {userName && (
-              <p style={{ fontSize: 13, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(129,140,248,0.65)', marginBottom: 10 }}>
+              <p style={{ fontSize: 13, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(201,168,76,0.65)', marginBottom: 10 }}>
                 Welcome, {userName}
               </p>
             )}
@@ -237,8 +237,8 @@ export default function OnboardingPage() {
             </p>
             {FEATURES.map(({ icon: Icon, label }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 28, height: 28, borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.18)' }}>
-                  <Icon style={{ width: 13, height: 13, color: '#818cf8' }} />
+                <div style={{ width: 28, height: 28, borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.18)' }}>
+                  <Icon style={{ width: 13, height: 13, color: '#C9A84C' }} />
                 </div>
                 <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', fontWeight: 400 }}>{label}</span>
                 <Check style={{ width: 13, height: 13, color: '#34d399', marginLeft: 'auto', flexShrink: 0 }} />
@@ -253,9 +253,9 @@ export default function OnboardingPage() {
                 width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                 padding: '15px 0', borderRadius: 14, fontSize: 16, fontWeight: 700,
                 border: 'none', cursor: 'pointer',
-                background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+                background: 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)',
                 color: '#fff', letterSpacing: '-0.010em',
-                boxShadow: '0 6px 24px rgba(99,102,241,0.50)',
+                boxShadow: '0 6px 24px rgba(201,168,76,0.50)',
                 transition: 'opacity 0.15s ease',
               }}
               onMouseEnter={e => (e.currentTarget.style.opacity = '0.90')}
@@ -296,7 +296,7 @@ export default function OnboardingPage() {
             <AquilaMark size={32} />
             <div>
               <p style={{ fontFamily: 'var(--font-display), var(--font-geist-sans), system-ui', fontSize: 15, fontWeight: 700, letterSpacing: '-0.020em', color: 'rgba(255,255,255,0.88)', margin: 0 }}>Aquila</p>
-              <p style={{ fontSize: 10, color: 'rgba(129,140,248,0.52)', letterSpacing: '0.08em', fontWeight: 500, margin: 0 }}>BY OASIS PFCC</p>
+              <p style={{ fontSize: 10, color: 'rgba(201,168,76,0.52)', letterSpacing: '0.08em', fontWeight: 500, margin: 0 }}>BY OASIS PFCC</p>
             </div>
           </div>
 
@@ -341,9 +341,9 @@ export default function OnboardingPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 padding: '14px 0', borderRadius: 14, fontSize: 15, fontWeight: 700,
                 border: 'none', cursor: joining || !accessKey.trim() ? 'not-allowed' : 'pointer',
-                background: accessKey.trim() && !joining ? 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)' : 'rgba(255,255,255,0.06)',
+                background: accessKey.trim() && !joining ? 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)' : 'rgba(255,255,255,0.06)',
                 color: accessKey.trim() && !joining ? '#fff' : 'rgba(255,255,255,0.28)',
-                boxShadow: accessKey.trim() && !joining ? '0 4px 20px rgba(99,102,241,0.45)' : 'none',
+                boxShadow: accessKey.trim() && !joining ? '0 4px 20px rgba(201,168,76,0.45)' : 'none',
                 transition: 'all 0.15s ease',
               }}
             >
@@ -375,7 +375,7 @@ export default function OnboardingPage() {
             <AquilaMark size={32} />
             <div>
               <p style={{ fontFamily: 'var(--font-display), var(--font-geist-sans), system-ui', fontSize: 15, fontWeight: 700, letterSpacing: '-0.020em', color: 'rgba(255,255,255,0.88)', margin: 0 }}>Aquila</p>
-              <p style={{ fontSize: 10, color: 'rgba(129,140,248,0.52)', letterSpacing: '0.08em', fontWeight: 500, margin: 0 }}>BY OASIS PFCC</p>
+              <p style={{ fontSize: 10, color: 'rgba(201,168,76,0.52)', letterSpacing: '0.08em', fontWeight: 500, margin: 0 }}>BY OASIS PFCC</p>
             </div>
           </div>
 
@@ -427,8 +427,8 @@ export default function OnboardingPage() {
                     borderColor: idOk ? 'rgba(52,211,153,0.40)' : idBad ? 'rgba(248,113,113,0.40)' : 'rgba(255,255,255,0.090)',
                   }}
                   onFocus={e => {
-                    e.currentTarget.style.borderColor = idOk ? 'rgba(52,211,153,0.55)' : idBad ? 'rgba(248,113,113,0.55)' : 'rgba(99,102,241,0.55)'
-                    e.currentTarget.style.boxShadow = idOk ? '0 0 0 3px rgba(52,211,153,0.10)' : idBad ? '0 0 0 3px rgba(248,113,113,0.10)' : '0 0 0 3px rgba(99,102,241,0.12)'
+                    e.currentTarget.style.borderColor = idOk ? 'rgba(52,211,153,0.55)' : idBad ? 'rgba(248,113,113,0.55)' : 'rgba(201,168,76,0.55)'
+                    e.currentTarget.style.boxShadow = idOk ? '0 0 0 3px rgba(52,211,153,0.10)' : idBad ? '0 0 0 3px rgba(248,113,113,0.10)' : '0 0 0 3px rgba(201,168,76,0.12)'
                   }}
                   onBlur={e => {
                     e.currentTarget.style.borderColor = idOk ? 'rgba(52,211,153,0.40)' : idBad ? 'rgba(248,113,113,0.40)' : 'rgba(255,255,255,0.090)'
@@ -460,9 +460,9 @@ export default function OnboardingPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 padding: '14px 0', borderRadius: 14, fontSize: 15, fontWeight: 700,
                 border: 'none', cursor: !idOk || loading ? 'not-allowed' : 'pointer',
-                background: idOk && !loading ? 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)' : 'rgba(255,255,255,0.06)',
+                background: idOk && !loading ? 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)' : 'rgba(255,255,255,0.06)',
                 color: idOk && !loading ? '#fff' : 'rgba(255,255,255,0.28)',
-                boxShadow: idOk && !loading ? '0 4px 20px rgba(99,102,241,0.45)' : 'none',
+                boxShadow: idOk && !loading ? '0 4px 20px rgba(201,168,76,0.45)' : 'none',
                 marginTop: 6,
                 transition: 'all 0.15s ease',
               }}
@@ -516,7 +516,7 @@ export default function OnboardingPage() {
             'Invite your team from Settings',
           ].map((hint, i) => (
             <div key={hint} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 20, height: 20, borderRadius: 6, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(99,102,241,0.14)', border: '1px solid rgba(99,102,241,0.20)', fontSize: 10, fontWeight: 700, color: '#818cf8' }}>
+              <div style={{ width: 20, height: 20, borderRadius: 6, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(201,168,76,0.14)', border: '1px solid rgba(201,168,76,0.20)', fontSize: 10, fontWeight: 700, color: '#C9A84C' }}>
                 {i + 1}
               </div>
               <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.60)' }}>{hint}</span>
@@ -530,9 +530,9 @@ export default function OnboardingPage() {
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
             padding: '15px 0', borderRadius: 14, fontSize: 16, fontWeight: 700,
             border: 'none', cursor: 'pointer',
-            background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+            background: 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)',
             color: '#fff', letterSpacing: '-0.010em',
-            boxShadow: '0 6px 24px rgba(99,102,241,0.50)',
+            boxShadow: '0 6px 24px rgba(201,168,76,0.50)',
             transition: 'opacity 0.15s ease',
           }}
           onMouseEnter={e => (e.currentTarget.style.opacity = '0.90')}

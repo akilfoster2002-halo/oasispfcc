@@ -17,12 +17,12 @@ function AquilaMark({ size = 32 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
       <defs>
         <radialGradient id="sc-bg" cx="38%" cy="32%" r="75%">
-          <stop offset="0%" stopColor="#6366f1"/>
-          <stop offset="100%" stopColor="#3730a3"/>
+          <stop offset="0%" stopColor="#A88A35"/>
+          <stop offset="100%" stopColor="#0C1829"/>
         </radialGradient>
         <radialGradient id="sc-iris" cx="40%" cy="38%" r="65%">
-          <stop offset="0%" stopColor="#a5b4fc" stopOpacity="0.95"/>
-          <stop offset="100%" stopColor="#818cf8" stopOpacity="0.85"/>
+          <stop offset="0%" stopColor="#C9A84C" stopOpacity="0.95"/>
+          <stop offset="100%" stopColor="#C9A84C" stopOpacity="0.85"/>
         </radialGradient>
         <filter id="sc-glow">
           <feGaussianBlur stdDeviation="1.5" result="blur"/>
@@ -50,7 +50,7 @@ function ChurchInitial({ name }: { name: string }) {
     <div style={{
       width: 44, height: 44, borderRadius: 12, flexShrink: 0,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+      background: 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)',
       fontSize: 15, fontWeight: 700, color: '#fff', letterSpacing: '-0.01em',
     }}>
       {initials}
@@ -90,7 +90,7 @@ export default function SelectChurchPage() {
     justifyContent: 'center',
     padding: '24px 16px',
     background: '#050810',
-    backgroundImage: 'radial-gradient(ellipse 70% 60% at 20% 0%, rgba(79,70,229,0.15) 0%, transparent 65%), radial-gradient(ellipse 55% 45% at 80% 100%, rgba(124,58,237,0.09) 0%, transparent 65%)',
+    backgroundImage: 'radial-gradient(ellipse 70% 60% at 20% 0%, rgba(79,127,196,0.15) 0%, transparent 65%), radial-gradient(ellipse 55% 45% at 80% 100%, rgba(79,127,196,0.09) 0%, transparent 65%)',
     fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)',
     WebkitFontSmoothing: 'antialiased',
   }
@@ -98,7 +98,7 @@ export default function SelectChurchPage() {
   if (loading) {
     return (
       <div style={{ ...wrapStyle, gap: 0 }}>
-        <div style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid rgba(99,102,241,0.25)', borderTopColor: '#6366f1', animation: 'spin 0.7s linear infinite' }} />
+        <div style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid rgba(201,168,76,0.25)', borderTopColor: '#A88A35', animation: 'spin 0.7s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     )
@@ -110,11 +110,11 @@ export default function SelectChurchPage() {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 36 }}>
         <div style={{ position: 'relative' }}>
           <AquilaMark size={38} />
-          <div style={{ position: 'absolute', inset: -8, borderRadius: 20, background: 'radial-gradient(circle, rgba(99,102,241,0.20) 0%, transparent 70%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', inset: -8, borderRadius: 20, background: 'radial-gradient(circle, rgba(201,168,76,0.20) 0%, transparent 70%)', pointerEvents: 'none' }} />
         </div>
         <div style={{ textAlign: 'center' }}>
           <p style={{ fontFamily: 'var(--font-display), var(--font-geist-sans), system-ui', fontSize: 20, fontWeight: 700, letterSpacing: '-0.025em', color: 'rgba(255,255,255,0.94)', margin: 0, lineHeight: 1 }}>Aquila</p>
-          <p style={{ fontSize: 11, color: 'rgba(129,140,248,0.52)', letterSpacing: '0.08em', fontWeight: 500, margin: '4px 0 0' }}>BY OASIS PFCC</p>
+          <p style={{ fontSize: 11, color: 'rgba(201,168,76,0.52)', letterSpacing: '0.08em', fontWeight: 500, margin: '4px 0 0' }}>BY OASIS PFCC</p>
         </div>
       </div>
 
@@ -157,8 +157,8 @@ export default function SelectChurchPage() {
                   transition: 'background 0.15s ease, border-color 0.15s ease',
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.background = 'rgba(99,102,241,0.08)'
-                  e.currentTarget.style.borderColor = 'rgba(129,140,248,0.25)'
+                  e.currentTarget.style.background = 'rgba(201,168,76,0.08)'
+                  e.currentTarget.style.borderColor = 'rgba(201,168,76,0.25)'
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.background = 'rgba(255,255,255,0.030)'

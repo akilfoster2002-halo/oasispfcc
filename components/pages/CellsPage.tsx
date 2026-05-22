@@ -60,11 +60,11 @@ export default function CellsPage() {
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center"
             style={{
-              background: 'linear-gradient(135deg, rgba(129,140,248,0.18) 0%, rgba(99,102,241,0.10) 100%)',
-              border: '1px solid rgba(129,140,248,0.22)',
+              background: 'linear-gradient(135deg, rgba(201,168,76,0.18) 0%, rgba(201,168,76,0.10) 100%)',
+              border: '1px solid rgba(201,168,76,0.22)',
             }}
           >
-            <Users className="w-5 h-5" style={{ color: '#818cf8' }} />
+            <Users className="w-5 h-5" style={{ color: '#C9A84C' }} />
           </div>
           <div>
             <h1 className="text-lg font-semibold" style={{ color: 'rgba(255,255,255,0.92)', letterSpacing: '-0.02em' }}>
@@ -81,8 +81,8 @@ export default function CellsPage() {
           className="flex items-center gap-2 rounded-xl text-sm font-medium text-white"
           style={{
             padding: '8px 16px',
-            background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
-            boxShadow: '0 4px 14px rgba(99,102,241,0.28)',
+            background: 'linear-gradient(135deg, #A88A35 0%, #A88A35 100%)',
+            boxShadow: '0 4px 14px rgba(201,168,76,0.28)',
             letterSpacing: '-0.01em',
             textDecoration: 'none',
           }}
@@ -108,7 +108,7 @@ export default function CellsPage() {
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.38)', fontWeight: 500 }}>No cells yet</p>
           <Link
             href={`/${slug}/cells/new`}
-            style={{ fontSize: 13, color: '#818cf8', marginTop: 6, display: 'inline-block', textDecoration: 'none' }}
+            style={{ fontSize: 13, color: '#C9A84C', marginTop: 6, display: 'inline-block', textDecoration: 'none' }}
           >
             Create your first cell →
           </Link>

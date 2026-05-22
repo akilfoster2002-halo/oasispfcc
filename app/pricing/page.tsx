@@ -10,12 +10,12 @@ function AquilaMark({ size = 32 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
       <defs>
         <radialGradient id="pm-bg" cx="38%" cy="32%" r="75%">
-          <stop offset="0%" stopColor="#6366f1" />
-          <stop offset="100%" stopColor="#3730a3" />
+          <stop offset="0%" stopColor="#A88A35" />
+          <stop offset="100%" stopColor="#0C1829" />
         </radialGradient>
         <radialGradient id="pm-iris" cx="40%" cy="38%" r="65%">
-          <stop offset="0%" stopColor="#a5b4fc" stopOpacity="0.95" />
-          <stop offset="100%" stopColor="#818cf8" stopOpacity="0.85" />
+          <stop offset="0%" stopColor="#C9A84C" stopOpacity="0.95" />
+          <stop offset="100%" stopColor="#C9A84C" stopOpacity="0.85" />
         </radialGradient>
         <filter id="pm-glow">
           <feGaussianBlur stdDeviation="1.2" result="blur" />
@@ -134,12 +134,12 @@ export default function PricingPage() {
             <AquilaMark size={30} />
             <div>
               <p style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em', color: 'rgba(255,255,255,0.94)', margin: 0, lineHeight: 1, fontFamily: 'var(--font-display, var(--font-geist-sans))' }}>Aquila</p>
-              <p style={{ fontSize: 10, color: 'rgba(129,140,248,0.50)', letterSpacing: '0.07em', fontWeight: 500, margin: '3px 0 0', textTransform: 'uppercase' }}>by Oasis PFCC</p>
+              <p style={{ fontSize: 10, color: 'rgba(201,168,76,0.50)', letterSpacing: '0.07em', fontWeight: 500, margin: '3px 0 0', textTransform: 'uppercase' }}>by Oasis PFCC</p>
             </div>
           </Link>
           <div style={{ display: 'flex', gap: 8 }}>
             <Link href="/login" style={{ padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.45)', textDecoration: 'none' }}>Sign in</Link>
-            <Link href="/signup" style={{ padding: '8px 18px', borderRadius: 10, fontSize: 13, fontWeight: 600, background: 'linear-gradient(135deg, #6366f1, #818cf8)', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 14px rgba(99,102,241,0.30)' }}>Get started</Link>
+            <Link href="/signup" style={{ padding: '8px 18px', borderRadius: 10, fontSize: 13, fontWeight: 600, background: 'linear-gradient(135deg, #A88A35, #C9A84C)', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 14px rgba(201,168,76,0.30)' }}>Get started</Link>
           </div>
         </div>
       </header>
@@ -147,11 +147,11 @@ export default function PricingPage() {
       {/* Header */}
       <div style={{ position: 'relative', overflow: 'hidden', padding: '80px 24px 64px', textAlign: 'center' }}>
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-          <div style={{ position: 'absolute', top: -100, left: '50%', width: 700, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.13) 0%, transparent 65%)', transform: 'translateX(-50%)' }} />
+          <div style={{ position: 'absolute', top: -100, left: '50%', width: 700, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(201,168,76,0.13) 0%, transparent 65%)', transform: 'translateX(-50%)' }} />
         </div>
 
         <div style={{ position: 'relative' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 100, marginBottom: 24, background: 'rgba(99,102,241,0.10)', border: '1px solid rgba(129,140,248,0.22)', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#a5b4fc' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 100, marginBottom: 24, background: 'rgba(201,168,76,0.10)', border: '1px solid rgba(201,168,76,0.22)', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#C9A84C' }}>
             <Sparkles style={{ width: 11, height: 11 }} />
             Pricing
           </div>
@@ -177,22 +177,22 @@ export default function PricingPage() {
                 display: 'flex',
                 flexDirection: 'column',
                 background: plan.popular
-                  ? 'linear-gradient(145deg, rgba(99,102,241,0.16) 0%, rgba(55,48,163,0.10) 100%)'
+                  ? 'linear-gradient(145deg, rgba(201,168,76,0.16) 0%, rgba(55,48,163,0.10) 100%)'
                   : 'linear-gradient(145deg, rgba(255,255,255,0.048) 0%, rgba(255,255,255,0.016) 100%)',
                 border: plan.popular
-                  ? '1px solid rgba(129,140,248,0.40)'
+                  ? '1px solid rgba(201,168,76,0.40)'
                   : '1px solid rgba(255,255,255,0.065)',
-                boxShadow: plan.popular ? '0 0 40px rgba(99,102,241,0.12)' : 'none',
+                boxShadow: plan.popular ? '0 0 40px rgba(201,168,76,0.12)' : 'none',
               }}
             >
               {plan.popular && (
                 <div style={{
                   position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)',
                   padding: '4px 16px', borderRadius: 100,
-                  background: 'linear-gradient(135deg, #6366f1, #818cf8)',
+                  background: 'linear-gradient(135deg, #A88A35, #C9A84C)',
                   fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
                   color: '#fff', whiteSpace: 'nowrap',
-                  boxShadow: '0 4px 14px rgba(99,102,241,0.45)',
+                  boxShadow: '0 4px 14px rgba(201,168,76,0.45)',
                 }}>
                   Most Popular
                 </div>
@@ -209,7 +209,7 @@ export default function PricingPage() {
                   </span>
                   <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>/mo</span>
                 </div>
-                <p style={{ fontSize: 14, fontStyle: 'italic', color: plan.popular ? '#a5b4fc' : 'rgba(255,255,255,0.50)', margin: '0 0 4px' }}>
+                <p style={{ fontSize: 14, fontStyle: 'italic', color: plan.popular ? '#C9A84C' : 'rgba(255,255,255,0.50)', margin: '0 0 4px' }}>
                   {plan.tagline}
                 </p>
               </div>
@@ -218,12 +218,12 @@ export default function PricingPage() {
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '10px 14px', borderRadius: 12, marginBottom: 22,
-                background: plan.popular ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.10)',
-                border: `1px solid ${plan.popular ? 'rgba(129,140,248,0.35)' : 'rgba(129,140,248,0.18)'}`,
+                background: plan.popular ? 'rgba(201,168,76,0.18)' : 'rgba(201,168,76,0.10)',
+                border: `1px solid ${plan.popular ? 'rgba(201,168,76,0.35)' : 'rgba(201,168,76,0.18)'}`,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <Zap style={{ width: 14, height: 14, color: '#818cf8' }} />
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#818cf8' }}>AI Congregation Agent</span>
+                  <Zap style={{ width: 14, height: 14, color: '#C9A84C' }} />
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#C9A84C' }}>AI Congregation Agent</span>
                 </div>
                 <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', fontWeight: 500 }}>{plan.aiResponses}</span>
               </div>
@@ -232,8 +232,8 @@ export default function PricingPage() {
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
                 {plan.features.map(f => (
                   <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                    <div style={{ width: 18, height: 18, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: plan.popular ? 'rgba(129,140,248,0.20)' : 'rgba(255,255,255,0.07)', marginTop: 1 }}>
-                      <Check style={{ width: 10, height: 10, color: plan.popular ? '#a5b4fc' : 'rgba(255,255,255,0.50)' }} />
+                    <div style={{ width: 18, height: 18, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: plan.popular ? 'rgba(201,168,76,0.20)' : 'rgba(255,255,255,0.07)', marginTop: 1 }}>
+                      <Check style={{ width: 10, height: 10, color: plan.popular ? '#C9A84C' : 'rgba(255,255,255,0.50)' }} />
                     </div>
                     <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.4 }}>{f}</span>
                   </li>
@@ -251,10 +251,10 @@ export default function PricingPage() {
                   transition: 'opacity 0.15s',
                   opacity: loading && loading !== plan.id ? 0.5 : 1,
                   background: plan.popular
-                    ? 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)'
+                    ? 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)'
                     : 'rgba(255,255,255,0.08)',
                   color: plan.popular ? '#fff' : 'rgba(255,255,255,0.70)',
-                  boxShadow: plan.popular ? '0 6px 24px rgba(99,102,241,0.40)' : 'none',
+                  boxShadow: plan.popular ? '0 6px 24px rgba(201,168,76,0.40)' : 'none',
                 }}
               >
                 {loading === plan.id ? 'Redirecting…' : <>Get started <ArrowRight style={{ width: 14, height: 14 }} /></>}

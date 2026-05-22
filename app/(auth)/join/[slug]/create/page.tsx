@@ -11,12 +11,12 @@ function AquilaMark() {
     <svg width="38" height="38" viewBox="0 0 32 32" fill="none">
       <defs>
         <radialGradient id="jc-bg" cx="38%" cy="32%" r="75%">
-          <stop offset="0%" stopColor="#6366f1"/>
-          <stop offset="100%" stopColor="#3730a3"/>
+          <stop offset="0%" stopColor="#A88A35"/>
+          <stop offset="100%" stopColor="#0C1829"/>
         </radialGradient>
         <radialGradient id="jc-iris" cx="40%" cy="38%" r="65%">
-          <stop offset="0%" stopColor="#a5b4fc" stopOpacity="0.95"/>
-          <stop offset="100%" stopColor="#818cf8" stopOpacity="0.85"/>
+          <stop offset="0%" stopColor="#C9A84C" stopOpacity="0.95"/>
+          <stop offset="100%" stopColor="#C9A84C" stopOpacity="0.85"/>
         </radialGradient>
         <filter id="jc-glow">
           <feGaussianBlur stdDeviation="1.5" result="blur"/>
@@ -46,8 +46,8 @@ const inputStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 }
 function fi(e: React.FocusEvent<HTMLInputElement>) {
-  e.currentTarget.style.borderColor = 'rgba(99,102,241,0.55)'
-  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.12)'
+  e.currentTarget.style.borderColor = 'rgba(201,168,76,0.55)'
+  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.12)'
 }
 function fo(e: React.FocusEvent<HTMLInputElement>) {
   e.currentTarget.style.borderColor = 'rgba(255,255,255,0.090)'
@@ -62,7 +62,7 @@ const wrapStyle: React.CSSProperties = {
   justifyContent: 'center',
   padding: '24px 16px',
   background: '#050810',
-  backgroundImage: 'radial-gradient(ellipse 70% 60% at 20% 0%, rgba(79,70,229,0.15) 0%, transparent 65%), radial-gradient(ellipse 55% 45% at 80% 100%, rgba(124,58,237,0.09) 0%, transparent 65%)',
+  backgroundImage: 'radial-gradient(ellipse 70% 60% at 20% 0%, rgba(79,127,196,0.15) 0%, transparent 65%), radial-gradient(ellipse 55% 45% at 80% 100%, rgba(79,127,196,0.09) 0%, transparent 65%)',
   fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)',
   WebkitFontSmoothing: 'antialiased',
 }
@@ -197,7 +197,7 @@ export default function JoinCreatePage() {
   if (churchLoading) {
     return (
       <div style={{ ...wrapStyle, gap: 0 }}>
-        <div style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid rgba(99,102,241,0.25)', borderTopColor: '#6366f1', animation: 'spin 0.7s linear infinite' }} />
+        <div style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid rgba(201,168,76,0.25)', borderTopColor: '#A88A35', animation: 'spin 0.7s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     )
@@ -208,7 +208,7 @@ export default function JoinCreatePage() {
       <div style={wrapStyle}>
         <div style={cardStyle}>
           <p style={{ textAlign: 'center', fontSize: 14, color: '#f87171', margin: '0 0 16px' }}>{churchError}</p>
-          <Link href="/" style={{ display: 'block', textAlign: 'center', fontSize: 13, color: '#818cf8', textDecoration: 'none' }}>Go home</Link>
+          <Link href="/" style={{ display: 'block', textAlign: 'center', fontSize: 13, color: '#C9A84C', textDecoration: 'none' }}>Go home</Link>
         </div>
       </div>
     )
@@ -220,11 +220,11 @@ export default function JoinCreatePage() {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 36 }}>
           <div style={{ position: 'relative' }}>
             <AquilaMark />
-            <div style={{ position: 'absolute', inset: -8, borderRadius: 20, background: 'radial-gradient(circle, rgba(99,102,241,0.20) 0%, transparent 70%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', inset: -8, borderRadius: 20, background: 'radial-gradient(circle, rgba(201,168,76,0.20) 0%, transparent 70%)', pointerEvents: 'none' }} />
           </div>
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontFamily: 'var(--font-display), var(--font-geist-sans), system-ui', fontSize: 20, fontWeight: 700, letterSpacing: '-0.025em', color: 'rgba(255,255,255,0.94)', margin: 0, lineHeight: 1 }}>Aquila</p>
-            <p style={{ fontSize: 11, color: 'rgba(129,140,248,0.52)', letterSpacing: '0.08em', fontWeight: 500, margin: '4px 0 0' }}>BY OASIS PFCC</p>
+            <p style={{ fontSize: 11, color: 'rgba(201,168,76,0.52)', letterSpacing: '0.08em', fontWeight: 500, margin: '4px 0 0' }}>BY OASIS PFCC</p>
           </div>
         </div>
         <div style={cardStyle}>
@@ -259,11 +259,11 @@ export default function JoinCreatePage() {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 36 }}>
         <div style={{ position: 'relative' }}>
           <AquilaMark />
-          <div style={{ position: 'absolute', inset: -8, borderRadius: 20, background: 'radial-gradient(circle, rgba(99,102,241,0.20) 0%, transparent 70%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', inset: -8, borderRadius: 20, background: 'radial-gradient(circle, rgba(201,168,76,0.20) 0%, transparent 70%)', pointerEvents: 'none' }} />
         </div>
         <div style={{ textAlign: 'center' }}>
           <p style={{ fontFamily: 'var(--font-display), var(--font-geist-sans), system-ui', fontSize: 20, fontWeight: 700, letterSpacing: '-0.025em', color: 'rgba(255,255,255,0.94)', margin: 0, lineHeight: 1 }}>Aquila</p>
-          <p style={{ fontSize: 11, color: 'rgba(129,140,248,0.52)', letterSpacing: '0.08em', fontWeight: 500, margin: '4px 0 0' }}>BY OASIS PFCC</p>
+          <p style={{ fontSize: 11, color: 'rgba(201,168,76,0.52)', letterSpacing: '0.08em', fontWeight: 500, margin: '4px 0 0' }}>BY OASIS PFCC</p>
         </div>
       </div>
 
@@ -320,9 +320,9 @@ export default function JoinCreatePage() {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 600,
               border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
-              background: loading ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
+              background: loading ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)',
               color: loading ? 'rgba(255,255,255,0.28)' : '#fff',
-              boxShadow: loading ? 'none' : '0 4px 18px rgba(99,102,241,0.40)',
+              boxShadow: loading ? 'none' : '0 4px 18px rgba(201,168,76,0.40)',
               opacity: loading ? 0.65 : 1,
               marginTop: 4,
               transition: 'all 0.15s ease',
@@ -337,7 +337,7 @@ export default function JoinCreatePage() {
 
         <p style={{ marginTop: 18, textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.28)' }}>
           Already have an account?{' '}
-          <Link href={`/login?next=/join/${slug}/create`} style={{ color: '#818cf8', textDecoration: 'none', fontWeight: 500 }}>Sign in</Link>
+          <Link href={`/login?next=/join/${slug}/create`} style={{ color: '#C9A84C', textDecoration: 'none', fontWeight: 500 }}>Sign in</Link>
         </p>
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

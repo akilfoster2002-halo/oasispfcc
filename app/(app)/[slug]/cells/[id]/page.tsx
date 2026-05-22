@@ -8,7 +8,7 @@ import { ArrowLeft, MapPin, Trash2 } from 'lucide-react'
 import TimePicker from '@/components/TimePicker'
 
 const CELL_COLORS = [
-  '#6366f1', '#34d399', '#f59e0b', '#f472b6',
+  '#A88A35', '#34d399', '#f59e0b', '#f472b6',
   '#38bdf8', '#a78bfa', '#fb923c', '#ef4444',
 ]
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -44,8 +44,8 @@ const labelSt: React.CSSProperties = {
 }
 
 function focusIn(e: React.FocusEvent<HTMLInputElement>) {
-  e.currentTarget.style.borderColor = 'rgba(99,102,241,0.50)'
-  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.10)'
+  e.currentTarget.style.borderColor = 'rgba(201,168,76,0.50)'
+  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.10)'
 }
 function focusOut(e: React.FocusEvent<HTMLInputElement>) {
   e.currentTarget.style.borderColor = 'rgba(255,255,255,0.080)'
@@ -72,7 +72,7 @@ export default function CellDetailPage({ params }: { params: Promise<{ id: strin
   const [loaded,      setLoaded]      = useState(false)
   const [name,        setName]        = useState('')
   const [groupId,     setGroupId]     = useState('')
-  const [color,       setColor]       = useState('#6366f1')
+  const [color,       setColor]       = useState('#A88A35')
   const [day,         setDay]         = useState<number>(3)
   const [time,        setTime]        = useState('19:00')
   const [location,    setLocation]    = useState('')
@@ -105,7 +105,7 @@ export default function CellDetailPage({ params }: { params: Promise<{ id: strin
         const cell = (d.cells ?? []).find((c: { id: string }) => c.id === cellId)
         if (!cell) return
         setName(cell.name)
-        setColor(cell.color ?? '#6366f1')
+        setColor(cell.color ?? '#A88A35')
         setDay(cell.meeting_day ?? 3)
         setTime(cell.meeting_time ?? '19:00')
         setLocation(cell.location ?? '')
@@ -241,7 +241,7 @@ export default function CellDetailPage({ params }: { params: Promise<{ id: strin
               <div style={{ display: 'flex', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
                 {DAY_NAMES.map((d, i) => (
                   <button key={i} type="button" onClick={() => setDay(i)}
-                    style={{ padding: '7px 12px', borderRadius: 10, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer', transition: 'all 0.12s ease', background: day === i ? '#6366f1' : 'rgba(255,255,255,0.07)', color: day === i ? '#fff' : 'rgba(255,255,255,0.50)', boxShadow: day === i ? '0 2px 8px rgba(99,102,241,0.35)' : 'none' }}
+                    style={{ padding: '7px 12px', borderRadius: 10, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer', transition: 'all 0.12s ease', background: day === i ? '#A88A35' : 'rgba(255,255,255,0.07)', color: day === i ? '#fff' : 'rgba(255,255,255,0.50)', boxShadow: day === i ? '0 2px 8px rgba(201,168,76,0.35)' : 'none' }}
                   >{d}</button>
                 ))}
               </div>
@@ -264,7 +264,7 @@ export default function CellDetailPage({ params }: { params: Promise<{ id: strin
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button type="submit" disabled={saving || !name.trim()}
-            style={{ flex: 1, padding: '13px 0', borderRadius: 14, fontSize: 14, fontWeight: 600, border: 'none', cursor: saving || !name.trim() ? 'not-allowed' : 'pointer', background: name.trim() ? 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)' : 'rgba(255,255,255,0.06)', color: name.trim() ? '#fff' : 'rgba(255,255,255,0.30)', boxShadow: name.trim() ? '0 4px 18px rgba(99,102,241,0.40)' : 'none' }}
+            style={{ flex: 1, padding: '13px 0', borderRadius: 14, fontSize: 14, fontWeight: 600, border: 'none', cursor: saving || !name.trim() ? 'not-allowed' : 'pointer', background: name.trim() ? 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)' : 'rgba(255,255,255,0.06)', color: name.trim() ? '#fff' : 'rgba(255,255,255,0.30)', boxShadow: name.trim() ? '0 4px 18px rgba(201,168,76,0.40)' : 'none' }}
           >{saving ? 'Saving…' : 'Save Changes'}</button>
           <button type="button" onClick={handleDelete} disabled={deleting}
             style={{ padding: '13px 16px', borderRadius: 14, fontSize: 14, cursor: 'pointer', background: 'rgba(248,113,113,0.10)', color: '#f87171', border: '1px solid rgba(248,113,113,0.20)' } as React.CSSProperties}

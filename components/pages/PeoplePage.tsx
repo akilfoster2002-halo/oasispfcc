@@ -21,7 +21,7 @@ function initials(name: string) {
   return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
 }
 
-const PALETTE = ['#6366f1', '#059669', '#d97706', '#7c3aed', '#db2777', '#0891b2']
+const PALETTE = ['#A88A35', '#059669', '#d97706', '#4F7FC4', '#db2777', '#0891b2']
 function avatarColor(name: string) {
   let h = 0
   for (const c of name) h = c.charCodeAt(0) + ((h << 5) - h)
@@ -102,10 +102,10 @@ export default function PeoplePage() {
   // Tab pill style
   const tabPill = (active: boolean) => ({
     background: active
-      ? 'linear-gradient(135deg, rgba(129,140,248,0.22) 0%, rgba(99,102,241,0.15) 100%)'
+      ? 'linear-gradient(135deg, rgba(201,168,76,0.22) 0%, rgba(201,168,76,0.15) 100%)'
       : 'transparent',
-    border: active ? '1px solid rgba(129,140,248,0.28)' : '1px solid transparent',
-    color: active ? '#818cf8' : 'rgba(255,255,255,0.40)',
+    border: active ? '1px solid rgba(201,168,76,0.28)' : '1px solid transparent',
+    color: active ? '#C9A84C' : 'rgba(255,255,255,0.40)',
     borderRadius: '10px',
     padding: '6px 14px',
     fontSize: '12px',
@@ -129,11 +129,11 @@ export default function PeoplePage() {
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center"
             style={{
-              background: 'linear-gradient(135deg, rgba(99,102,241,0.25) 0%, rgba(129,140,248,0.15) 100%)',
-              border: '1px solid rgba(129,140,248,0.25)',
+              background: 'linear-gradient(135deg, rgba(201,168,76,0.25) 0%, rgba(201,168,76,0.15) 100%)',
+              border: '1px solid rgba(201,168,76,0.25)',
             }}
           >
-            <Users className="w-5 h-5" style={{ color: '#818cf8' }} />
+            <Users className="w-5 h-5" style={{ color: '#C9A84C' }} />
           </div>
           <div>
             <h1 className="text-lg font-semibold" style={{ color: 'rgba(255,255,255,0.92)' }}>People</h1>
@@ -158,8 +158,8 @@ export default function PeoplePage() {
                 <span
                   className="text-[10px] px-1.5 py-0.5 rounded-full"
                   style={{
-                    backgroundColor: tab === 'active' ? 'rgba(129,140,248,0.25)' : 'rgba(255,255,255,0.08)',
-                    color: tab === 'active' ? '#818cf8' : 'rgba(255,255,255,0.35)',
+                    backgroundColor: tab === 'active' ? 'rgba(201,168,76,0.25)' : 'rgba(255,255,255,0.08)',
+                    color: tab === 'active' ? '#C9A84C' : 'rgba(255,255,255,0.35)',
                   }}
                 >
                   {active.length}
@@ -173,8 +173,8 @@ export default function PeoplePage() {
                 <span
                   className="text-[10px] px-1.5 py-0.5 rounded-full"
                   style={{
-                    backgroundColor: tab === 'archived' ? 'rgba(129,140,248,0.25)' : 'rgba(255,255,255,0.08)',
-                    color: tab === 'archived' ? '#818cf8' : 'rgba(255,255,255,0.35)',
+                    backgroundColor: tab === 'archived' ? 'rgba(201,168,76,0.25)' : 'rgba(255,255,255,0.08)',
+                    color: tab === 'archived' ? '#C9A84C' : 'rgba(255,255,255,0.35)',
                   }}
                 >
                   {archived.length}

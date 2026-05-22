@@ -4,7 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
 import { ArrowRight, Eye, EyeOff, Key } from 'lucide-react'
-import { AuthShell, authStyles, inputFocus, inputBlur } from '../_components/AuthShell'
+import { AuthShell } from '../_components/AuthShell'
+import { Button, FieldGroup, IconButton, Input } from '@/components/ui'
 import { normalizeAccessKey } from '@/lib/access-key'
 
 export default function SignupPage() {
@@ -20,24 +21,13 @@ export default function SignupPage() {
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.')
-      return
-    }
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.')
-      return
-    }
+    if (password !== confirmPassword) { setError('Passwords do not match.'); return }
+    if (password.length < 8) { setError('Password must be at least 8 characters.'); return }
 
-    // Client-side normalize. If the user typed something, it must be a valid shape.
-    // The server re-normalizes too — this is just for fast feedback.
     let normalizedKey: string | undefined
     if (accessKey.trim()) {
       const n = normalizeAccessKey(accessKey)
-      if (!n) {
-        setError('Access keys are 8 characters, like XXXX-XXXX.')
-        return
-      }
+      if (!n) { setError('Access keys are 8 characters, like XXXX-XXXX.'); return }
       normalizedKey = n
     }
 
@@ -47,12 +37,7 @@ export default function SignupPage() {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: fullName,
-          email,
-          password,
-          accessKey: normalizedKey,
-        }),
+        body: JSON.stringify({ name: fullName, email, password, accessKey: normalizedKey }),
       })
       const data = await res.json()
 
@@ -68,25 +53,18 @@ export default function SignupPage() {
         return
       }
 
-      // The route already established a session via cookies; do a sign-in fallback
-      // only if it didn't (e.g. older deployment). Either way we hard-redirect so the
-      // browser picks up fresh session cookies cleanly.
       if (!data.sessionEstablished) {
         const supabase = getSupabaseBrowser()
         const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
-        if (signInErr) {
-          setError(signInErr.message)
-          return
-        }
+        if (signInErr) { setError(signInErr.message); return }
       }
-
       window.location.href = data.slug ? `/${data.slug}/dashboard` : '/onboarding'
     } finally {
       setLoading(false)
     }
   }
 
-  const passwordsMatch = !!confirmPassword && password === confirmPassword
+  const passwordsMatch    = !!confirmPassword && password === confirmPassword
   const passwordsMismatch = !!confirmPassword && password !== confirmPassword
 
   return (
@@ -95,118 +73,100 @@ export default function SignupPage() {
       subtitle="Have a church key? Enter it below to join your team."
       error={error}
       footer={
-        <p style={{ marginTop: 22, textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.28)' }}>
+        <p style={{ marginTop: 24, textAlign: 'center', fontSize: 13, color: 'var(--ds-text-tertiary)' }}>
           Already have an account?{' '}
-          <Link href="/login" style={{ color: '#818cf8', textDecoration: 'none', fontWeight: 500 }}>Sign in</Link>
+          <Link href="/login" style={{ color: 'var(--ds-accent)', textDecoration: 'none', fontWeight: 500 }}>Sign in</Link>
         </p>
       }
     >
-      <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div>
-          <label style={authStyles.label}>Full name</label>
-          <input
+      <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <FieldGroup label="Full name" htmlFor="name">
+          <Input
+            id="name"
             type="text" required autoFocus autoComplete="name"
             value={fullName} onChange={e => setFullName(e.target.value)}
             placeholder="Jane Smith"
-            style={authStyles.input} onFocus={inputFocus} onBlur={inputBlur}
           />
-        </div>
+        </FieldGroup>
 
-        <div>
-          <label style={authStyles.label}>Email</label>
-          <input
+        <FieldGroup label="Email" htmlFor="email">
+          <Input
+            id="email"
             type="email" required autoComplete="email"
             value={email} onChange={e => { setEmail(e.target.value); setError('') }}
             placeholder="jane@church.org"
-            style={authStyles.input} onFocus={inputFocus} onBlur={inputBlur}
           />
-        </div>
+        </FieldGroup>
 
-        <div>
-          <label style={authStyles.label}>Password</label>
-          <div style={{ position: 'relative' }}>
-            <input
-              type={showPassword ? 'text' : 'password'} required minLength={8} autoComplete="new-password"
-              value={password} onChange={e => { setPassword(e.target.value); setError('') }}
-              placeholder="Min. 8 characters"
-              style={{ ...authStyles.input, paddingRight: 42 }} onFocus={inputFocus} onBlur={inputBlur}
-            />
-            <button
-              type="button" onClick={() => setShowPassword(v => !v)} tabIndex={-1}
-              style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'rgba(255,255,255,0.30)', display: 'flex', alignItems: 'center' }}
-            >
-              {showPassword ? <EyeOff style={{ width: 15, height: 15 }} /> : <Eye style={{ width: 15, height: 15 }} />}
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <label style={authStyles.label}>Confirm password</label>
-          <input
-            type="password" required minLength={8} autoComplete="new-password"
-            value={confirmPassword} onChange={e => { setConfirmPassword(e.target.value); setError('') }}
-            placeholder="Re-enter your password"
-            style={{
-              ...authStyles.input,
-              borderColor: passwordsMismatch
-                ? 'rgba(248,113,113,0.45)'
-                : passwordsMatch
-                ? 'rgba(52,211,153,0.40)'
-                : 'rgba(255,255,255,0.090)',
-            }}
-            onFocus={inputFocus} onBlur={inputBlur}
+        <FieldGroup label="Password" htmlFor="password">
+          <Input
+            id="password"
+            type={showPassword ? 'text' : 'password'} required minLength={8} autoComplete="new-password"
+            value={password} onChange={e => { setPassword(e.target.value); setError('') }}
+            placeholder="Min. 8 characters"
+            rightAdornment={
+              <IconButton
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                tabIndex={-1}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                style={{ width: 32, height: 32 }}
+              >
+                {showPassword ? <EyeOff style={{ width: 15, height: 15 }} /> : <Eye style={{ width: 15, height: 15 }} />}
+              </IconButton>
+            }
           />
-          {passwordsMismatch && (
-            <p style={{ marginTop: 5, fontSize: 12, color: '#f87171' }}>Passwords don&apos;t match</p>
-          )}
-        </div>
+        </FieldGroup>
 
-        <div>
-          <label style={authStyles.label}>
-            Church access key{' '}
-            <span style={{ color: 'rgba(255,255,255,0.25)', fontWeight: 400 }}>(optional)</span>
-          </label>
-          <div style={{ position: 'relative' }}>
-            <Key style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: accessKey ? '#818cf8' : 'rgba(255,255,255,0.22)', pointerEvents: 'none' }} />
-            <input
-              type="text"
-              value={accessKey}
-              onChange={e => { setAccessKey(e.target.value.toUpperCase()); setError('') }}
-              placeholder="XXXX-XXXX"
-              maxLength={9}
-              style={{
-                ...authStyles.input,
-                paddingLeft: 36,
-                fontFamily: 'monospace',
-                letterSpacing: '0.08em',
-                fontSize: 15,
-                borderColor: accessKey ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.090)',
-              }}
-              onFocus={inputFocus} onBlur={inputBlur}
-            />
-          </div>
-          <p style={{ marginTop: 5, fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>
-            Get this from your church admin to join their workspace.
-          </p>
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 600,
-            border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
-            background: loading ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)',
-            color: loading ? 'rgba(255,255,255,0.28)' : '#fff',
-            boxShadow: loading ? 'none' : '0 4px 18px rgba(99,102,241,0.45)',
-            opacity: loading ? 0.65 : 1,
-            marginTop: 4,
-            transition: 'all 0.15s ease',
-          }}
+        <FieldGroup
+          label="Confirm password"
+          htmlFor="confirmPassword"
+          error={passwordsMismatch ? "Passwords don't match" : undefined}
         >
-          {loading ? 'Creating account…' : <>Create account <ArrowRight style={{ width: 15, height: 15 }} /></>}
-        </button>
+          <Input
+            id="confirmPassword"
+            type="password" required minLength={8} autoComplete="new-password"
+            value={confirmPassword}
+            onChange={e => { setConfirmPassword(e.target.value); setError('') }}
+            placeholder="Re-enter your password"
+            state={passwordsMismatch ? 'error' : passwordsMatch ? 'success' : 'default'}
+          />
+        </FieldGroup>
+
+        <FieldGroup
+          label="Church access key"
+          hint="(optional)"
+          htmlFor="accessKey"
+          helper="Get this from your church admin to join their workspace."
+        >
+          <Input
+            id="accessKey"
+            type="text"
+            value={accessKey}
+            onChange={e => { setAccessKey(e.target.value.toUpperCase()); setError('') }}
+            placeholder="XXXX-XXXX"
+            maxLength={9}
+            leftAdornment={<Key style={{ width: 14, height: 14, color: accessKey ? 'var(--ds-accent)' : 'var(--ds-text-faint)' }} />}
+            style={{
+              fontFamily: 'var(--font-geist-mono), monospace',
+              letterSpacing: '0.10em',
+              fontSize: 14,
+            }}
+            state={accessKey && accessKey.length >= 8 ? 'default' : 'default'}
+          />
+        </FieldGroup>
+
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          fullWidth
+          loading={loading}
+          rightIcon={!loading ? <ArrowRight style={{ width: 16, height: 16 }} /> : undefined}
+          style={{ marginTop: 8 }}
+        >
+          {loading ? 'Creating account…' : 'Create account'}
+        </Button>
       </form>
     </AuthShell>
   )

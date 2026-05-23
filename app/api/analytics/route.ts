@@ -38,11 +38,15 @@ export async function GET(req: NextRequest) {
     const wkAndGf = safeGroup ? `AND g.name ILIKE '%${safeGroup}%'` : ''
     const wkTopGf = safeGroup ? `WHERE g.name ILIKE '%${safeGroup}%'` : ''
 
-    // Week boundaries (Sunday–Saturday) containing `to`
-    const toD     = new Date(to + 'T12:00:00')
-    const dow     = toD.getDay()
-    const twStart = new Date(toD); twStart.setDate(toD.getDate() - dow)
-    const twEnd   = new Date(twStart); twEnd.setDate(twStart.getDate() + 6)
+    // Week boundaries (Sunday–Saturday) — always report on the last COMPLETED week.
+    // On Sunday through Friday, that's the week that ended last Saturday.
+    // On Saturday, it's the week that ends today.
+    // This matches the workflow where reporting is done on Sundays for the prior week.
+    const toD          = new Date(to + 'T12:00:00')
+    const dow          = toD.getDay()
+    const daysToLastSat = (dow + 1) % 7          // 0 on Sat, 1 on Sun, …, 6 on Fri
+    const twEnd   = new Date(toD); twEnd.setDate(toD.getDate() - daysToLastSat)
+    const twStart = new Date(twEnd); twStart.setDate(twEnd.getDate() - 6)
     const lwStart = new Date(twStart); lwStart.setDate(twStart.getDate() - 7)
     const tw0 = twStart.toISOString().split('T')[0]
     const tw1 = twEnd.toISOString().split('T')[0]

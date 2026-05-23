@@ -566,7 +566,7 @@ function WeeklyReport({
         <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           <p className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.75)' }}>Cell Detail</p>
           <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.30)' }}>
-            Per-cell metrics for the current week
+            Per-cell metrics for the reported week
           </p>
         </div>
         {loading ? (

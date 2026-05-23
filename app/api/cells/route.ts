@@ -43,7 +43,7 @@ export async function GET(req: Request) {
   if (!member) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = adminClient()
-  const { data, error } = await admin
+  const { data: cellsData, error } = await admin
     .from('cells')
     .select('*')
     .eq('church_id', churchId)
@@ -51,7 +51,19 @@ export async function GET(req: Request) {
     .order('name')
 
   if (error) return Response.json({ error: error.message }, { status: 500 })
-  return Response.json({ cells: data })
+
+  const groupIds = [...new Set((cellsData ?? []).map((c: { group_id: string | null }) => c.group_id).filter(Boolean))]
+  const { data: groupsData } = groupIds.length
+    ? await admin.from('groups').select('id, name').in('id', groupIds)
+    : { data: [] }
+
+  const groupMap = new Map((groupsData ?? []).map((g: { id: string; name: string }) => [g.id, g.name]))
+  const cells = (cellsData ?? []).map((cell: Record<string, unknown>) => ({
+    ...cell,
+    group_name: cell.group_id ? (groupMap.get(cell.group_id as string) ?? null) : null,
+  }))
+
+  return Response.json({ cells })
 }
 
 /** POST /api/cells — create a cell */

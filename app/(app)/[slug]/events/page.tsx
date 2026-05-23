@@ -51,6 +51,7 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<CalEvent[]>([])
   const [hidden, setHidden] = useState<Set<string>>(new Set())
   const [selected, setSelected] = useState<CalEvent | null>(null)
+  const [overflowDay, setOverflowDay] = useState<{ dateStr: string; evs: CalEvent[] } | null>(null)
   const [deleting, setDeleting] = useState(false)
 
   async function deleteEvent(ev: CalEvent) {
@@ -315,7 +316,12 @@ export default function CalendarPage() {
                           </button>
                         ))}
                         {dayEvs.length > 3 && (
-                          <p style={{ fontSize: 10, padding: '0 4px', color: 'rgba(255,255,255,0.35)', margin: 0 }}>+{dayEvs.length - 3} more</p>
+                          <button
+                            onClick={e => { e.stopPropagation(); setOverflowDay({ dateStr, evs: dayEvs }) }}
+                            style={{ fontSize: 10, padding: '1px 6px', color: 'rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 4, cursor: 'pointer', margin: 0, lineHeight: '18px' }}
+                            onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.80)'; e.currentTarget.style.background = 'rgba(255,255,255,0.09)' }}
+                            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+                          >+{dayEvs.length - 3} more</button>
                         )}
                       </div>
                     </>
@@ -326,6 +332,45 @@ export default function CalendarPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Day overflow modal ── */}
+      {overflowDay && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, backgroundColor: 'rgba(0,0,0,0.55)' }}
+          onClick={() => setOverflowDay(null)}
+        >
+          <div style={{ width: 340, maxHeight: '70vh', borderRadius: 22, overflow: 'hidden', background: 'linear-gradient(145deg, rgba(255,255,255,0.075) 0%, rgba(255,255,255,0.030) 100%)', backdropFilter: 'blur(40px) saturate(200%)', WebkitBackdropFilter: 'blur(40px) saturate(200%)', border: '1px solid rgba(255,255,255,0.090)', boxShadow: '0 1px 0 rgba(255,255,255,0.10) inset, 0 -1px 0 rgba(0,0,0,0.25) inset, 0 24px 64px rgba(0,0,0,0.50)', display: 'flex', flexDirection: 'column' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.065)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.92)', margin: 0, letterSpacing: '-0.018em' }}>
+                {new Date(overflowDay.dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              </h3>
+              <button onClick={() => setOverflowDay(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, opacity: 0.45 }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '0.45')}
+              ><X style={{ width: 16, height: 16, color: 'rgba(255,255,255,0.90)' }} /></button>
+            </div>
+            <div style={{ overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {overflowDay.evs.map(ev => (
+                <button key={ev.id}
+                  onClick={() => { setOverflowDay(null); setSelected(ev) }}
+                  style={{ width: '100%', textAlign: 'left', padding: '10px 14px', borderRadius: 12, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer', background: `${ev.color}18`, borderLeft: `3px solid ${ev.color}`, color: 'rgba(255,255,255,0.85)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = `${ev.color}28`)}
+                  onMouseLeave={e => (e.currentTarget.style.background = `${ev.color}18`)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {ev.event_datetime && <span style={{ color: ev.color, fontWeight: 600, fontSize: 11, flexShrink: 0 }}>{fmtTime(ev.event_datetime)}</span>}
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.name}</span>
+                  </div>
+                  {ev.group_name !== 'General' && (
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.36)', marginTop: 2 }}>{ev.group_name}</div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Event popup ── */}
       {selected && (

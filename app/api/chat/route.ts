@@ -56,6 +56,21 @@ async function getChurchContext() {
 
 const TOOLS: Anthropic.Tool[] = [
   {
+    name: 'get_groups',
+    description: 'List all ministry groups (e.g. MEGA, YPZ). Each group contains one or more cell groups. Use this to understand church structure or when someone asks about groups.',
+    input_schema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'get_cells',
+    description: 'List all cell groups. Each cell belongs to a group. Returns name, group, leader, meeting schedule, and location.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        group_name: { type: 'string', description: 'Filter cells by group name or partial name (e.g. "MEGA"). Omit for all cells.' },
+      },
+    },
+  },
+  {
     name: 'search_people',
     description: 'Search church members by name. Returns contact info, cell group, group, designation, pastor, gender, marital status.',
     input_schema: {
@@ -64,6 +79,20 @@ const TOOLS: Anthropic.Tool[] = [
         query: { type: 'string', description: 'First name, last name, or full name to search for' },
       },
       required: ['query'],
+    },
+  },
+  {
+    name: 'get_events_by_date',
+    description: 'Get all church events (services, cell meetings, outreach, etc.) within a date range — past or future. Use for questions like "what happened the week of May 17th".',
+    input_schema: {
+      type: 'object',
+      properties: {
+        start_date: { type: 'string', description: 'Start date YYYY-MM-DD (required)' },
+        end_date: { type: 'string', description: 'End date YYYY-MM-DD (required)' },
+        group_name: { type: 'string', description: 'Filter by group name (optional)' },
+        service_type: { type: 'string', description: 'Filter by type: cell, service, outreach, other (optional)' },
+      },
+      required: ['start_date', 'end_date'],
     },
   },
   {
@@ -102,17 +131,6 @@ const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
-    name: 'get_upcoming_events',
-    description: 'List upcoming scheduled events for the church.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        days_ahead: { type: 'number', description: 'Days ahead to look (default 30)' },
-        service_type: { type: 'string', description: 'Filter by type: cell, service, outreach, other' },
-      },
-    },
-  },
-  {
     name: 'get_follow_ups',
     description: 'Get pastoral follow-up records for first-time visitors and people who need follow-up.',
     input_schema: {
@@ -120,14 +138,6 @@ const TOOLS: Anthropic.Tool[] = [
       properties: {
         status: { type: 'string', description: 'Filter by status: pending, sent, or dismissed. Omit for all.' },
       },
-    },
-  },
-  {
-    name: 'get_cells',
-    description: 'List all cell groups with leader, meeting schedule, location, and recent attendance stats.',
-    input_schema: {
-      type: 'object',
-      properties: {},
     },
   },
   {
@@ -151,6 +161,67 @@ async function executeTool(
 ): Promise<string> {
   try {
     switch (name) {
+      case 'get_groups': {
+        const { data, error } = await supabase
+          .from('groups')
+          .select('id, name, cells(name, leader_name, meeting_day, meeting_time, is_active)')
+          .eq('church_id', churchId)
+          .order('name')
+        if (error) return `Error: ${error.message}`
+        if (!data?.length) return 'No groups found.'
+        const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        const result = data.map(g => ({
+          group: g.name,
+          cells: (g.cells as Array<{ name: string; leader_name: string | null; meeting_day: number | null; meeting_time: string | null; is_active: boolean }>).map(c => ({
+            name: c.name,
+            leader: c.leader_name,
+            meets: c.meeting_day != null ? DAY[c.meeting_day] : null,
+            time: c.meeting_time,
+            active: c.is_active,
+          })),
+        }))
+        return JSON.stringify(result)
+      }
+
+      case 'get_events_by_date': {
+        const startDate = String(input.start_date ?? '')
+        const endDate = String(input.end_date ?? '')
+        const groupName = input.group_name ? String(input.group_name) : null
+        const serviceType = input.service_type ? String(input.service_type) : null
+
+        let q = supabase
+          .from('events')
+          .select('name, event_date, event_datetime, service_type, location, cells(name, groups(name)), groups(name)')
+          .eq('church_id', churchId)
+          .gte('event_date', startDate)
+          .lte('event_date', endDate)
+          .order('event_date', { ascending: true })
+          .limit(50)
+
+        if (serviceType) q = q.eq('service_type', serviceType)
+
+        const { data, error } = await q
+        if (error) return `Error: ${error.message}`
+        if (!data?.length) return `No events found between ${startDate} and ${endDate}.`
+
+        // Filter by group name if provided (post-fetch since nested filter isn't easily done via PostgREST)
+        const rows = data.map(e => {
+          const cell = e.cells as unknown as { name: string; groups: { name: string } | null } | null
+          const group = e.groups as unknown as { name: string } | null
+          return {
+            name: e.name,
+            date: e.event_date,
+            type: e.service_type,
+            location: e.location,
+            cell: cell?.name ?? null,
+            group: cell?.groups?.name ?? group?.name ?? null,
+          }
+        }).filter(e => !groupName || (e.group ?? '').toLowerCase().includes(groupName.toLowerCase()))
+
+        if (!rows.length) return `No events found${groupName ? ` in group "${groupName}"` : ''} between ${startDate} and ${endDate}.`
+        return JSON.stringify(rows)
+      }
+
       case 'search_people': {
         const q = String(input.query ?? '')
         const { data, error } = await supabase
@@ -306,20 +377,37 @@ async function executeTool(
       }
 
       case 'get_cells': {
-        const { data: cells, error } = await supabase
+        const groupName = input.group_name ? String(input.group_name) : null
+
+        let q = supabase
           .from('cells')
-          .select('name, leader_name, location, meeting_day, meeting_time, is_active')
+          .select('name, leader_name, location, meeting_day, meeting_time, is_active, groups(name)')
           .eq('church_id', churchId)
           .order('name')
 
+        const { data: cells, error } = await q
         if (error) return `Error: ${error.message}`
         if (!cells?.length) return 'No cell groups found.'
 
         const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-        const result = cells.map(c => ({
-          ...c,
-          meeting_day: c.meeting_day != null ? DAY[c.meeting_day] : null,
-        }))
+        let result = cells.map(c => {
+          const grp = c.groups as unknown as { name: string } | null
+          return {
+            name: c.name,
+            group: grp?.name ?? null,
+            leader: c.leader_name,
+            location: c.location,
+            meets: c.meeting_day != null ? DAY[c.meeting_day] : null,
+            time: c.meeting_time,
+            active: c.is_active,
+          }
+        })
+
+        if (groupName) {
+          result = result.filter(c => (c.group ?? '').toLowerCase().includes(groupName.toLowerCase()))
+          if (!result.length) return `No cells found in group "${groupName}".`
+        }
+
         return JSON.stringify(result)
       }
 
@@ -361,11 +449,20 @@ async function executeTool(
 
 const BASE_SYSTEM = `You are Oasis Assistant — a knowledgeable, warm AI helper embedded inside Aquila, a church management platform used by Oasis PFCC. You help church administrators, pastors, and leaders understand their congregation, plan events, and make data-driven ministry decisions.
 
-You have access to live church data through tools. When someone asks about attendance, members, giving, events, cells, or follow-ups — use the appropriate tool to look it up. Don't say you don't have access to data; use your tools.
+Church data structure:
+- Groups (e.g. MEGA, YPZ) are ministry groupings that contain one or more cell groups.
+- Cells are the individual small groups/cell meetings that belong to a group.
+- Events are any scheduled meeting — services, outreach, or cell meetings — each event can be linked to a cell and/or group.
+- People are members, each with an optional cell_name and group_name field.
+
+You have access to live church data through tools. When someone asks about attendance, members, giving, events, cells, groups, or follow-ups — use the appropriate tool to look it up immediately. Never say you don't have access to data. Never ask for clarification if you can just run the tool with reasonable assumptions.
+
+For date questions like "the week of May 17th", use get_events_by_date with start_date=2026-05-17 and end_date=2026-05-23.
+For group questions, use get_groups first to understand the structure.
 
 Today's date is ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
 
-Be concise, warm, and pastoral in tone. Give real answers from the data — don't be vague. Use plain text, no markdown headers or heavy bullet lists. Keep responses focused and actionable.`
+Be concise, warm, and pastoral. Give real answers from the data. Use plain text, no markdown headers. Keep responses focused and actionable.`
 
 export async function POST(req: Request) {
   try {

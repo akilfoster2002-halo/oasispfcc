@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,15 +24,13 @@ async function getChurchContext() {
     if (!user) return null
 
     const { data: membership } = await supabase
-      .from('memberships')
+      .from('church_memberships')
       .select('church_id, churches(name, slug)')
       .eq('user_id', user.id)
-      .eq('is_approved', true)
       .maybeSingle()
 
     if (!membership?.church_id) return null
 
-    // Grab quick summary stats
     const churchId = membership.church_id
     const [peopleRes, eventsRes, cellsRes] = await Promise.all([
       supabase.from('people').select('id', { count: 'exact', head: true }).eq('church_id', churchId),
@@ -43,6 +42,8 @@ async function getChurchContext() {
     const churchName = (Array.isArray(churches) ? churches[0]?.name : churches?.name) ?? 'your church'
 
     return {
+      supabase,
+      churchId,
       churchName,
       totalPeople: peopleRes.count ?? 0,
       totalEvents: eventsRes.count ?? 0,
@@ -53,16 +54,318 @@ async function getChurchContext() {
   }
 }
 
+const TOOLS: Anthropic.Tool[] = [
+  {
+    name: 'search_people',
+    description: 'Search church members by name. Returns contact info, cell group, group, designation, pastor, gender, marital status.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'First name, last name, or full name to search for' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'get_cell_attendance',
+    description: 'Get who attended a specific cell group meeting on a specific date, or list recent meetings for a cell.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        cell_name: { type: 'string', description: 'Cell group name or partial name (e.g. "RIT")' },
+        date: { type: 'string', description: 'Specific date YYYY-MM-DD. Omit to get the most recent meetings.' },
+      },
+      required: ['cell_name'],
+    },
+  },
+  {
+    name: 'get_event_attendance',
+    description: 'Get attendance for any event (service, outreach, etc.) by event name and/or date.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        event_name: { type: 'string', description: 'Event name or partial name' },
+        date: { type: 'string', description: 'Date YYYY-MM-DD' },
+      },
+    },
+  },
+  {
+    name: 'get_giving_summary',
+    description: 'Get giving/donation records. Filter by person name and/or date range.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        person_name: { type: 'string', description: 'Person name or partial name (optional)' },
+        start_date: { type: 'string', description: 'Start date YYYY-MM-DD (default: 90 days ago)' },
+        end_date: { type: 'string', description: 'End date YYYY-MM-DD (default: today)' },
+      },
+    },
+  },
+  {
+    name: 'get_upcoming_events',
+    description: 'List upcoming scheduled events for the church.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        days_ahead: { type: 'number', description: 'Days ahead to look (default 30)' },
+        service_type: { type: 'string', description: 'Filter by type: cell, service, outreach, other' },
+      },
+    },
+  },
+  {
+    name: 'get_follow_ups',
+    description: 'Get pastoral follow-up records for first-time visitors and people who need follow-up.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', description: 'Filter by status: pending, sent, or dismissed. Omit for all.' },
+      },
+    },
+  },
+  {
+    name: 'get_cells',
+    description: 'List all cell groups with leader, meeting schedule, location, and recent attendance stats.',
+    input_schema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'get_attendance_trends',
+    description: 'Week-by-week attendance trends. Useful for spotting growth or decline patterns.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        weeks: { type: 'number', description: 'Number of past weeks to analyze (default 12)' },
+        service_type: { type: 'string', description: 'Filter by type: cell, service, outreach' },
+      },
+    },
+  },
+]
+
+async function executeTool(
+  name: string,
+  input: Record<string, unknown>,
+  churchId: string,
+  supabase: SupabaseClient,
+): Promise<string> {
+  try {
+    switch (name) {
+      case 'search_people': {
+        const q = String(input.query ?? '')
+        const { data, error } = await supabase
+          .from('people')
+          .select('first_name, last_name, email, phone, cell_name, group_name, pastor, designation, gender, marital_status, baptized, joined_oasis')
+          .eq('church_id', churchId)
+          .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%`)
+          .limit(10)
+        if (error) return `Error searching people: ${error.message}`
+        if (!data?.length) return `No members found matching "${q}".`
+        return JSON.stringify(data)
+      }
+
+      case 'get_cell_attendance': {
+        const cellName = String(input.cell_name ?? '')
+        const date = input.date ? String(input.date) : null
+
+        const { data: cells } = await supabase
+          .from('cells')
+          .select('id, name')
+          .eq('church_id', churchId)
+          .ilike('name', `%${cellName}%`)
+          .limit(1)
+
+        if (!cells?.length) return `No cell group found matching "${cellName}".`
+        const cell = cells[0]
+
+        let eventsQuery = supabase
+          .from('events')
+          .select('id, name, event_date')
+          .eq('church_id', churchId)
+          .eq('cell_id', cell.id)
+          .order('event_date', { ascending: false })
+          .limit(date ? 1 : 5)
+
+        if (date) eventsQuery = eventsQuery.eq('event_date', date)
+
+        const { data: events } = await eventsQuery
+        if (!events?.length) {
+          return `No meetings found for ${cell.name}${date ? ` on ${date}` : ''}.`
+        }
+
+        const results = await Promise.all(events.map(async (event) => {
+          const { data: rows } = await supabase
+            .from('attendance')
+            .select('attendance_status, people(first_name, last_name)')
+            .eq('event_id', event.id)
+          const attendees = (rows ?? []).map(r => {
+            const p = r.people as unknown as { first_name: string; last_name: string } | null
+            return p ? `${p.first_name} ${p.last_name}` : 'Unknown'
+          })
+          return { cell: cell.name, event: event.name, date: event.event_date, count: attendees.length, attendees }
+        }))
+
+        return JSON.stringify(results)
+      }
+
+      case 'get_event_attendance': {
+        const eventName = input.event_name ? String(input.event_name) : null
+        const date = input.date ? String(input.date) : null
+
+        let q = supabase
+          .from('events')
+          .select('id, name, event_date, service_type, first_timers, soul_won')
+          .eq('church_id', churchId)
+          .order('event_date', { ascending: false })
+          .limit(5)
+
+        if (eventName) q = q.ilike('name', `%${eventName}%`)
+        if (date) q = q.eq('event_date', date)
+
+        const { data: events } = await q
+        if (!events?.length) return `No events found${eventName ? ` matching "${eventName}"` : ''}${date ? ` on ${date}` : ''}.`
+
+        const results = await Promise.all(events.map(async (event) => {
+          const { data: rows } = await supabase
+            .from('attendance')
+            .select('people(first_name, last_name)')
+            .eq('event_id', event.id)
+          const attendees = (rows ?? []).map(r => {
+            const p = r.people as unknown as { first_name: string; last_name: string } | null
+            return p ? `${p.first_name} ${p.last_name}` : 'Unknown'
+          })
+          return { event: event.name, date: event.event_date, type: event.service_type, count: attendees.length, first_timers: event.first_timers, soul_won: event.soul_won, attendees }
+        }))
+
+        return JSON.stringify(results)
+      }
+
+      case 'get_giving_summary': {
+        const personName = input.person_name ? String(input.person_name) : null
+        const startDate = input.start_date ? String(input.start_date) : null
+        const endDate = input.end_date ? String(input.end_date) : null
+
+        let q = supabase
+          .from('giving')
+          .select('person_name, amount, fund, method, given_at, notes')
+          .eq('church_id', churchId)
+          .order('given_at', { ascending: false })
+          .limit(50)
+
+        if (personName) q = q.ilike('person_name', `%${personName}%`)
+        if (startDate) q = q.gte('given_at', startDate)
+        if (endDate) q = q.lte('given_at', endDate)
+
+        const { data, error } = await q
+        if (error) return `Error: ${error.message}`
+        if (!data?.length) return `No giving records found${personName ? ` for "${personName}"` : ''}.`
+
+        const total = data.reduce((sum, r) => sum + Number(r.amount), 0)
+        return JSON.stringify({ total: total.toFixed(2), count: data.length, records: data })
+      }
+
+      case 'get_upcoming_events': {
+        const daysAhead = Number(input.days_ahead ?? 30)
+        const serviceType = input.service_type ? String(input.service_type) : null
+        const until = new Date()
+        until.setDate(until.getDate() + daysAhead)
+
+        let q = supabase
+          .from('events')
+          .select('name, event_date, event_datetime, service_type, location, description, cells(name), groups(name)')
+          .eq('church_id', churchId)
+          .gte('event_date', new Date().toISOString().slice(0, 10))
+          .lte('event_date', until.toISOString().slice(0, 10))
+          .order('event_date', { ascending: true })
+          .limit(20)
+
+        if (serviceType) q = q.eq('service_type', serviceType)
+
+        const { data, error } = await q
+        if (error) return `Error: ${error.message}`
+        if (!data?.length) return `No upcoming events in the next ${daysAhead} days.`
+        return JSON.stringify(data)
+      }
+
+      case 'get_follow_ups': {
+        const status = input.status ? String(input.status) : null
+
+        let q = supabase
+          .from('follow_ups')
+          .select('person_name, phone, event_name, event_date, message, status, created_at')
+          .eq('church_id', churchId)
+          .order('event_date', { ascending: false })
+          .limit(30)
+
+        if (status) q = q.eq('status', status)
+
+        const { data, error } = await q
+        if (error) return `Error: ${error.message}`
+        if (!data?.length) return `No follow-up records found${status ? ` with status "${status}"` : ''}.`
+        return JSON.stringify(data)
+      }
+
+      case 'get_cells': {
+        const { data: cells, error } = await supabase
+          .from('cells')
+          .select('name, leader_name, location, meeting_day, meeting_time, is_active')
+          .eq('church_id', churchId)
+          .order('name')
+
+        if (error) return `Error: ${error.message}`
+        if (!cells?.length) return 'No cell groups found.'
+
+        const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        const result = cells.map(c => ({
+          ...c,
+          meeting_day: c.meeting_day != null ? DAY[c.meeting_day] : null,
+        }))
+        return JSON.stringify(result)
+      }
+
+      case 'get_attendance_trends': {
+        const weeks = Number(input.weeks ?? 12)
+        const serviceType = input.service_type ? String(input.service_type) : null
+        const since = new Date()
+        since.setDate(since.getDate() - weeks * 7)
+
+        let q = supabase
+          .from('events')
+          .select('id, name, event_date, service_type, attendance(id)')
+          .eq('church_id', churchId)
+          .gte('event_date', since.toISOString().slice(0, 10))
+          .order('event_date', { ascending: false })
+
+        if (serviceType) q = q.eq('service_type', serviceType)
+
+        const { data, error } = await q
+        if (error) return `Error: ${error.message}`
+        if (!data?.length) return `No events in the past ${weeks} weeks.`
+
+        const rows = data.map(e => ({
+          name: e.name,
+          date: e.event_date,
+          type: e.service_type,
+          attendance: Array.isArray(e.attendance) ? e.attendance.length : 0,
+        }))
+        return JSON.stringify(rows)
+      }
+
+      default:
+        return `Unknown tool: ${name}`
+    }
+  } catch (err) {
+    return `Tool error: ${err instanceof Error ? err.message : String(err)}`
+  }
+}
+
 const BASE_SYSTEM = `You are Oasis Assistant — a knowledgeable, warm AI helper embedded inside Aquila, a church management platform used by Oasis PFCC. You help church administrators, pastors, and leaders understand their congregation, plan events, and make data-driven ministry decisions.
 
-You can help with:
-- Questions about church management, ministry strategy, and discipleship
-- Understanding attendance trends and congregation health
-- Planning events, cell groups, and outreach
-- Member follow-up and pastoral care guidance
-- Interpreting church growth data
+You have access to live church data through tools. When someone asks about attendance, members, giving, events, cells, or follow-ups — use the appropriate tool to look it up. Don't say you don't have access to data; use your tools.
 
-Be concise, warm, and pastoral in tone. When you don't know specific data, say so and suggest where they could find it in Aquila. Keep responses focused and actionable. Use plain text — no markdown headers or bullet overload, just clear natural language.`
+Today's date is ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
+
+Be concise, warm, and pastoral in tone. Give real answers from the data — don't be vague. Use plain text, no markdown headers or heavy bullet lists. Keep responses focused and actionable.`
 
 export async function POST(req: Request) {
   try {
@@ -77,21 +380,54 @@ export async function POST(req: Request) {
     const ctx = await getChurchContext()
 
     const systemPrompt = ctx
-      ? `${BASE_SYSTEM}\n\nCurrent church context:\n- Church: ${ctx.churchName}\n- Total members in system: ${ctx.totalPeople}\n- Total events recorded: ${ctx.totalEvents}\n- Active cell groups: ${ctx.totalCells}`
+      ? `${BASE_SYSTEM}\n\nChurch: ${ctx.churchName}\nMembers in system: ${ctx.totalPeople}\nTotal events recorded: ${ctx.totalEvents}\nActive cell groups: ${ctx.totalCells}`
       : BASE_SYSTEM
 
     const anthropic = getAnthropic()
+    const tools = ctx ? TOOLS : []
 
-    const response = await anthropic.messages.create({
+    let msgs: Anthropic.MessageParam[] = messages.map(m => ({ role: m.role, content: m.content }))
+
+    let response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
       system: systemPrompt,
-      messages: messages.map(m => ({ role: m.role, content: m.content })),
+      tools,
+      messages: msgs,
     })
 
-    const reply = response.content[0]?.type === 'text'
-      ? response.content[0].text
-      : 'Sorry, I could not generate a response.'
+    // Agentic loop: execute tools until Claude is done
+    let iterations = 0
+    while (response.stop_reason === 'tool_use' && iterations < 5) {
+      iterations++
+      const toolBlocks = response.content.filter((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
+
+      const toolResults: Anthropic.ToolResultBlockParam[] = await Promise.all(
+        toolBlocks.map(async (block) => ({
+          type: 'tool_result' as const,
+          tool_use_id: block.id,
+          content: await executeTool(
+            block.name,
+            block.input as Record<string, unknown>,
+            ctx!.churchId,
+            ctx!.supabase,
+          ),
+        })),
+      )
+
+      msgs = [...msgs, { role: 'assistant', content: response.content }, { role: 'user', content: toolResults }]
+
+      response = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1024,
+        system: systemPrompt,
+        tools,
+        messages: msgs,
+      })
+    }
+
+    const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === 'text')
+    const reply = textBlock?.text ?? 'Sorry, I could not generate a response.'
 
     return Response.json({ reply })
   } catch (err) {

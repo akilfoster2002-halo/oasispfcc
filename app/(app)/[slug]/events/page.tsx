@@ -287,7 +287,7 @@ export default function CalendarPage() {
             ))}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: 'minmax(110px, 1fr)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridAutoRows: 'minmax(110px, auto)' }}>
             {cells.map((day, i) => {
               const dateStr = day
                 ? `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
@@ -305,7 +305,7 @@ export default function CalendarPage() {
                         </span>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {dayEvs.slice(0, 3).map(ev => (
+                        {(dayEvs.length > 2 ? dayEvs.slice(0, 2) : dayEvs).map(ev => (
                           <button key={ev.id} onClick={() => setSelected(ev)}
                             style={{ width: '100%', textAlign: 'left', padding: '2px 6px', borderRadius: 5, fontSize: 11, fontWeight: 500, border: 'none', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: '20px', backgroundColor: `${ev.color}20`, color: ev.color, borderLeft: `2px solid ${ev.color}` }}
                             onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
@@ -315,13 +315,13 @@ export default function CalendarPage() {
                             {ev.name}
                           </button>
                         ))}
-                        {dayEvs.length > 3 && (
+                        {dayEvs.length > 2 && (
                           <button
                             onClick={e => { e.stopPropagation(); setOverflowDay({ dateStr, evs: dayEvs }) }}
                             style={{ fontSize: 10, padding: '1px 6px', color: 'rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 4, cursor: 'pointer', margin: 0, lineHeight: '18px' }}
                             onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.80)'; e.currentTarget.style.background = 'rgba(255,255,255,0.09)' }}
                             onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
-                          >+{dayEvs.length - 3} more</button>
+                          >+{dayEvs.length - 2} more</button>
                         )}
                       </div>
                     </>

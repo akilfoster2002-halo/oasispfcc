@@ -28,6 +28,7 @@ interface CalEvent {
   group_id: string | null
   group_name: string
   color: string
+  attendanceCount: number
 }
 
 function fmtTime(dt: string | null): string {
@@ -52,6 +53,7 @@ export default function CalendarPage() {
   const [hidden, setHidden] = useState<Set<string>>(new Set())
   const [selected, setSelected] = useState<CalEvent | null>(null)
   const [overflowDay, setOverflowDay] = useState<{ dateStr: string; evs: CalEvent[] } | null>(null)
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
   async function deleteEvent(ev: CalEvent) {
@@ -100,7 +102,7 @@ export default function CalendarPage() {
 
     getSupabaseBrowser()
       .from('events')
-      .select('id, name, event_date, event_datetime, service_type, group_id')
+      .select('id, name, event_date, event_datetime, service_type, group_id, attendance(count)')
       .eq('church_id', churchId)
       .gte('event_date', from)
       .lte('event_date', to)
@@ -111,6 +113,8 @@ export default function CalendarPage() {
         setEvents(
           (data ?? []).map(e => {
             const g = e.group_id ? gMap.get(e.group_id) : undefined
+            const attArr = (e as Record<string, unknown>).attendance as { count: string }[] | null
+            const attendanceCount = attArr && attArr.length > 0 ? parseInt(attArr[0].count) : 0
             return {
               id: e.id,
               name: e.name,
@@ -120,6 +124,7 @@ export default function CalendarPage() {
               group_id: e.group_id,
               group_name: g?.name ?? 'General',
               color: g?.color ?? 'rgba(255,255,255,0.35)',
+              attendanceCount,
             }
           })
         )
@@ -306,14 +311,21 @@ export default function CalendarPage() {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         {(dayEvs.length > 2 ? dayEvs.slice(0, 2) : dayEvs).map(ev => (
-                          <button key={ev.id} onClick={() => setSelected(ev)}
-                            style={{ width: '100%', textAlign: 'left', padding: '2px 6px', borderRadius: 5, fontSize: 11, fontWeight: 500, border: 'none', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: '20px', backgroundColor: `${ev.color}20`, color: ev.color, borderLeft: `2px solid ${ev.color}` }}
-                            onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
-                            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-                          >
-                            {ev.event_datetime && <span style={{ marginRight: 4, fontWeight: 600, opacity: 0.80 }}>{fmtTime(ev.event_datetime)}</span>}
-                            {ev.name}
-                          </button>
+                          <div key={ev.id} style={{ position: 'relative' }}>
+                            <button onClick={() => setSelected(ev)}
+                              style={{ width: '100%', textAlign: 'left', padding: '2px 6px', borderRadius: 5, fontSize: 11, fontWeight: 500, border: 'none', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: '20px', backgroundColor: `${ev.color}20`, color: ev.color, borderLeft: `2px solid ${ev.color}` }}
+                              onMouseEnter={e => { setHoveredId(ev.id); e.currentTarget.style.opacity = '0.75' }}
+                              onMouseLeave={e => { setHoveredId(null); e.currentTarget.style.opacity = '1' }}
+                            >
+                              {ev.event_datetime && <span style={{ marginRight: 4, fontWeight: 600, opacity: 0.80 }}>{fmtTime(ev.event_datetime)}</span>}
+                              {ev.name}
+                            </button>
+                            {hoveredId === ev.id && (
+                              <div style={{ position: 'absolute', bottom: 'calc(100% + 4px)', left: 0, zIndex: 200, pointerEvents: 'none', background: 'rgba(8,12,28,0.96)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 7, padding: '4px 9px', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.88)', whiteSpace: 'nowrap', backdropFilter: 'blur(12px)', boxShadow: '0 4px 16px rgba(0,0,0,0.50)' }}>
+                                {ev.attendanceCount} checked in
+                              </div>
+                            )}
+                          </div>
                         ))}
                         {dayEvs.length > 2 && (
                           <button
@@ -361,6 +373,9 @@ export default function CalendarPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {ev.event_datetime && <span style={{ color: ev.color, fontWeight: 600, fontSize: 11, flexShrink: 0 }}>{fmtTime(ev.event_datetime)}</span>}
                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.name}</span>
+                    {ev.attendanceCount > 0 && (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: ev.color, flexShrink: 0, opacity: 0.80 }}>{ev.attendanceCount}</span>
+                    )}
                   </div>
                   {ev.group_name !== 'General' && (
                     <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.36)', marginTop: 2 }}>{ev.group_name}</div>

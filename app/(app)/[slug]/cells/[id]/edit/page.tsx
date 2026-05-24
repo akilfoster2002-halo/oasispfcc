@@ -78,6 +78,7 @@ export default function CellDetailPage({ params }: { params: Promise<{ id: strin
   const [location,    setLocation]    = useState('')
   const [saving,      setSaving]      = useState(false)
   const [deleting,    setDeleting]    = useState(false)
+  const [saveError,   setSaveError]   = useState<string | null>(null)
 
   // Leader
   const [leaderQuery, setLeaderQuery] = useState('')
@@ -132,7 +133,8 @@ export default function CellDetailPage({ params }: { params: Promise<{ id: strin
     e.preventDefault()
     if (!churchId || !name.trim()) return
     setSaving(true)
-    await fetch(`/api/cells?id=${cellId}`, {
+    setSaveError(null)
+    const res = await fetch(`/api/cells?id=${cellId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -144,6 +146,11 @@ export default function CellDetailPage({ params }: { params: Promise<{ id: strin
       }),
     })
     setSaving(false)
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      setSaveError(d.error ?? 'Save failed — please try again.')
+      return
+    }
     router.push(`/${slug}/cells/${cellId}`)
   }
 
@@ -261,6 +268,12 @@ export default function CellDetailPage({ params }: { params: Promise<{ id: strin
             </Field>
           </div>
         </div>
+
+        {saveError && (
+          <div style={{ padding: '12px 16px', borderRadius: 12, background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.25)', color: '#fca5a5', fontSize: 13 }}>
+            {saveError}
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button type="submit" disabled={saving || !name.trim()}

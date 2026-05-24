@@ -39,9 +39,16 @@ interface TopMember {
   pct: number
 }
 
+interface CellSeries {
+  recurrence_days: string[]
+  start_time: string | null
+  location: string | null
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+const DOW_MAP: Record<string, number> = { SUN: 0, MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6 }
 
 function fmt24(t: string | null): string {
   if (!t) return ''
@@ -117,6 +124,7 @@ export default function CellAnalyticsPage({ params }: { params: Promise<{ id: st
   const slug = routeParams?.slug as string
 
   const [cell,       setCell]       = useState<CellInfo | null>(null)
+  const [series,     setSeries]     = useState<CellSeries | null>(null)
   const [events,     setEvents]     = useState<CellEvent[]>([])
   const [topMembers, setTopMembers] = useState<TopMember[]>([])
   const [loading,    setLoading]    = useState(true)
@@ -153,7 +161,16 @@ export default function CellAnalyticsPage({ params }: { params: Promise<{ id: st
       }
       setCell(cellInfo)
 
-      // 3. All events for this cell with attendance count
+      // 3. Event series for schedule info
+      const { data: seriesData } = await sb
+        .from('event_series')
+        .select('recurrence_days, start_time, location')
+        .eq('cell_id', cellId)
+        .limit(1)
+        .single()
+      if (seriesData) setSeries(seriesData as CellSeries)
+
+      // 4. All events for this cell with attendance count
       const { data: evData } = await sb
         .from('events')
         .select('id, event_date, attendance(count)')
@@ -206,16 +223,21 @@ export default function CellAnalyticsPage({ params }: { params: Promise<{ id: st
 
   // ── Derived stats ────────────────────────────────────────────────────────────
 
+  const today = new Date().toISOString().split('T')[0]
+
+  const pastEvents   = useMemo(() => events.filter(e => e.event_date <= today), [events, today])
+  const futureEvents = useMemo(() => events.filter(e => e.event_date > today).slice(0, 8), [events, today])
+
   const stats = useMemo(() => {
-    if (!events.length) return { sessions: 0, totalAtt: 0, uniqueMembers: 0, avg: 0, trend: 0 }
-    const sessions   = events.length
-    const totalAtt   = events.reduce((s, e) => s + e.attendance_count, 0)
+    if (!pastEvents.length) return { sessions: 0, totalAtt: 0, uniqueMembers: 0, avg: 0, trend: 0 }
+    const sessions   = pastEvents.length
+    const totalAtt   = pastEvents.reduce((s, e) => s + e.attendance_count, 0)
     const avg        = sessions > 0 ? Math.round((totalAtt / sessions) * 10) / 10 : 0
     const uniqueMembers = topMembers.length
 
     // Trend: compare last 4 sessions avg vs prior 4
-    const recent = events.slice(-4)
-    const prior  = events.slice(-8, -4)
+    const recent = pastEvents.slice(-4)
+    const prior  = pastEvents.slice(-8, -4)
     if (prior.length > 0) {
       const rAvg = recent.reduce((s, e) => s + e.attendance_count, 0) / recent.length
       const pAvg = prior.reduce((s, e) => s + e.attendance_count, 0) / prior.length
@@ -223,13 +245,24 @@ export default function CellAnalyticsPage({ params }: { params: Promise<{ id: st
       return { sessions, totalAtt, uniqueMembers, avg, trend }
     }
     return { sessions, totalAtt, uniqueMembers, avg, trend: 0 }
-  }, [events, topMembers])
+  }, [pastEvents, topMembers])
 
   const chartData = useMemo(() =>
-    events.map(e => ({ date: e.event_date, count: e.attendance_count, label: fmtDate(e.event_date) })),
-  [events])
+    pastEvents.map(e => ({ date: e.event_date, count: e.attendance_count, label: fmtDate(e.event_date) })),
+  [pastEvents])
 
-  const recentEvents = useMemo(() => [...events].reverse().slice(0, 8), [events])
+  const recentEvents = useMemo(() => [...pastEvents].reverse().slice(0, 8), [pastEvents])
+
+  // ── Schedule derived from cell or series ─────────────────────────────────────
+
+  const scheduleDayNum: number | null = useMemo(() => {
+    if (cell?.meeting_day !== null && cell?.meeting_day !== undefined) return cell.meeting_day
+    if (series?.recurrence_days?.length) return DOW_MAP[series.recurrence_days[0]] ?? null
+    return null
+  }, [cell, series])
+
+  const scheduleTime: string | null = cell?.meeting_time ?? series?.start_time ?? null
+  const scheduleLocation: string | null = cell?.location ?? series?.location ?? null
 
   // ── Loading skeleton ─────────────────────────────────────────────────────────
 
@@ -294,10 +327,10 @@ export default function CellAnalyticsPage({ params }: { params: Promise<{ id: st
           )}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, fontSize: 13, color: 'rgba(255,255,255,0.38)' }}>
-          {cell.meeting_day !== null && (
-            <span>Every {DAY_NAMES[cell.meeting_day]}{cell.meeting_time ? ` · ${fmt24(cell.meeting_time)}` : ''}</span>
+          {scheduleDayNum !== null && (
+            <span>Every {DAY_NAMES[scheduleDayNum]}{scheduleTime ? ` · ${fmt24(scheduleTime)}` : ''}</span>
           )}
-          {cell.location && <span>{cell.location}</span>}
+          {scheduleLocation && <span>{scheduleLocation}</span>}
           {cell.leader_name && <span>Led by {cell.leader_name}</span>}
         </div>
       </div>
@@ -412,6 +445,42 @@ export default function CellAnalyticsPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
       </div>
+
+      {/* ── Upcoming Sessions ── */}
+      {futureEvents.length > 0 && (
+        <div style={{ ...cardStyle, padding: 0, overflow: 'hidden', marginTop: 16 }}>
+          <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.80)', margin: 0 }}>Upcoming Sessions</p>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.30)', margin: '2px 0 0' }}>Scheduled — attendance not yet taken</p>
+          </div>
+          <div style={{ padding: '10px 0' }}>
+            {futureEvents.map((ev, i) => (
+              <Link key={ev.id} href={`/${slug}/events/${ev.id}`}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', textDecoration: 'none', borderBottom: i < futureEvents.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none', transition: 'background 0.12s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+              >
+                <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: `${cellColor}12`, border: `1px solid ${cellColor}25`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: `${cellColor}aa` }}>
+                    {new Date(ev.event_date + 'T12:00:00').getDate()}
+                  </span>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.65)', margin: 0 }}>
+                    {new Date(ev.event_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  </p>
+                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', margin: '1px 0 0' }}>
+                    No attendance recorded yet
+                  </p>
+                </div>
+                <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, background: `${cellColor}15`, color: `${cellColor}99`, fontWeight: 500, flexShrink: 0 }}>
+                  Upcoming
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
     </div>
   )

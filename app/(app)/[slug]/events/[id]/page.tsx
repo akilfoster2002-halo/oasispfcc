@@ -530,38 +530,42 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               </div>
               <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                 {attendees.map((a, i) => (
-                  <li
-                    key={a.attendance_id}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      padding: '12px 20px',
-                      borderBottom: i < attendees.length - 1 ? '1px solid rgba(255,255,255,0.042)' : 'none',
-                    }}
-                  >
-                    <div style={{
-                      width: 32, height: 32, borderRadius: '50%',
-                      background: 'linear-gradient(135deg, rgba(201,168,76,0.30) 0%, rgba(201,168,76,0.20) 100%)',
-                      border: '1px solid rgba(201,168,76,0.25)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0, fontSize: 12, fontWeight: 600, color: '#C9A84C',
-                    }}>
-                      {(a.first_name[0] ?? '?')}{(a.last_name[0] ?? '')}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.88)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {a.first_name} {a.last_name}
-                      </p>
-                      {a.phone && (
-                        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {a.phone}
+                  <li key={a.attendance_id} style={{ borderBottom: i < attendees.length - 1 ? '1px solid rgba(255,255,255,0.042)' : 'none' }}>
+                    <Link
+                      href={`/${slug}/people/${a.person_id}`}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '12px 20px', textDecoration: 'none',
+                        transition: 'background 0.12s ease',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                    >
+                      <div style={{
+                        width: 32, height: 32, borderRadius: '50%',
+                        background: 'linear-gradient(135deg, rgba(201,168,76,0.30) 0%, rgba(201,168,76,0.20) 100%)',
+                        border: '1px solid rgba(201,168,76,0.25)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0, fontSize: 12, fontWeight: 600, color: '#C9A84C',
+                      }}>
+                        {(a.first_name[0] ?? '?')}{(a.last_name[0] ?? '')}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.88)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {a.first_name} {a.last_name}
                         </p>
+                        {a.phone && (
+                          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {a.phone}
+                          </p>
+                        )}
+                      </div>
+                      {a.check_in_time && (
+                        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', flexShrink: 0 }}>
+                          {new Date(a.check_in_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                        </span>
                       )}
-                    </div>
-                    {a.check_in_time && (
-                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.28)', flexShrink: 0 }}>
-                        {new Date(a.check_in_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                      </span>
-                    )}
+                    </Link>
                   </li>
                 ))}
               </ul>

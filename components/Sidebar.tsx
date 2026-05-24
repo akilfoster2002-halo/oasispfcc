@@ -5,7 +5,7 @@ import { usePathname, useRouter, useParams } from 'next/navigation'
 import {
   LayoutDashboard, Users, Layers, BarChart3,
   Heart, MessageSquare, LogOut, Settings,
-  CheckSquare, UserPlus, CalendarDays, FileText, Home,
+  CheckSquare, UserPlus, CalendarDays, FileText, Home, Radio,
 } from 'lucide-react'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
 import { useUserProfile } from '@/lib/use-user-profile'
@@ -18,6 +18,7 @@ const CORE_NAV = [
   { path: 'groups',    label: 'Groups',    icon: Layers },
   { path: 'cells',     label: 'Cells',     icon: Home },
   { path: 'events',    label: 'Events',    icon: CalendarDays },
+  { path: 'services',  label: 'Services',  icon: Radio },
 ]
 
 const TOOLS_NAV = [

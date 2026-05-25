@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Copy, Check, RefreshCw, Clock } from 'lucide-react'
+import { Copy, Check, RefreshCw, Clock, Lock, Zap } from 'lucide-react'
+import Link from 'next/link'
 import { Card, IconButton, Button, Skeleton, Message } from '@/components/ui'
 
 interface KeyData {
@@ -12,6 +13,7 @@ interface KeyData {
 export function AccessKeyCard({ slug }: { slug: string }) {
   const [keyData, setKeyData] = useState<KeyData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [locked, setLocked] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
   const [copied, setCopied] = useState(false)
   const [justRotated, setJustRotated] = useState(false)
@@ -22,6 +24,7 @@ export function AccessKeyCard({ slug }: { slug: string }) {
       const res = await fetch(`/api/churches/${slug}/access-key`, { signal })
       const d = await res.json()
       if (signal?.aborted) return
+      if (d.error === 'upgrade_required') { setLocked(true); return }
       if (d.error) { setError(d.error); return }
       setKeyData({ key: d.key, minutesLeft: d.minutesLeft })
       setError('')
@@ -79,6 +82,26 @@ export function AccessKeyCard({ slug }: { slug: string }) {
   }
 
   const urgency = keyData && keyData.minutesLeft <= 10
+
+  if (!loading && locked) {
+    return (
+      <Card padding={28}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.18)' }}>
+            <Lock style={{ width: 18, height: 18, color: '#C9A84C' }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.82)', margin: '0 0 3px' }}>Team invites are a premium feature</p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.36)', margin: 0, lineHeight: 1.5 }}>Upgrade to generate an access key and invite your team.</p>
+          </div>
+          <Link href={`/${slug}/pricing`} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 16px', borderRadius: 10, background: 'linear-gradient(135deg,#A88A35 0%,#C9A84C 100%)', fontSize: 12, fontWeight: 600, color: '#fff', textDecoration: 'none', flexShrink: 0 }}>
+            <Zap style={{ width: 12, height: 12 }} />
+            Upgrade
+          </Link>
+        </div>
+      </Card>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

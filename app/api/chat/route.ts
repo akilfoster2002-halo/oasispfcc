@@ -38,7 +38,7 @@ async function checkAndIncrementUsage(churchId: string): Promise<
   if (isPaid) return { allowed: true, isPaid: true }
 
   const today = new Date().toISOString().slice(0, 10)
-  const limit = church.agent_daily_limit ?? 5
+  const limit = church.agent_daily_limit ?? 10
 
   const { data: usage } = await admin
     .from('agent_daily_usage')

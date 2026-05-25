@@ -44,6 +44,17 @@ async function rotateKey(churchId: string, priorExpiresAt: string | null) {
  *  Rotation is still done here (so the UI doesn't need a separate call on first load),
  *  but it's done atomically via conditional update so simultaneous GETs converge.
  */
+const PAID_PLANS = new Set(['starter', 'growth', 'intelligence'])
+
+async function checkPlan(churchId: string): Promise<boolean> {
+  const { data } = await getSupabaseServer()
+    .from('churches')
+    .select('plan, plan_status')
+    .eq('id', churchId)
+    .single()
+  return !!data && PAID_PLANS.has(data.plan) && data.plan_status === 'active'
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
@@ -55,6 +66,10 @@ export async function GET(
       { error: guard.error === 'not_found' ? 'Church not found' : 'Forbidden' },
       { status: guard.error === 'not_found' ? 404 : 403 },
     )
+  }
+
+  if (!await checkPlan(guard.churchId)) {
+    return Response.json({ error: 'upgrade_required' }, { status: 403 })
   }
 
   const admin = getSupabaseServer()
@@ -100,6 +115,10 @@ export async function POST(
       { error: guard.error === 'not_found' ? 'Church not found' : 'Forbidden' },
       { status: guard.error === 'not_found' ? 404 : 403 },
     )
+  }
+
+  if (!await checkPlan(guard.churchId)) {
+    return Response.json({ error: 'upgrade_required' }, { status: 403 })
   }
 
   const { key, expiresAt } = await rotateKey(guard.churchId, null)

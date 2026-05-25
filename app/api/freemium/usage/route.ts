@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 const PAID_PLANS = new Set(['starter', 'growth', 'intelligence'])
 const FREE_PEOPLE_LIMIT = 100
-const FREE_MESSAGES_LIMIT = 5
+const FREE_MESSAGES_LIMIT = 10
 
 export async function GET(req: Request) {
   try {

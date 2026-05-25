@@ -10,7 +10,7 @@ function adminClient() {
   )
 }
 
-async function getRequestingMember(churchId: string) {
+async function getApprovedMember(churchId: string) {
   const cookieStore = await cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,17 +29,40 @@ async function getRequestingMember(churchId: string) {
     .eq('status', 'approved')
     .single()
 
-  if (!m || !['admin', 'pastor', 'leader'].includes(m.role)) return null
-  return { userId: user.id }
+  if (!m) return null
+  return { userId: user.id, memberRole: m.role }
 }
 
-/** GET /api/cells?churchId= */
+async function getEditor(churchId: string) {
+  const member = await getApprovedMember(churchId)
+  if (!member) return null
+
+  const admin = adminClient()
+  const { data: profile } = await admin
+    .from('user_profiles')
+    .select('role')
+    .eq('id', member.userId)
+    .single()
+
+  const isMaster = profile?.role === 'master'
+  if (!isMaster && !['admin', 'pastor', 'leader'].includes(member.memberRole)) return null
+  return member
+}
+
+/** GET /api/cells?churchId= OR ?slug= */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
-  const churchId = searchParams.get('churchId')
-  if (!churchId) return Response.json({ error: 'Missing churchId' }, { status: 400 })
+  let churchId = searchParams.get('churchId')
 
-  const member = await getRequestingMember(churchId)
+  if (!churchId) {
+    const slug = searchParams.get('slug')
+    if (!slug) return Response.json({ error: 'Missing churchId or slug' }, { status: 400 })
+    const { data: ch } = await adminClient().from('churches').select('id').eq('slug', slug).single()
+    if (!ch) return Response.json({ error: 'Church not found' }, { status: 404 })
+    churchId = ch.id as string
+  }
+
+  const member = await getApprovedMember(churchId as string)
   if (!member) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = adminClient()
@@ -72,7 +95,7 @@ export async function POST(req: Request) {
   const { churchId, name, groupId, leaderId, leaderName, meetingDay, meetingTime, location, color } = body
   if (!churchId || !name) return Response.json({ error: 'Missing required fields' }, { status: 400 })
 
-  const member = await getRequestingMember(churchId)
+  const member = await getEditor(churchId)
   if (!member) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = adminClient()
@@ -107,7 +130,7 @@ export async function PATCH(req: Request) {
   const { churchId, ...updates } = body
   if (!churchId) return Response.json({ error: 'Missing churchId' }, { status: 400 })
 
-  const member = await getRequestingMember(churchId)
+  const member = await getEditor(churchId)
   if (!member) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const allowed: Record<string, unknown> = {}
@@ -141,7 +164,7 @@ export async function DELETE(req: Request) {
   const churchId = searchParams.get('churchId')
   if (!id || !churchId) return Response.json({ error: 'Missing params' }, { status: 400 })
 
-  const member = await getRequestingMember(churchId)
+  const member = await getEditor(churchId)
   if (!member) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = adminClient()

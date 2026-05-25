@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
 import { Users, Plus, ChevronRight, ChevronDown, MapPin, Clock, Layers } from 'lucide-react'
 
 interface Cell {
@@ -31,37 +30,7 @@ function fmt24(t: string | null): string {
   return m === '00' ? `${h12}${ap}` : `${h12}:${m}${ap}`
 }
 
-export default function CellsPage() {
-  const params = useParams()
-  const slug = params?.slug as string
-
-  const [cells,   setCells]   = useState<Cell[]>([])
-  const [loading, setLoading] = useState(true)
-  const [expanded, setExpanded] = useState<Set<string>>(new Set())
-
-  useEffect(() => {
-    if (!slug) return
-    fetch(`/api/cells?slug=${slug}`)
-      .then(r => r.json())
-      .then(d => {
-        const loaded: Cell[] = d.cells ?? []
-        setCells(loaded)
-        const keys = [...new Set(loaded.map(c => c.group_name ?? '__none__'))]
-        setExpanded(new Set(keys))
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [slug])
-
-  function toggle(key: string) {
-    setExpanded(prev => {
-      const next = new Set(prev)
-      next.has(key) ? next.delete(key) : next.add(key)
-      return next
-    })
-  }
-
-  // Build group map
+export default function CellsClient({ cells, slug }: { cells: Cell[]; slug: string; churchId: string }) {
   const groupMap = new Map<string, Cell[]>()
   for (const cell of cells) {
     const key = cell.group_name ?? '__none__'
@@ -73,6 +42,16 @@ export default function CellsPage() {
     if (b === '__none__') return -1
     return a.localeCompare(b)
   })
+
+  const [expanded, setExpanded] = useState<Set<string>>(new Set(sortedGroups))
+
+  function toggle(key: string) {
+    setExpanded(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '32px 24px' }}>
@@ -91,7 +70,7 @@ export default function CellsPage() {
           <div>
             <h1 style={{ fontSize: 18, fontWeight: 600, color: 'rgba(255,255,255,0.92)', letterSpacing: '-0.02em', margin: 0 }}>Cells</h1>
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.36)', margin: '2px 0 0' }}>
-              {loading ? '—' : `${sortedGroups.length} group${sortedGroups.length !== 1 ? 's' : ''} · ${cells.length} cells`}
+              {sortedGroups.length} group{sortedGroups.length !== 1 ? 's' : ''} · {cells.length} cells
             </p>
           </div>
         </div>
@@ -111,17 +90,8 @@ export default function CellsPage() {
         </Link>
       </div>
 
-      {/* Loading */}
-      {loading && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {[1, 2].map(i => (
-            <div key={i} style={{ height: 56, borderRadius: 16, background: 'rgba(255,255,255,0.04)' }} className="shimmer" />
-          ))}
-        </div>
-      )}
-
       {/* Empty */}
-      {!loading && cells.length === 0 && (
+      {cells.length === 0 && (
         <div style={{ borderRadius: 20, padding: '80px 0', textAlign: 'center', background: 'rgba(255,255,255,0.025)', border: '1px dashed rgba(255,255,255,0.08)' }}>
           <Users style={{ width: 40, height: 40, color: 'rgba(255,255,255,0.12)', margin: '0 auto 12px' }} />
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.38)', fontWeight: 500, margin: 0 }}>No cells yet</p>
@@ -132,7 +102,7 @@ export default function CellsPage() {
       )}
 
       {/* Groups */}
-      {!loading && cells.length > 0 && (
+      {cells.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {sortedGroups.map(groupKey => {
             const groupCells = groupMap.get(groupKey)!
@@ -146,7 +116,6 @@ export default function CellsPage() {
                 background: 'linear-gradient(145deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%)',
                 overflow: 'hidden',
               }}>
-                {/* Group header — clickable */}
                 <button
                   onClick={() => toggle(groupKey)}
                   style={{
@@ -177,7 +146,6 @@ export default function CellsPage() {
                   }} />
                 </button>
 
-                {/* Cell list */}
                 {isOpen && (
                   <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '8px 12px 12px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -188,10 +156,8 @@ export default function CellsPage() {
                           style={{
                             display: 'flex', alignItems: 'center', gap: 12,
                             padding: '10px 12px', borderRadius: 12,
-                            background: 'transparent',
-                            border: '1px solid transparent',
-                            textDecoration: 'none',
-                            transition: 'background 150ms ease, border-color 150ms ease',
+                            background: 'transparent', border: '1px solid transparent',
+                            textDecoration: 'none', transition: 'background 150ms ease, border-color 150ms ease',
                           }}
                           onMouseEnter={e => {
                             const el = e.currentTarget as HTMLElement
@@ -204,12 +170,10 @@ export default function CellsPage() {
                             el.style.borderColor = 'transparent'
                           }}
                         >
-                          {/* Color dot */}
                           <div style={{
                             width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
                             background: cell.color, boxShadow: `0 0 6px ${cell.color}66`,
                           }} />
-
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.85)', margin: 0, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {cell.name}
@@ -232,7 +196,6 @@ export default function CellsPage() {
                               )}
                             </div>
                           </div>
-
                           <ChevronRight style={{ width: 14, height: 14, color: 'rgba(255,255,255,0.18)', flexShrink: 0 }} />
                         </Link>
                       ))}

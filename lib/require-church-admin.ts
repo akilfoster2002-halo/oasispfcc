@@ -26,16 +26,27 @@ export async function requireChurchAdmin(churchId: string): Promise<ChurchAdmin 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: m } = await getSupabaseServer()
-    .from('church_memberships')
-    .select('id, role')
-    .eq('user_id', user.id)
-    .eq('church_id', churchId)
-    .eq('status', 'approved')
-    .single()
+  const admin = getSupabaseServer()
+  const [{ data: m }, { data: profile }] = await Promise.all([
+    admin
+      .from('church_memberships')
+      .select('id, role')
+      .eq('user_id', user.id)
+      .eq('church_id', churchId)
+      .eq('status', 'approved')
+      .single(),
+    admin
+      .from('user_profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single(),
+  ])
 
-  if (!m || !(ADMIN_ROLES as readonly string[]).includes(m.role)) return null
-  return { userId: user.id, role: m.role as Role, membershipId: m.id }
+  if (!m) return null
+  // user_profiles.role === 'master' is a global admin flag — always allow
+  const effectiveRole = profile?.role === 'master' ? 'master' : m.role
+  if (!(ADMIN_ROLES as readonly string[]).includes(effectiveRole)) return null
+  return { userId: user.id, role: effectiveRole as Role, membershipId: m.id }
 }
 
 /** Convenience: also resolve the church id from slug. Returns null on either failure. */

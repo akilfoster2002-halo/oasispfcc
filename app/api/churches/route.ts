@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     .insert({
       user_id: user.id,
       church_id: church.id,
-      role: 'admin',
+      role: 'master',
       status: 'approved',
       joined_via: 'created',
     })

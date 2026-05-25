@@ -25,11 +25,12 @@ export default function PremiumGate({ title, subtitle, features, children }: Pre
   const [isPaid, setIsPaid] = useState<boolean | null>(null)
 
   useEffect(() => {
-    fetch('/api/freemium/usage')
+    const url = slug ? `/api/freemium/usage?slug=${slug}` : '/api/freemium/usage'
+    fetch(url)
       .then(r => r.ok ? r.json() : null)
       .then(d => setIsPaid(d?.isPaid ?? false))
       .catch(() => setIsPaid(false))
-  }, [])
+  }, [slug])
 
   if (isPaid === null) return null
   if (isPaid) return <>{children}</>

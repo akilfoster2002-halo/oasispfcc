@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter, useParams } from 'next/navigation'
 import {
@@ -13,7 +14,7 @@ import { useUserProfile } from '@/lib/use-user-profile'
 // ── Navigation manifest ────────────────────────────────────────────────────────
 
 const CORE_NAV = [
-  { path: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { path: 'dashboard', label: 'Church Agent', icon: LayoutDashboard },
   { path: 'people',    label: 'People',    icon: Users },
   { path: 'groups',    label: 'Groups',    icon: Layers },
   { path: 'cells',     label: 'Cells',     icon: Home },
@@ -35,45 +36,18 @@ const ADMIN_NAV = [
 ]
 
 // ── Brand mark ─────────────────────────────────────────────────────────────────
-// Iris / lens — vision, clarity, oversight
 
 function AquilaMark() {
   return (
-    <div style={{ position: 'relative', width: 30, height: 30, flexShrink: 0 }}>
-      <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
-        <defs>
-          <radialGradient id="aq-bg" cx="38%" cy="28%" r="78%">
-            <stop offset="0%" stopColor="#1B2E5A"/>
-            <stop offset="100%" stopColor="#0C1835"/>
-          </radialGradient>
-          <radialGradient id="aq-iris" cx="38%" cy="36%" r="68%">
-            <stop offset="0%" stopColor="#C9A84C" stopOpacity="0.95"/>
-            <stop offset="60%" stopColor="#A88A35" stopOpacity="0.80"/>
-            <stop offset="100%" stopColor="#7B6220" stopOpacity="0.65"/>
-          </radialGradient>
-          <radialGradient id="aq-ring" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgba(201,168,76,0.00)"/>
-            <stop offset="100%" stopColor="rgba(201,168,76,0.30)"/>
-          </radialGradient>
-          <filter id="aq-glow" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="1.8" result="blur"/>
-            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-          </filter>
-        </defs>
-        {/* Base — deep aegean night */}
-        <rect width="32" height="32" rx="9" fill="url(#aq-bg)"/>
-        {/* Frosted top-edge — light on stone */}
-        <rect x="0" y="0" width="32" height="13" rx="9" fill="rgba(255,252,245,0.07)"/>
-        <rect x="0" y="6" width="32" height="7" fill="rgba(0,0,0,0)"/>
-        {/* Outer iris ring — gold breath */}
-        <circle cx="16" cy="16" r="7.5" stroke="rgba(201,168,76,0.25)" strokeWidth="1"/>
-        {/* Iris core — gold */}
-        <circle cx="16" cy="16" r="4.2" fill="url(#aq-iris)" filter="url(#aq-glow)"/>
-        {/* Specular — light catching the surface */}
-        <circle cx="13.8" cy="13.5" r="1.1" fill="rgba(255,248,220,0.65)"/>
-        {/* Subtle bottom warmth */}
-        <ellipse cx="16" cy="28" rx="10" ry="3" fill="rgba(201,168,76,0.06)"/>
-      </svg>
+    <div style={{ position: 'relative', width: 32, height: 32, flexShrink: 0 }}>
+      <Image
+        src="/Aquila Logo.png"
+        alt="Aquila"
+        width={32}
+        height={32}
+        style={{ objectFit: 'contain', width: 32, height: 32 }}
+        priority
+      />
     </div>
   )
 }

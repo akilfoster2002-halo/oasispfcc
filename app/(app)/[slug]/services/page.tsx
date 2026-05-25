@@ -146,12 +146,14 @@ export default function ServicesPage() {
       const { data: church } = await sb.from('churches').select('id').eq('slug', slug).single()
       if (!church) { setLoading(false); return }
 
+      const today = new Date().toISOString().split('T')[0]
       const { data } = await sb
         .from('events')
         .select('id, event_date, service_type, attendance(count)')
         .eq('church_id', church.id)
         .in('service_type', ['sunday_inperson', 'sunday_online', 'midweek'])
         .is('cell_id', null)
+        .lte('event_date', today)
         .order('event_date', { ascending: true })
 
       const evs: ServiceEvent[] = (data ?? []).map((e: Record<string, unknown>) => {

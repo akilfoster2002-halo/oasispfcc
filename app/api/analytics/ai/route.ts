@@ -43,7 +43,7 @@ SQL RULES:
   2. Always end with ORDER BY and LIMIT 50
   3. Use ILIKE for name/type searches
   4. Filter: AND att.attendance_status = 'present'
-  5. Date range: default to last 90 days unless user specifies
+  5. Date range: default to last 90 days unless user specifies. ALWAYS cap event_date <= CURRENT_DATE (never include future events).
   6. Aggregate by event NAME for cell breakdowns (not by individual event row)
   7. Never expose person IDs or breeze_id in results
   8. For full name: use p.first_name || ' ' || p.last_name

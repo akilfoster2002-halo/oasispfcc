@@ -170,12 +170,14 @@ export default function CellAnalyticsPage({ params }: { params: Promise<{ id: st
         .single()
       if (seriesData) setSeries(seriesData as CellSeries)
 
-      // 4. All events for this cell with attendance count
+      // 4. Past events for this cell with attendance count (no future events)
+      const today = new Date().toISOString().split('T')[0]
       const { data: evData } = await sb
         .from('events')
         .select('id, event_date, attendance(count)')
         .eq('cell_id', cellId)
         .eq('church_id', church.id)
+        .lte('event_date', today)
         .order('event_date', { ascending: true })
 
       const evList: CellEvent[] = (evData ?? []).map((e: Record<string, unknown>) => {

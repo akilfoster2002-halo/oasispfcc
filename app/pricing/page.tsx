@@ -56,7 +56,7 @@ const PLANS = [
     tagline: 'Understand your church',
     description: 'Growing churches · Multi-ministry teams',
     aiResponses: '~100 responses / mo',
-    popular: true,
+    popular: false,
     features: [
       'Everything in Starter',
       'Advanced ministry dashboards',
@@ -75,7 +75,7 @@ const PLANS = [
     tagline: 'Lead with clarity',
     description: 'Established churches · Senior leadership',
     aiResponses: 'Unlimited responses',
-    popular: false,
+    popular: true,
     features: [
       'Everything in Growth',
       'Predictive engagement',
@@ -92,22 +92,27 @@ const PLANS = [
 export default function PricingPage() {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleSelect(planId: string) {
     setLoading(planId)
+    setError(null)
     try {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: planId }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
+      if (res.status === 401) { router.push('/login?next=/pricing'); return }
       if (!res.ok) {
-        if (res.status === 401) { router.push('/login?next=/pricing'); return }
-        alert(data.error ?? 'Something went wrong')
+        setError(data.error ?? `Error ${res.status} — please try again`)
         return
       }
+      if (!data.url) { setError('No checkout URL returned — contact support'); return }
       window.location.href = data.url
+    } catch {
+      setError('Network error — check your connection and try again')
     } finally {
       setLoading(null)
     }
@@ -166,6 +171,11 @@ export default function PricingPage() {
 
       {/* Plans */}
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px 40px' }}>
+        {error && (
+          <div style={{ marginBottom: 24, padding: '12px 18px', borderRadius: 12, background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.25)', fontSize: 13, color: '#fca5a5', textAlign: 'center' }}>
+            {error}
+          </div>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, alignItems: 'start' }}>
           {PLANS.map(plan => (
             <div

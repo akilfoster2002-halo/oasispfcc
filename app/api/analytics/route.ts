@@ -143,6 +143,7 @@ export async function GET(req: NextRequest) {
         LEFT JOIN events e ON e.group_id = g.id
           AND e.event_date BETWEEN '${from}' AND '${to}'
         LEFT JOIN attendance att ON att.event_id = e.id AND att.attendance_status = 'present'
+        WHERE g.church_id = '${churchId}'
         GROUP BY g.id, g.name
         ORDER BY total_attendance DESC NULLS LAST
       `),

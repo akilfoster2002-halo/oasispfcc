@@ -16,7 +16,7 @@ import { useUserProfile } from '@/lib/use-user-profile'
 // ── Navigation manifest ────────────────────────────────────────────────────────
 
 const CORE_NAV = [
-  { path: 'dashboard', label: 'Church Agent', icon: LayoutDashboard },
+  { path: 'dashboard', label: 'Aquila Agent', icon: LayoutDashboard },
   { path: 'people',    label: 'People',    icon: Users },
   { path: 'groups',    label: 'Groups',    icon: Layers },
   { path: 'cells',     label: 'Cells',     icon: Home },

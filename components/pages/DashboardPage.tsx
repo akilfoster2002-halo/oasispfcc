@@ -436,7 +436,7 @@ export default function ChatPage() {
           </div>
           <div className="flex-1 min-w-0">
             <h1 className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.92)' }}>
-              Oasis Assistant
+              Aquila Agent
             </h1>
             <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>
               {activeSessionId

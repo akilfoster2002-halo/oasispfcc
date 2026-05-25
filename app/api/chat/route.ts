@@ -517,7 +517,7 @@ async function executeTool(
   }
 }
 
-const BASE_SYSTEM = `You are Oasis Assistant — a knowledgeable, warm AI helper embedded inside Aquila, a church management platform used by Oasis PFCC. You help church administrators, pastors, and leaders understand their congregation, plan events, and make data-driven ministry decisions.
+const BASE_SYSTEM = `You are Aquila Agent — a knowledgeable, warm AI helper embedded inside Aquila, a church management platform. You help church administrators, pastors, and leaders understand their congregation, plan events, and make data-driven ministry decisions.
 
 Church data structure:
 - Groups (e.g. MEGA, YPZ) are ministry groupings that contain one or more cell groups.

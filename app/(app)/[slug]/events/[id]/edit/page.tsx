@@ -7,7 +7,7 @@ import { getSupabaseBrowser } from '@/lib/supabase-browser'
 import { generateOccurrences, describeRecurrence, type RecurrenceRule } from '@/lib/recurrence'
 import {
   ArrowLeft, Calendar, Clock, MapPin, Tag, RefreshCw,
-  ChevronDown, ChevronUp, Info,
+  ChevronDown, ChevronUp, Info, Trash2,
 } from 'lucide-react'
 import TimePicker, { addMinutes, timeBefore } from '@/components/TimePicker'
 
@@ -141,6 +141,10 @@ export default function EditEventPage({
   const [endTime, setEndTime]         = useState('')
 
   const [recurrence, setRecurrence]   = useState<RecurrenceRule>(DEFAULT_RECURRENCE)
+  const [seriesId, setSeriesId]       = useState<string | null>(null)
+  const [currentEventDate, setCurrentEventDate] = useState('')
+  const [showScopeModal, setShowScopeModal] = useState<'edit' | 'delete' | null>(null)
+  const [deleting, setDeleting]       = useState(false)
 
   const setR = (patch: Partial<RecurrenceRule>) =>
     setRecurrence(r => ({ ...r, ...patch }))
@@ -188,6 +192,8 @@ export default function EditEventPage({
         setRecurrence({ ...DEFAULT_RECURRENCE, ...ev.recurrence_rule })
         if (ev.recurrence_rule.type !== 'none') setShowRecurrence(true)
       }
+      setSeriesId(ev.series_id ?? null)
+      setCurrentEventDate(ev.event_date ?? '')
 
       setLoadingEvent(false)
     }
@@ -210,11 +216,18 @@ export default function EditEventPage({
     return `Will create ${n} event${n === 1 ? '' : 's'} · last on ${lastFmt}`
   }, [occurrences, recurrence.type])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim() || !date) return
+    // If event belongs to a series, ask scope before saving
+    if (seriesId) { setShowScopeModal('edit'); return }
+    executeSave('this')
+  }
+
+  const executeSave = async (scope: string) => {
     setSaving(true)
     setError(null)
+    setShowScopeModal(null)
 
     const res = await fetch(`/api/events/${eventId}`, {
       method: 'PATCH',
@@ -231,6 +244,7 @@ export default function EditEventPage({
         start_time: allDay ? null : startTime || null,
         end_time: allDay ? null : endTime || null,
         recurrence: recurrence.type !== 'none' ? recurrence : null,
+        scope,
       }),
     })
 
@@ -240,8 +254,19 @@ export default function EditEventPage({
       setSaving(false)
       return
     }
-
     router.push(`/${slug}/events/${eventId}`)
+  }
+
+  const handleDeleteClick = () => {
+    if (seriesId) { setShowScopeModal('delete'); return }
+    executeDelete('this')
+  }
+
+  const executeDelete = async (scope: string) => {
+    setDeleting(true)
+    setShowScopeModal(null)
+    await fetch(`/api/events/${eventId}?scope=${scope}`, { method: 'DELETE' })
+    router.push(`/${slug}/events`)
   }
 
   const isRecurring = recurrence.type !== 'none'
@@ -738,9 +763,109 @@ export default function EditEventPage({
             >
               Cancel
             </Link>
+            <button
+              type="button"
+              onClick={handleDeleteClick}
+              disabled={deleting}
+              title="Delete event"
+              style={{
+                padding: '12px 16px', borderRadius: 14, fontSize: 14, cursor: 'pointer',
+                background: 'rgba(248,113,113,0.10)', color: '#f87171',
+                border: '1px solid rgba(248,113,113,0.20)', transition: 'background 0.12s ease',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.20)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.10)')}
+            >
+              <Trash2 style={{ width: 15, height: 15 }} />
+            </button>
           </div>
         </form>
       </div>
+
+      {/* ── Scope modal (Apple Calendar-style action sheet) ── */}
+      {showScopeModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            background: 'rgba(0,0,0,0.60)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+            padding: '0 16px 40px',
+          }}
+          onClick={() => setShowScopeModal(null)}
+        >
+          <div
+            style={{
+              width: '100%', maxWidth: 480,
+              background: 'linear-gradient(160deg, rgba(18,22,46,0.99) 0%, rgba(10,12,28,0.99) 100%)',
+              border: '1px solid rgba(255,255,255,0.09)',
+              borderRadius: 24,
+              overflow: 'hidden',
+              boxShadow: '0 -4px 60px rgba(0,0,0,0.70), 0 0 0 1px rgba(255,255,255,0.04) inset',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)', textAlign: 'center' }}>
+              <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
+                {showScopeModal === 'edit' ? 'Edit Recurring Event' : 'Delete Recurring Event'}
+              </p>
+            </div>
+
+            {/* Options */}
+            <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {([
+                { scope: 'this',             title: 'This event',                   desc: 'Only this occurrence will be changed' },
+                { scope: 'this_and_future',  title: 'This and following events',    desc: 'This and all future occurrences in the series' },
+                { scope: 'all',              title: 'All events',                   desc: 'Every occurrence in the series, past and future' },
+              ] as const).map(({ scope, title, desc }) => (
+                <button
+                  key={scope}
+                  onClick={() => showScopeModal === 'edit' ? executeSave(scope) : executeDelete(scope)}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+                    padding: '13px 16px', borderRadius: 14, width: '100%',
+                    background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                    transition: 'background 0.12s ease',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = showScopeModal === 'delete'
+                      ? 'rgba(248,113,113,0.08)' : 'rgba(255,255,255,0.05)'
+                  }}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                >
+                  <span style={{
+                    fontSize: 15, fontWeight: 500,
+                    color: showScopeModal === 'delete' ? '#f87171' : 'rgba(255,255,255,0.88)',
+                  }}>
+                    {title}
+                  </span>
+                  <span style={{ fontSize: 12, marginTop: 3, color: 'rgba(255,255,255,0.32)' }}>
+                    {desc}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Cancel */}
+            <div style={{ padding: '4px 8px 8px' }}>
+              <button
+                onClick={() => setShowScopeModal(null)}
+                style={{
+                  width: '100%', padding: '14px 0', borderRadius: 14,
+                  fontSize: 15, fontWeight: 600,
+                  background: 'rgba(255,255,255,0.06)', border: 'none', cursor: 'pointer',
+                  color: 'rgba(255,255,255,0.65)', transition: 'background 0.12s ease',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.10)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

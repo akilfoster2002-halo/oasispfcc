@@ -1,4 +1,6 @@
 import { getSupabaseServer } from '@/lib/supabase-server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import { NextRequest } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -14,10 +16,37 @@ async function sql(
   return (data as Row[]) ?? []
 }
 
+async function getChurchId(): Promise<string | null> {
+  try {
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll: () => cookieStore.getAll() } },
+    )
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+    const { data } = await supabase
+      .from('church_memberships')
+      .select('church_id')
+      .eq('user_id', user.id)
+      .eq('status', 'approved')
+      .maybeSingle()
+    return data?.church_id ?? null
+  } catch {
+    return null
+  }
+}
+
 // ── Route ─────────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
   try {
+    const churchId = await getChurchId()
+    if (!churchId) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(req.url)
 
     const now = new Date()
@@ -34,9 +63,12 @@ export async function GET(req: NextRequest) {
     }
 
     const safeGroup = group?.replace(/[^a-zA-Z0-9 \-_]/g, '') ?? null
-    const gf      = safeGroup ? `AND g.name ILIKE '%${safeGroup}%'` : ''
-    const wkAndGf = safeGroup ? `AND g.name ILIKE '%${safeGroup}%'` : ''
-    const wkTopGf = safeGroup ? `WHERE g.name ILIKE '%${safeGroup}%'` : ''
+    const cf      = `AND g.church_id = '${churchId}'`
+    const gf      = safeGroup ? `${cf} AND g.name ILIKE '%${safeGroup}%'` : cf
+    const wkAndGf = safeGroup ? `${cf} AND g.name ILIKE '%${safeGroup}%'` : cf
+    const wkTopGf = safeGroup
+      ? `WHERE g.church_id = '${churchId}' AND g.name ILIKE '%${safeGroup}%'`
+      : `WHERE g.church_id = '${churchId}'`
 
     // Week boundaries (Sunday–Saturday) — always report on the last COMPLETED week.
     // On Sunday through Friday, that's the week that ended last Saturday.
@@ -150,8 +182,10 @@ export async function GET(req: NextRequest) {
           SELECT DISTINCT att.person_id
           FROM attendance att
           JOIN events e ON e.id = att.event_id
+          JOIN groups g ON g.id = e.group_id
           WHERE att.attendance_status = 'present'
             AND e.event_date < '${from}'
+            AND g.church_id = '${churchId}'
         )
         SELECT
           COUNT(CASE WHEN p.person_id IS NULL     THEN 1 END) AS new_count,
@@ -309,6 +343,7 @@ export async function GET(req: NextRequest) {
             e.soul_won,
             COALESCE(att.cnt, 0) AS att_cnt
           FROM events e
+          JOIN groups g ON g.id = e.group_id AND g.church_id = '${churchId}'
           LEFT JOIN (
             SELECT event_id, COUNT(*) AS cnt
             FROM attendance WHERE attendance_status = 'present'

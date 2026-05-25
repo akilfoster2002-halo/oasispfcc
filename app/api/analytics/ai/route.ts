@@ -1,7 +1,31 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { getSupabaseServer } from '@/lib/supabase-server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
+
+async function getChurchId(): Promise<string | null> {
+  try {
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll: () => cookieStore.getAll() } },
+    )
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+    const { data } = await supabase
+      .from('church_memberships')
+      .select('church_id')
+      .eq('user_id', user.id)
+      .eq('status', 'approved')
+      .maybeSingle()
+    return data?.church_id ?? null
+  } catch {
+    return null
+  }
+}
 
 function getAnthropic() {
   const key = process.env.ANTHROPIC_API_KEY
@@ -79,6 +103,11 @@ export interface AIAnalyticsResponse {
 
 export async function POST(req: Request) {
   try {
+    const churchId = await getChurchId()
+    if (!churchId) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { prompt } = await req.json() as { prompt: string }
     if (!prompt?.trim()) {
       return Response.json({ error: 'No prompt provided' }, { status: 400 })
@@ -86,10 +115,12 @@ export async function POST(req: Request) {
 
     const anthropic = getAnthropic()
 
+    const scopedSystem = `${SYSTEM}\n\nCRITICAL: ALL queries MUST include this filter on every table that has church_id:\n  AND groups.church_id = '${churchId}'\n  AND people.church_id = '${churchId}'\n  AND events.church_id = '${churchId}'\nNever omit these filters. The church_id is not a variable — always use the literal value above.`
+
     const msg = await anthropic.messages.create({
       model: 'claude-opus-4-7',
       max_tokens: 1500,
-      system: SYSTEM,
+      system: scopedSystem,
       messages: [{ role: 'user', content: prompt.trim() }],
     })
 
@@ -111,6 +142,11 @@ export async function POST(req: Request) {
     const sqlLower = safeSql.toLowerCase()
     if (!sqlLower.startsWith('select') && !sqlLower.startsWith('with')) {
       return Response.json({ error: 'AI generated non-SELECT query' }, { status: 400 })
+    }
+
+    // Safety: reject if the query doesn't reference this church's ID
+    if (!safeSql.includes(churchId)) {
+      return Response.json({ error: 'Query is missing church scope — rejected for safety' }, { status: 400 })
     }
 
     const supabase = getSupabaseServer()

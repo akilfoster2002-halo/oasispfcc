@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     .from('church_memberships')
     .select('church_id, church:churches(id, name, stripe_customer_id, slug)')
     .eq('user_id', user.id)
-    .in('role', ['admin', 'pastor'])
+    .in('role', ['master', 'admin', 'pastor'])
     .eq('status', 'approved')
     .order('created_at', { ascending: true })
     .limit(1)

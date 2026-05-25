@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { name, email, password, accessKey } = await req.json()
+  const { name, email, password, accessKey, refCode } = await req.json()
   if (!name || !email || !password) {
     return Response.json({ error: 'Missing required fields' }, { status: 400 })
   }
@@ -120,6 +120,49 @@ export async function POST(req: NextRequest) {
   } catch {
     // Swallow: the client will fall back. We don't want signup to fail just
     // because cookies couldn't be set (e.g. middleware quirks).
+  }
+
+  // ── Handle referral bonus ─────────────────────────────────────────────────
+  if (refCode && typeof refCode === 'string') {
+    try {
+      const today = new Date().toISOString().slice(0, 10)
+      const { data: referrer } = await admin
+        .from('churches')
+        .select('id')
+        .eq('ref_code', refCode.toUpperCase())
+        .single()
+
+      if (referrer) {
+        // Give referrer +5 messages today by storing negative usage (offsets their count)
+        const { data: existing } = await admin
+          .from('agent_daily_usage')
+          .select('messages_used')
+          .eq('church_id', referrer.id)
+          .eq('usage_date', today)
+          .maybeSingle()
+
+        await admin.from('agent_daily_usage').upsert(
+          {
+            church_id: referrer.id,
+            usage_date: today,
+            messages_used: existing ? Math.max(0, existing.messages_used - 5) : -5,
+          },
+          { onConflict: 'church_id,usage_date' },
+        )
+
+        // Give the new church +5 on day 1 if they created a new workspace (no access key)
+        // If they joined via access key, give the joined church a day-1 bonus
+        const targetChurchId = church?.id
+        if (targetChurchId && targetChurchId !== referrer.id) {
+          await admin.from('agent_daily_usage').upsert(
+            { church_id: targetChurchId, usage_date: today, messages_used: -5 },
+            { onConflict: 'church_id,usage_date' },
+          )
+        }
+      }
+    } catch {
+      // Referral bonus is best-effort — don't fail signup
+    }
   }
 
   return Response.json({

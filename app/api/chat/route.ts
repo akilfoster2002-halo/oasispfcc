@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
@@ -9,6 +10,75 @@ function getAnthropic() {
   const key = process.env.ANTHROPIC_API_KEY
   if (!key) throw new Error('ANTHROPIC_API_KEY not set')
   return new Anthropic({ apiKey: key })
+}
+
+function getAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  )
+}
+
+const PAID_PLANS = new Set(['starter', 'growth', 'intelligence'])
+
+async function checkAndIncrementUsage(churchId: string): Promise<
+  { allowed: true; isPaid: boolean } | { allowed: false; limit: number; used: number; resetAt: string }
+> {
+  const admin = getAdminClient()
+  const { data: church } = await admin
+    .from('churches')
+    .select('plan, plan_status, agent_daily_limit')
+    .eq('id', churchId)
+    .single()
+
+  if (!church) return { allowed: true, isPaid: false }
+
+  const isPaid = PAID_PLANS.has(church.plan) && church.plan_status === 'active'
+  if (isPaid) return { allowed: true, isPaid: true }
+
+  const today = new Date().toISOString().slice(0, 10)
+  const limit = church.agent_daily_limit ?? 5
+
+  const { data: usage } = await admin
+    .from('agent_daily_usage')
+    .select('messages_used')
+    .eq('church_id', churchId)
+    .eq('usage_date', today)
+    .maybeSingle()
+
+  const used = usage?.messages_used ?? 0
+  if (used >= limit) {
+    const tomorrow = new Date()
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+    tomorrow.setUTCHours(0, 0, 0, 0)
+    return { allowed: false, limit, used, resetAt: tomorrow.toISOString() }
+  }
+
+  return { allowed: true, isPaid: false }
+}
+
+async function incrementUsage(churchId: string) {
+  const admin = getAdminClient()
+  const today = new Date().toISOString().slice(0, 10)
+  const { data: existing } = await admin
+    .from('agent_daily_usage')
+    .select('messages_used')
+    .eq('church_id', churchId)
+    .eq('usage_date', today)
+    .maybeSingle()
+
+  if (existing) {
+    await admin
+      .from('agent_daily_usage')
+      .update({ messages_used: existing.messages_used + 1 })
+      .eq('church_id', churchId)
+      .eq('usage_date', today)
+  } else {
+    await admin
+      .from('agent_daily_usage')
+      .insert({ church_id: churchId, usage_date: today, messages_used: 1 })
+  }
 }
 
 async function getChurchContext() {
@@ -476,6 +546,19 @@ export async function POST(req: Request) {
 
     const ctx = await getChurchContext()
 
+    // Freemium gate
+    let isPaidPlan = false
+    if (ctx) {
+      const check = await checkAndIncrementUsage(ctx.churchId)
+      if (!check.allowed) {
+        return Response.json(
+          { error: 'daily_limit_reached', limit: check.limit, used: check.used, resetAt: check.resetAt },
+          { status: 429 },
+        )
+      }
+      isPaidPlan = check.isPaid
+    }
+
     const systemPrompt = ctx
       ? `${BASE_SYSTEM}\n\nChurch: ${ctx.churchName}\nMembers in system: ${ctx.totalPeople}\nTotal events recorded: ${ctx.totalEvents}\nActive cell groups: ${ctx.totalCells}`
       : BASE_SYSTEM
@@ -525,6 +608,9 @@ export async function POST(req: Request) {
 
     const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === 'text')
     const reply = textBlock?.text ?? 'Sorry, I could not generate a response.'
+
+    // Track usage for free tier (fire-and-forget — don't block the response)
+    if (ctx && !isPaidPlan) incrementUsage(ctx.churchId).catch(() => {})
 
     return Response.json({ reply })
   } catch (err) {

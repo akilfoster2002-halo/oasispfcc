@@ -315,6 +315,17 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     setAddError(null)
     const sb = getSupabaseBrowser()
 
+    // Check people cap for free tier
+    const usageRes = await fetch('/api/freemium/usage')
+    if (usageRes.ok) {
+      const usage = await usageRes.json()
+      if (!usage.isPaid && usage.people.limit !== null && usage.people.count >= usage.people.limit) {
+        setAddError(`Free plan limit: ${usage.people.limit} people. Upgrade to add more.`)
+        setAddSaving(false)
+        return
+      }
+    }
+
     const { data: person, error: personErr } = await sb
       .from('people')
       .insert({

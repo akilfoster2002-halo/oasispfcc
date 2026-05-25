@@ -1,14 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
-import { ArrowRight, Eye, EyeOff, Key } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, Key, Gift } from 'lucide-react'
 import { AuthShell } from '../_components/AuthShell'
 import { Button, FieldGroup, IconButton, Input } from '@/components/ui'
 import { normalizeAccessKey } from '@/lib/access-key'
 
-export default function SignupPage() {
+function SignupForm() {
+  const searchParams = useSearchParams()
+  const refCode = searchParams.get('ref') ?? ''
+
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -37,7 +41,7 @@ export default function SignupPage() {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: fullName, email, password, accessKey: normalizedKey }),
+        body: JSON.stringify({ name: fullName, email, password, accessKey: normalizedKey, refCode: refCode || undefined }),
       })
       const data = await res.json()
 
@@ -79,6 +83,19 @@ export default function SignupPage() {
         </p>
       }
     >
+      {refCode && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '10px 14px', borderRadius: 12, marginBottom: 4,
+          background: 'linear-gradient(135deg, rgba(201,168,76,0.10) 0%, rgba(201,168,76,0.05) 100%)',
+          border: '1px solid rgba(201,168,76,0.22)',
+        }}>
+          <Gift style={{ width: 15, height: 15, color: '#C9A84C', flexShrink: 0 }} />
+          <p style={{ fontSize: 13, color: 'rgba(201,168,76,0.85)', margin: 0, letterSpacing: '-0.01em' }}>
+            You were invited — sign up to unlock <strong>+5 bonus messages</strong> for your first day.
+          </p>
+        </div>
+      )}
       <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <FieldGroup label="Full name" htmlFor="name">
           <Input
@@ -169,5 +186,13 @@ export default function SignupPage() {
         </Button>
       </form>
     </AuthShell>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
   )
 }

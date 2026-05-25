@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useParams } from 'next/navigation'
 import { Send, Sparkles, Bot, User, Plus, MessageSquare, Trash2, Menu } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 
@@ -139,6 +140,8 @@ function TypingIndicator() {
 }
 
 export default function ChatPage() {
+  const params = useParams()
+  const slug = (params?.slug as string) ?? ''
   const [sessions, setSessions]               = useState<ChatSession[]>([])
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [messages, setMessages]               = useState<Message[]>([])
@@ -248,14 +251,19 @@ export default function ChatPage() {
         body: JSON.stringify({ messages: updated }),
       })
       const rawText = await res.text()
-      let data: { reply?: string; error?: string }
+      let data: { reply?: string; error?: string; limit?: number; used?: number; resetAt?: string }
       try {
         data = JSON.parse(rawText)
       } catch {
         console.error('[chat] non-JSON response:', res.status, rawText.slice(0, 200))
         throw new Error(`Server returned ${res.status}: ${rawText.slice(0, 80)}`)
       }
-      const reply = data.error ? `Sorry, something went wrong: ${data.error}` : (data.reply ?? 'No response.')
+      let reply: string
+      if (data.error === 'daily_limit_reached') {
+        reply = `You've used all ${data.limit} messages for today. Your limit resets at midnight. Upgrade your plan for unlimited access → /${slug}/pricing`
+      } else {
+        reply = data.error ? `Sorry, something went wrong: ${data.error}` : (data.reply ?? 'No response.')
+      }
       setMessages(prev => [...prev, { role: 'assistant', content: reply }])
 
       if (sessionId) {

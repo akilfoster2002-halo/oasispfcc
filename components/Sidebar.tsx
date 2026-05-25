@@ -3,10 +3,12 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter, useParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import {
   LayoutDashboard, Users, Layers, BarChart3,
   Heart, MessageSquare, LogOut, Settings,
   CheckSquare, UserPlus, CalendarDays, FileText, Home, Radio,
+  Zap, Copy, Check,
 } from 'lucide-react'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
 import { useUserProfile } from '@/lib/use-user-profile'
@@ -160,6 +162,139 @@ function NavItem({
   )
 }
 
+// ── Freemium HUD ──────────────────────────────────────────────────────────────
+
+interface FreemiumData {
+  isPaid: boolean
+  plan: string
+  refCode: string
+  messages: { used: number; limit: number | null }
+  people: { count: number; limit: number | null }
+}
+
+function FreemiumHUD({ slug }: { slug: string }) {
+  const [data, setData]     = useState<FreemiumData | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/freemium/usage')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => d && setData(d))
+      .catch(() => {})
+  }, [])
+
+  if (!data || data.isPaid) return null
+
+  const msgLeft = data.messages.limit !== null ? Math.max(0, data.messages.limit - data.messages.used) : null
+  const refUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/signup?ref=${data.refCode}`
+    : `/signup?ref=${data.refCode}`
+
+  function copyRef() {
+    navigator.clipboard.writeText(refUrl).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <div style={{
+      margin: '8px 12px 4px',
+      padding: '12px 14px',
+      borderRadius: 14,
+      background: 'linear-gradient(135deg, rgba(201,168,76,0.07) 0%, rgba(201,168,76,0.03) 100%)',
+      border: '1px solid rgba(201,168,76,0.14)',
+    }}>
+      {/* Agent messages */}
+      {msgLeft !== null && (
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(201,168,76,0.55)' }}>
+              Agent Messages
+            </span>
+            <span style={{ fontSize: 10, color: msgLeft === 0 ? 'rgba(241,117,117,0.7)' : 'rgba(255,255,255,0.45)' }}>
+              {msgLeft}/{data.messages.limit} left
+            </span>
+          </div>
+          <div style={{ height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.06)' }}>
+            <div style={{
+              height: '100%', borderRadius: 99,
+              width: `${data.messages.limit ? (msgLeft / data.messages.limit) * 100 : 0}%`,
+              background: msgLeft === 0
+                ? 'rgba(241,117,117,0.5)'
+                : 'linear-gradient(90deg, #A88A35, #C9A84C)',
+              transition: 'width 400ms ease',
+            }} />
+          </div>
+          {msgLeft === 0 && (
+            <p style={{ fontSize: 9, color: 'rgba(241,117,117,0.65)', margin: '4px 0 0', letterSpacing: '0.02em' }}>
+              Resets tomorrow at midnight
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* People count */}
+      {data.people.limit !== null && (
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(201,168,76,0.55)' }}>
+              People
+            </span>
+            <span style={{ fontSize: 10, color: data.people.count >= data.people.limit ? 'rgba(241,117,117,0.7)' : 'rgba(255,255,255,0.45)' }}>
+              {data.people.count}/{data.people.limit}
+            </span>
+          </div>
+          <div style={{ height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.06)' }}>
+            <div style={{
+              height: '100%', borderRadius: 99,
+              width: `${Math.min(100, (data.people.count / data.people.limit) * 100)}%`,
+              background: data.people.count >= data.people.limit
+                ? 'rgba(241,117,117,0.5)'
+                : 'linear-gradient(90deg, #A88A35, #C9A84C)',
+              transition: 'width 400ms ease',
+            }} />
+          </div>
+        </div>
+      )}
+
+      {/* Share referral + upgrade */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <button
+          onClick={copyRef}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '5px 10px', borderRadius: 8,
+            background: 'rgba(201,168,76,0.10)', border: '1px solid rgba(201,168,76,0.18)',
+            color: 'rgba(201,168,76,0.75)', fontSize: 11, fontWeight: 500,
+            cursor: 'pointer', letterSpacing: '-0.005em',
+          }}
+        >
+          {copied
+            ? <Check style={{ width: 11, height: 11 }} />
+            : <Copy style={{ width: 11, height: 11 }} />
+          }
+          {copied ? 'Link copied!' : 'Share & earn +5 messages'}
+        </button>
+        <Link
+          href={`/${slug}/pricing`}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '5px 10px', borderRadius: 8,
+            background: 'linear-gradient(135deg, rgba(201,168,76,0.18) 0%, rgba(201,168,76,0.10) 100%)',
+            border: '1px solid rgba(201,168,76,0.28)',
+            color: '#C9A84C', fontSize: 11, fontWeight: 600,
+            textDecoration: 'none', letterSpacing: '-0.005em',
+          }}
+        >
+          <Zap style={{ width: 11, height: 11 }} />
+          Upgrade plan
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 // ── Sidebar ─────────────────────────────────────────────────────────────────────
 
 export default function Sidebar() {
@@ -283,6 +418,9 @@ export default function Sidebar() {
           })}
         </div>
       </nav>
+
+      {/* ── Freemium HUD ────────────────────────────────────────────────────── */}
+      <FreemiumHUD slug={slug} />
 
       {/* ── Footer — admin + sign out ────────────────────────────────────────── */}
       <div style={{

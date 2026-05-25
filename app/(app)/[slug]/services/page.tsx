@@ -372,6 +372,7 @@ export default function ServicesPage() {
         .eq('church_id', church.id)
         .in('service_type', ['sunday_inperson', 'sunday_online', 'midweek', 'other'])
         .is('cell_id', null)
+        .not('group_id', 'is', null)
         .lte('event_date', today)
         .order('event_date', { ascending: true })
 

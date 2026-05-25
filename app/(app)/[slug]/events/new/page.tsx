@@ -82,6 +82,7 @@ export default function NewEventPage() {
   const [churchId, setChurchId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isPaid, setIsPaid] = useState(true)
   const [showRecurrence, setShowRecurrence] = useState(false)
   const dateInputRef = useRef<HTMLInputElement>(null)
 
@@ -115,6 +116,17 @@ export default function NewEventPage() {
         ? recurrence.days.filter(d => d !== key)
         : [...recurrence.days, key],
     })
+
+  useEffect(() => {
+    fetch('/api/freemium/usage')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        const paid = d?.isPaid ?? true
+        setIsPaid(paid)
+        if (!paid) setServiceType('sunday_inperson')
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     const load = async () => {
@@ -407,13 +419,14 @@ export default function NewEventPage() {
           <div style={cardStyle}>
             <SectionHeader icon={Calendar} title="Category" />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <Field label="Service Type">
+              <Field label={isPaid ? 'Service Type' : 'Service Type — Upgrade to unlock more'}>
                 <select
                   value={serviceType}
                   onChange={e => setServiceType(e.target.value)}
-                  style={{ ...inputStyle, colorScheme: 'dark' }}
+                  disabled={!isPaid}
+                  style={{ ...inputStyle, colorScheme: 'dark', opacity: isPaid ? 1 : 0.7, cursor: isPaid ? 'auto' : 'not-allowed' }}
                 >
-                  {SERVICE_TYPES.map(t => (
+                  {(isPaid ? SERVICE_TYPES : SERVICE_TYPES.filter(t => t.value.startsWith('sunday'))).map(t => (
                     <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
                 </select>

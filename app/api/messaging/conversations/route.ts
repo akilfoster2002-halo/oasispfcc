@@ -4,7 +4,7 @@ import { createServerClient } from '@supabase/ssr'
 
 export const dynamic = 'force-dynamic'
 
-async function getCallerProfile() {
+async function getCallerContext() {
   const cookieStore = await cookies()
   const userClient = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,12 +13,14 @@ async function getCallerProfile() {
   )
   const { data: { user } } = await userClient.auth.getUser()
   if (!user) return null
-  const { data } = await userClient
-    .from('user_profiles')
-    .select('role, group_id')
-    .eq('id', user.id)
-    .single()
-  return data ?? null
+  const [profileRes, membershipRes] = await Promise.all([
+    userClient.from('user_profiles').select('role, group_id').eq('id', user.id).single(),
+    userClient.from('church_memberships').select('church_id').eq('user_id', user.id).eq('status', 'approved').maybeSingle(),
+  ])
+  return {
+    profile: profileRes.data ?? null,
+    churchId: membershipRes.data?.church_id ?? null,
+  }
 }
 
 export async function GET(req: Request) {
@@ -26,11 +28,15 @@ export async function GET(req: Request) {
   const status = searchParams.get('status')
 
   const supabase = getSupabaseServer()
-  const profile  = await getCallerProfile()
+  const ctx = await getCallerContext()
+  if (!ctx?.churchId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { profile, churchId } = ctx
 
   let q = supabase
     .from('conversations')
     .select('*')
+    .eq('church_id', churchId)
     .order('last_message_at', { ascending: false, nullsFirst: false })
     .limit(100)
 

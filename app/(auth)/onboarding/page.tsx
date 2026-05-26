@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
 import {
   Check, X, Loader2, ArrowRight,
@@ -20,35 +21,6 @@ function toSlug(name: string) {
 }
 
 type Availability = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
-
-// ─── Brand mark ───────────────────────────────────────────────────────────────
-
-function AquilaMark({ size = 44 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <defs>
-        <radialGradient id="ob-bg" cx="38%" cy="32%" r="75%">
-          <stop offset="0%" stopColor="#A88A35"/>
-          <stop offset="100%" stopColor="#0C1829"/>
-        </radialGradient>
-        <radialGradient id="ob-iris" cx="40%" cy="38%" r="65%">
-          <stop offset="0%" stopColor="#C9A84C" stopOpacity="0.95"/>
-          <stop offset="100%" stopColor="#C9A84C" stopOpacity="0.85"/>
-        </radialGradient>
-        <filter id="ob-glow">
-          <feGaussianBlur stdDeviation="1.5" result="blur"/>
-          <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-        </filter>
-      </defs>
-      <rect width="32" height="32" rx="9" fill="url(#ob-bg)"/>
-      <rect x="0" y="0" width="32" height="14" rx="9" fill="rgba(255,255,255,0.10)"/>
-      <rect x="0" y="7" width="32" height="7" fill="rgba(255,255,255,0)"/>
-      <circle cx="16" cy="16" r="7" stroke="rgba(255,255,255,0.20)" strokeWidth="1"/>
-      <circle cx="16" cy="16" r="4" fill="url(#ob-iris)" filter="url(#ob-glow)"/>
-      <circle cx="13.5" cy="13.5" r="1.2" fill="rgba(255,255,255,0.55)"/>
-    </svg>
-  )
-}
 
 // ─── Shared input styles ──────────────────────────────────────────────────────
 
@@ -199,7 +171,7 @@ export default function OnboardingPage() {
 
           {/* Mark + glow */}
           <div style={{ position: 'relative', marginBottom: 28 }}>
-            <AquilaMark size={52} />
+            <Image src="/Aquila Logo.png" width={52} height={52} alt="Aquila" />
             <div style={{ position: 'absolute', inset: -16, borderRadius: 28, background: 'radial-gradient(circle, rgba(201,168,76,0.25) 0%, transparent 70%)', pointerEvents: 'none' }} />
           </div>
 
@@ -293,7 +265,7 @@ export default function OnboardingPage() {
       <div style={wrapStyle}>
         <div style={{ width: '100%', maxWidth: 420 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32 }}>
-            <AquilaMark size={32} />
+            <Image src="/Aquila Logo.png" width={32} height={32} alt="Aquila" />
             <div>
               <p style={{ fontFamily: 'var(--font-display), var(--font-geist-sans), system-ui', fontSize: 15, fontWeight: 700, letterSpacing: '-0.020em', color: 'rgba(255,255,255,0.88)', margin: 0 }}>Aquila</p>
               <p style={{ fontSize: 10, color: 'rgba(201,168,76,0.52)', letterSpacing: '0.08em', fontWeight: 500, margin: 0 }}>BY OASIS PFCC</p>
@@ -372,7 +344,7 @@ export default function OnboardingPage() {
 
           {/* Back + logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32 }}>
-            <AquilaMark size={32} />
+            <Image src="/Aquila Logo.png" width={32} height={32} alt="Aquila" />
             <div>
               <p style={{ fontFamily: 'var(--font-display), var(--font-geist-sans), system-ui', fontSize: 15, fontWeight: 700, letterSpacing: '-0.020em', color: 'rgba(255,255,255,0.88)', margin: 0 }}>Aquila</p>
               <p style={{ fontSize: 10, color: 'rgba(201,168,76,0.52)', letterSpacing: '0.08em', fontWeight: 500, margin: 0 }}>BY OASIS PFCC</p>

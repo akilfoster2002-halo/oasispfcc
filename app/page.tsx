@@ -1,31 +1,6 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Users, BarChart3, MessageSquare, Shield, CalendarDays, Eye, ArrowRight, Zap } from 'lucide-react'
-
-function AquilaMark({ size = 36 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <defs>
-        <radialGradient id="lm-bg" cx="38%" cy="32%" r="75%">
-          <stop offset="0%" stopColor="#A88A35" />
-          <stop offset="100%" stopColor="#0C1829" />
-        </radialGradient>
-        <radialGradient id="lm-iris" cx="40%" cy="38%" r="65%">
-          <stop offset="0%" stopColor="#C9A84C" stopOpacity="0.95" />
-          <stop offset="100%" stopColor="#C9A84C" stopOpacity="0.85" />
-        </radialGradient>
-        <filter id="lm-glow">
-          <feGaussianBlur stdDeviation="1.2" result="blur" />
-          <feComposite in="SourceGraphic" in2="blur" operator="over" />
-        </filter>
-      </defs>
-      <rect width="32" height="32" rx="9" fill="url(#lm-bg)" />
-      <rect x="0" y="0" width="32" height="14" rx="9" fill="rgba(255,255,255,0.09)" />
-      <circle cx="16" cy="16" r="7.5" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
-      <circle cx="16" cy="16" r="4" fill="url(#lm-iris)" filter="url(#lm-glow)" />
-      <circle cx="13.6" cy="13.6" r="1.1" fill="rgba(255,255,255,0.60)" />
-    </svg>
-  )
-}
 
 const FEATURES = [
   {
@@ -110,7 +85,7 @@ export default function LandingPage() {
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <AquilaMark size={32} />
+            <Image src="/Aquila Logo.png" width={32} height={32} alt="Aquila" />
             <div>
               <p style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em', color: 'rgba(255,255,255,0.94)', margin: 0, lineHeight: 1, fontFamily: 'var(--font-display, var(--font-geist-sans))' }}>
                 Aquila
@@ -388,7 +363,7 @@ export default function LandingPage() {
 
           <div style={{ position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
-              <AquilaMark size={48} />
+              <Image src="/Aquila Logo.png" width={64} height={64} alt="Aquila" />
             </div>
             <h2 style={{
               fontFamily: 'var(--font-display, var(--font-geist-sans))',
@@ -433,7 +408,7 @@ export default function LandingPage() {
         maxWidth: 1100, margin: '0 auto', width: '100%', boxSizing: 'border-box',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <AquilaMark size={22} />
+          <Image src="/Aquila Logo.png" width={24} height={24} alt="Aquila" />
           <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.35)', margin: 0, fontFamily: 'var(--font-display)' }}>Aquila</p>
         </div>
         <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.20)', margin: 0 }}>

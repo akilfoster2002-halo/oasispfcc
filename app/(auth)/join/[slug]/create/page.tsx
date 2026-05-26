@@ -3,35 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
 import { ArrowRight, Eye, EyeOff, ArrowLeft, CheckCircle2, Loader2 } from 'lucide-react'
-
-function AquilaMark() {
-  return (
-    <svg width="38" height="38" viewBox="0 0 32 32" fill="none">
-      <defs>
-        <radialGradient id="jc-bg" cx="38%" cy="32%" r="75%">
-          <stop offset="0%" stopColor="#A88A35"/>
-          <stop offset="100%" stopColor="#0C1829"/>
-        </radialGradient>
-        <radialGradient id="jc-iris" cx="40%" cy="38%" r="65%">
-          <stop offset="0%" stopColor="#C9A84C" stopOpacity="0.95"/>
-          <stop offset="100%" stopColor="#C9A84C" stopOpacity="0.85"/>
-        </radialGradient>
-        <filter id="jc-glow">
-          <feGaussianBlur stdDeviation="1.5" result="blur"/>
-          <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-        </filter>
-      </defs>
-      <rect width="32" height="32" rx="9" fill="url(#jc-bg)"/>
-      <rect x="0" y="0" width="32" height="14" rx="9" fill="rgba(255,255,255,0.10)"/>
-      <rect x="0" y="7" width="32" height="7" fill="rgba(255,255,255,0)"/>
-      <circle cx="16" cy="16" r="7" stroke="rgba(255,255,255,0.20)" strokeWidth="1"/>
-      <circle cx="16" cy="16" r="4" fill="url(#jc-iris)" filter="url(#jc-glow)"/>
-      <circle cx="13.5" cy="13.5" r="1.2" fill="rgba(255,255,255,0.55)"/>
-    </svg>
-  )
-}
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -219,7 +193,7 @@ export default function JoinCreatePage() {
       <div style={wrapStyle}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 36 }}>
           <div style={{ position: 'relative' }}>
-            <AquilaMark />
+            <Image src="/Aquila Logo.png" width={38} height={38} alt="Aquila" />
             <div style={{ position: 'absolute', inset: -8, borderRadius: 20, background: 'radial-gradient(circle, rgba(201,168,76,0.20) 0%, transparent 70%)', pointerEvents: 'none' }} />
           </div>
           <div style={{ textAlign: 'center' }}>
@@ -258,7 +232,7 @@ export default function JoinCreatePage() {
       {/* Brand */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 36 }}>
         <div style={{ position: 'relative' }}>
-          <AquilaMark />
+          <Image src="/Aquila Logo.png" width={38} height={38} alt="Aquila" />
           <div style={{ position: 'absolute', inset: -8, borderRadius: 20, background: 'radial-gradient(circle, rgba(201,168,76,0.20) 0%, transparent 70%)', pointerEvents: 'none' }} />
         </div>
         <div style={{ textAlign: 'center' }}>

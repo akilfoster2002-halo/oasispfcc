@@ -2,34 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Check, ArrowRight, Sparkles, Zap } from 'lucide-react'
-
-function AquilaMark({ size = 32 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <defs>
-        <radialGradient id="pm-bg" cx="38%" cy="32%" r="75%">
-          <stop offset="0%" stopColor="#A88A35" />
-          <stop offset="100%" stopColor="#0C1829" />
-        </radialGradient>
-        <radialGradient id="pm-iris" cx="40%" cy="38%" r="65%">
-          <stop offset="0%" stopColor="#C9A84C" stopOpacity="0.95" />
-          <stop offset="100%" stopColor="#C9A84C" stopOpacity="0.85" />
-        </radialGradient>
-        <filter id="pm-glow">
-          <feGaussianBlur stdDeviation="1.2" result="blur" />
-          <feComposite in="SourceGraphic" in2="blur" operator="over" />
-        </filter>
-      </defs>
-      <rect width="32" height="32" rx="9" fill="url(#pm-bg)" />
-      <rect x="0" y="0" width="32" height="14" rx="9" fill="rgba(255,255,255,0.09)" />
-      <circle cx="16" cy="16" r="7.5" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
-      <circle cx="16" cy="16" r="4" fill="url(#pm-iris)" filter="url(#pm-glow)" />
-      <circle cx="13.6" cy="13.6" r="1.1" fill="rgba(255,255,255,0.60)" />
-    </svg>
-  )
-}
 
 const PLANS = [
   {
@@ -136,7 +111,7 @@ export default function PricingPage() {
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-            <AquilaMark size={30} />
+            <Image src="/Aquila Logo.png" width={30} height={30} alt="Aquila" />
             <div>
               <p style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em', color: 'rgba(255,255,255,0.94)', margin: 0, lineHeight: 1, fontFamily: 'var(--font-display, var(--font-geist-sans))' }}>Aquila</p>
               <p style={{ fontSize: 10, color: 'rgba(201,168,76,0.50)', letterSpacing: '0.07em', fontWeight: 500, margin: '3px 0 0', textTransform: 'uppercase' }}>by Oasis PFCC</p>

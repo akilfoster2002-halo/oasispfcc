@@ -370,9 +370,8 @@ export default function ServicesPage() {
         .from('events')
         .select('id, event_date, service_type, group_id, groups(name), attendance(count)')
         .eq('church_id', church.id)
-        .in('service_type', ['sunday_inperson', 'sunday_online', 'midweek', 'other'])
+        .not('service_type', 'in', '("cell_meeting")')
         .is('cell_id', null)
-        .not('group_id', 'is', null)
         .lte('event_date', today)
         .order('event_date', { ascending: true })
 
@@ -383,8 +382,8 @@ export default function ServicesPage() {
           id:           e.id as string,
           event_date:   e.event_date as string,
           service_type: e.service_type as string,
-          group_id:     e.group_id as string,
-          group_name:   grp?.name ?? 'Ungrouped',
+          group_id:     (e.group_id as string) ?? '',
+          group_name:   grp?.name ?? 'General',
           count:        att && att.length > 0 ? parseInt(att[0].count) : 0,
         }
       })

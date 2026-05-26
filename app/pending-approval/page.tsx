@@ -31,7 +31,7 @@ export default function PendingApprovalPage() {
   async function handleSignOut() {
     const supabase = getSupabaseBrowser()
     await supabase.auth.signOut()
-    router.push('/login')
+    router.push('/')
   }
 
   const pending = memberships.filter(m => m.status === 'pending')

@@ -53,7 +53,7 @@ export default function SelectChurchPage() {
   async function handleSignOut() {
     const supabase = getSupabaseBrowser()
     await supabase.auth.signOut()
-    router.push('/login')
+    router.push('/')
   }
 
   const wrapStyle: React.CSSProperties = {

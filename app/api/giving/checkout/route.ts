@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
   if (!church) return Response.json({ error: 'Church not found' }, { status: 404 })
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://lucidity.church'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://aquila.church'
 
   const session = await stripe().checkout.sessions.create({
     mode: 'payment',

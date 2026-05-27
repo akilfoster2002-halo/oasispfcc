@@ -150,11 +150,13 @@ export default function ChatPage() {
   const [loadingMsgs, setLoadingMsgs]         = useState(false)
   const [showDrawer, setShowDrawer]           = useState(false)
   const [firstName, setFirstName]             = useState<string | null>(null)
+  const userIdRef = useRef<string | null>(null)
   const bottomRef  = useRef<HTMLDivElement>(null)
   const inputRef   = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
+      userIdRef.current = data.user?.id ?? null
       const meta = data.user?.user_metadata
       const name = (meta?.full_name ?? meta?.name ?? '') as string
       setFirstName(name.split(' ')[0] || null)
@@ -223,9 +225,10 @@ export default function ChatPage() {
 
     if (!sessionId) {
       const title = text.trim().slice(0, 70)
+      const userId = userIdRef.current ?? (await supabase.auth.getUser()).data.user?.id
       const { data } = await supabase
         .from('chat_sessions')
-        .insert({ title })
+        .insert({ title, user_id: userId })
         .select('id')
         .single()
       if (data) {

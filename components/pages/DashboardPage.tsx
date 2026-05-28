@@ -60,11 +60,14 @@ function MessageBubble({ message }: { message: Message }) {
     return (
       <div className="flex justify-end gap-2.5 fade-up">
         <div
-          className="max-w-[75%] px-4 py-2.5 rounded-2xl rounded-tr-sm text-sm leading-relaxed"
+          className="max-w-[75%] px-4 py-2.5 rounded-2xl rounded-tr-sm leading-relaxed"
           style={{
             background: 'linear-gradient(135deg, #C9A84C 0%, #DDB95A 100%)',
             color: 'rgba(6,7,14,0.95)',
             boxShadow: '0 4px 20px rgba(201,168,76,0.30)',
+            fontFamily: 'var(--font-cormorant, "Cormorant Garamond"), Georgia, serif',
+            fontSize: '1.05rem',
+            letterSpacing: '0.01em',
           }}
         >
           {message.content}
@@ -93,17 +96,20 @@ function MessageBubble({ message }: { message: Message }) {
         <Bot className="w-3.5 h-3.5" style={{ color: '#34d399' }} />
       </div>
       <div
-        className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-tl-sm text-sm leading-relaxed"
+        className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-tl-sm leading-relaxed"
         style={{
           background: 'linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.04) 100%)',
           backdropFilter: 'blur(20px)',
           border: '1px solid rgba(255,255,255,0.09)',
           color: 'rgba(255,255,255,0.88)',
+          fontFamily: 'var(--font-cormorant, "Cormorant Garamond"), Georgia, serif',
+          fontSize: '1.05rem',
+          letterSpacing: '0.01em',
         }}
       >
         <ReactMarkdown
           components={{
-            p:      ({ children }) => <p style={{ margin: '0 0 0.5em', lineHeight: '1.65' }}>{children}</p>,
+            p:      ({ children }) => <p style={{ margin: '0 0 0.5em', lineHeight: '1.7' }}>{children}</p>,
             strong: ({ children }) => <strong style={{ color: '#f0e6c8', fontWeight: 600 }}>{children}</strong>,
             em:     ({ children }) => <em style={{ color: 'rgba(255,255,255,0.75)' }}>{children}</em>,
             ul:     ({ children }) => <ul style={{ margin: '0.4em 0', paddingLeft: '1.25em', listStyleType: 'disc' }}>{children}</ul>,

@@ -59,6 +59,7 @@ export default function PeoplePage() {
         .from('people')
         .select('id, first_name, last_name, phone, created_at, designation')
         .order('last_name')
+        .limit(10000)
 
       if (ids !== null) q = q.in('id', ids)
 

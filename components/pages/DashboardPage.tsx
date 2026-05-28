@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Send, Sparkles, Bot, User, Plus, MessageSquare, Trash2, Menu } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
+import ReactMarkdown from 'react-markdown'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -92,7 +93,7 @@ function MessageBubble({ message }: { message: Message }) {
         <Bot className="w-3.5 h-3.5" style={{ color: '#34d399' }} />
       </div>
       <div
-        className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-tl-sm text-sm leading-relaxed whitespace-pre-wrap"
+        className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-tl-sm text-sm leading-relaxed"
         style={{
           background: 'linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.04) 100%)',
           backdropFilter: 'blur(20px)',
@@ -100,7 +101,27 @@ function MessageBubble({ message }: { message: Message }) {
           color: 'rgba(255,255,255,0.88)',
         }}
       >
-        {message.content}
+        <ReactMarkdown
+          components={{
+            p:      ({ children }) => <p style={{ margin: '0 0 0.5em', lineHeight: '1.65' }}>{children}</p>,
+            strong: ({ children }) => <strong style={{ color: '#f0e6c8', fontWeight: 600 }}>{children}</strong>,
+            em:     ({ children }) => <em style={{ color: 'rgba(255,255,255,0.75)' }}>{children}</em>,
+            ul:     ({ children }) => <ul style={{ margin: '0.4em 0', paddingLeft: '1.25em', listStyleType: 'disc' }}>{children}</ul>,
+            ol:     ({ children }) => <ol style={{ margin: '0.4em 0', paddingLeft: '1.25em' }}>{children}</ol>,
+            li:     ({ children }) => <li style={{ marginBottom: '0.2em' }}>{children}</li>,
+            h1:     ({ children }) => <p style={{ fontWeight: 700, fontSize: '1.05em', marginBottom: '0.35em', color: '#f0e6c8' }}>{children}</p>,
+            h2:     ({ children }) => <p style={{ fontWeight: 700, fontSize: '1em', marginBottom: '0.3em', color: '#e8ddb5' }}>{children}</p>,
+            h3:     ({ children }) => <p style={{ fontWeight: 600, marginBottom: '0.25em', color: '#e8ddb5' }}>{children}</p>,
+            code:   ({ children }) => (
+              <code style={{ background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: '4px', fontSize: '0.85em', fontFamily: 'monospace' }}>
+                {children}
+              </code>
+            ),
+            hr: () => <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.12)', margin: '0.5em 0' }} />,
+          }}
+        >
+          {message.content}
+        </ReactMarkdown>
       </div>
     </div>
   )

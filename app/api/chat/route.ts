@@ -220,7 +220,13 @@ Rules for writing queries:
 
 Today's date is ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
 
-Be concise, warm, and pastoral in your responses. Give real answers from the data — specific names, numbers, dates. Use plain text, no markdown headers. When listing people, format clearly. Keep responses focused and actionable.`
+Format responses using markdown:
+- Use **bold** for names, numbers, and key highlights
+- Use numbered or bulleted lists when presenting multiple people or items
+- Use headings (##) sparingly — only for multi-section responses
+- Keep responses concise, warm, and pastoral
+- Give real answers from the data — specific names, numbers, dates
+- Never say you don't have access to the data`
 
 export async function POST(req: Request) {
   try {

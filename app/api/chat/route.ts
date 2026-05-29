@@ -133,46 +133,43 @@ function isSafeQuery(sql: string): boolean {
 const TOOLS: Anthropic.Tool[] = [
   {
     name: 'find_person',
-    description: `Find church members by name. Always use this first when a question is about a specific person. Returns all matching people with their id, full name, cell, and group — so you can confirm the right person before querying their data. If multiple matches are returned, ask the user to clarify which person they mean.`,
+    description: `Find church members by name. Always call this first when a question is about a specific person. Returns all matches with id, full name, cell, group, and phone. If multiple people match, ask the user to clarify before proceeding.`,
     input_schema: {
       type: 'object',
       properties: {
-        name: {
-          type: 'string',
-          description: 'The name or partial name to search for (first name, last name, or both).',
-        },
+        name: { type: 'string', description: 'Name or partial name to search (first, last, or both).' },
       },
       required: ['name'],
     },
   },
   {
-    name: 'get_person_attendance',
-    description: `Get the complete, verified attendance history for a specific person by their UUID. Returns every event they attended — both services (Sunday, midweek) and cell meetings — with the event name, date, and type. Use this whenever you need to know what events someone attended, their last attendance, or whether they've attended a particular type of event. Never infer attendance patterns from a different query — always call this tool for person-specific attendance questions.`,
+    name: 'get_member_profile',
+    description: `Get the complete profile for one person: all attendance history (every service and cell meeting), giving summary, follow-up history, and their profile fields. Use this when you need a full picture of someone — engagement level, patterns, last seen, giving, pastoral notes. Never guess at someone's history — call this tool.`,
     input_schema: {
       type: 'object',
       properties: {
-        person_id: {
-          type: 'string',
-          description: 'The UUID of the person (from find_person).',
-        },
+        person_id: { type: 'string', description: 'UUID of the person (from find_person).' },
       },
       required: ['person_id'],
     },
   },
   {
+    name: 'get_church_snapshot',
+    description: `Get a real-time snapshot of the whole church: recent service attendance trends (last 8 weeks), cell health overview, pending follow-ups count, at-risk member count (missing 3+ weeks of cell), and top-line giving. Call this first when answering big-picture questions about the church's health, growth, or overall engagement. Gives you the context you need before diving into specifics.`,
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
+  {
     name: 'run_sql',
-    description: `Execute a read-only SQL SELECT query for aggregate or analytical questions — trends, counts, group comparisons, giving summaries, lists of people meeting certain criteria. Do NOT use this for questions about a specific named person's attendance — use find_person + get_person_attendance instead. Always filter by church_id = '<churchId>'. Never use INSERT, UPDATE, DELETE or any mutating statement.`,
+    description: `Execute a read-only SQL SELECT for aggregate or analytical questions — trends, comparisons, ranked lists, custom criteria. Do NOT use for individual person attendance (use get_member_profile) or church-wide health (use get_church_snapshot). Always filter by church_id. No mutations.`,
     input_schema: {
       type: 'object',
       properties: {
-        query: {
-          type: 'string',
-          description: 'A valid PostgreSQL SELECT (or WITH ... SELECT) statement.',
-        },
-        description: {
-          type: 'string',
-          description: 'One sentence explaining what this query fetches.',
-        },
+        query: { type: 'string', description: 'PostgreSQL SELECT or WITH...SELECT statement.' },
+        description: { type: 'string', description: 'One sentence explaining what this fetches.' },
       },
       required: ['query', 'description'],
     },
@@ -312,15 +309,15 @@ export async function POST(req: Request) {
     let msgs: Anthropic.MessageParam[] = messages.map(m => ({ role: m.role, content: m.content }))
 
     let response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2048,
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4096,
       system: systemPrompt,
       tools,
       messages: msgs,
     })
 
     let iterations = 0
-    while (response.stop_reason === 'tool_use' && iterations < 8) {
+    while (response.stop_reason === 'tool_use' && iterations < 15) {
       iterations++
       const toolBlocks = response.content.filter((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
 
@@ -354,28 +351,102 @@ export async function POST(req: Request) {
             return { type: 'tool_result' as const, tool_use_id: block.id, content: JSON.stringify(data) }
           }
 
-          // ── get_person_attendance ────────────────────────────────────
-          if (block.name === 'get_person_attendance') {
+          // ── get_member_profile ──────────────────────────────────────
+          if (block.name === 'get_member_profile') {
             const { person_id } = block.input as { person_id: string }
-            const sql = `
-              SELECT
-                e.name AS event_name,
-                e.event_date,
-                e.service_type,
-                CASE WHEN e.cell_id IS NULL THEN 'service' ELSE 'cell_meeting' END AS event_kind,
-                a.attendance_status
-              FROM attendance a
-              JOIN events e ON e.id = a.event_id
-              WHERE a.person_id = '${person_id}'
-                AND a.church_id = '${ctx!.churchId}'
-                AND a.attendance_status = 'present'
-              ORDER BY e.event_date DESC
-              LIMIT 100
-            `
-            const { data, error } = await admin.rpc('execute_readonly_sql', { sql }).single()
-            if (error) return { type: 'tool_result' as const, tool_use_id: block.id, content: `Error: ${error.message}` }
-            const result = JSON.stringify(data ?? [])
-            return { type: 'tool_result' as const, tool_use_id: block.id, content: result || '[]' }
+            const cid = ctx!.churchId
+
+            const [profileRes, attendanceRes, givingRes, followUpsRes] = await Promise.all([
+              admin.from('people').select('*').eq('id', person_id).single(),
+              admin.rpc('execute_readonly_sql', {
+                sql: `
+                  SELECT e.name AS event_name, e.event_date, e.service_type,
+                    CASE WHEN e.cell_id IS NULL THEN 'service' ELSE 'cell_meeting' END AS event_kind
+                  FROM attendance a
+                  JOIN events e ON e.id = a.event_id
+                  WHERE a.person_id = '${person_id}' AND a.church_id = '${cid}'
+                    AND a.attendance_status = 'present'
+                  ORDER BY e.event_date DESC LIMIT 200
+                `
+              }).single(),
+              admin.from('giving').select('amount, fund, given_at, method')
+                .eq('person_id', person_id).eq('church_id', cid).order('given_at', { ascending: false }).limit(20),
+              admin.from('follow_ups').select('status, event_name, event_date, message')
+                .eq('person_id', person_id).eq('church_id', cid).order('event_date', { ascending: false }).limit(10),
+            ])
+
+            const attendance = (attendanceRes.data ?? []) as unknown[]
+            const totalAttendance = attendance.length
+            const services = (attendance as { event_kind: string }[]).filter(e => e.event_kind === 'service').length
+            const cells = (attendance as { event_kind: string }[]).filter(e => e.event_kind === 'cell_meeting').length
+            const lastSeen = (attendance as { event_date: string }[])[0]?.event_date ?? null
+
+            const result = {
+              profile: profileRes.data,
+              attendance: { total: totalAttendance, services, cell_meetings: cells, last_seen: lastSeen, history: attendance.slice(0, 50) },
+              giving: givingRes.data ?? [],
+              follow_ups: followUpsRes.data ?? [],
+            }
+            return { type: 'tool_result' as const, tool_use_id: block.id, content: JSON.stringify(result) }
+          }
+
+          // ── get_church_snapshot ──────────────────────────────────────
+          if (block.name === 'get_church_snapshot') {
+            const cid = ctx!.churchId
+            const [
+              recentServicesRes, cellHealthRes, followUpRes, atRiskRes, givingRes,
+            ] = await Promise.all([
+              admin.rpc('execute_readonly_sql', {
+                sql: `
+                  SELECT e.name, e.event_date, e.service_type,
+                    COUNT(a.id) FILTER (WHERE a.attendance_status = 'present') AS present_count
+                  FROM events e
+                  LEFT JOIN attendance a ON a.event_id = e.id AND a.church_id = '${cid}'
+                  WHERE e.church_id = '${cid}' AND e.cell_id IS NULL
+                    AND e.event_date >= NOW() - INTERVAL '8 weeks'
+                  GROUP BY e.id, e.name, e.event_date, e.service_type
+                  ORDER BY e.event_date DESC LIMIT 16
+                `
+              }).single(),
+              admin.rpc('execute_readonly_sql', {
+                sql: `
+                  SELECT c.name, c.leader_name,
+                    COUNT(a.id) FILTER (WHERE a.attendance_status = 'present') AS recent_attendance,
+                    COUNT(DISTINCT e.id) AS recent_meetings
+                  FROM cells c
+                  LEFT JOIN events e ON e.cell_id = c.id AND e.event_date >= NOW() - INTERVAL '6 weeks'
+                  LEFT JOIN attendance a ON a.event_id = e.id AND a.church_id = '${cid}'
+                  WHERE c.church_id = '${cid}' AND c.is_active = true
+                  GROUP BY c.id, c.name, c.leader_name
+                  ORDER BY recent_attendance DESC LIMIT 20
+                `
+              }).single(),
+              admin.from('follow_ups').select('id', { count: 'exact', head: true }).eq('church_id', cid).eq('status', 'pending'),
+              admin.rpc('execute_readonly_sql', {
+                sql: `
+                  SELECT COUNT(DISTINCT a.person_id) AS at_risk
+                  FROM attendance a JOIN events e ON e.id = a.event_id
+                  WHERE a.church_id = '${cid}' AND e.cell_id IS NOT NULL AND a.attendance_status = 'present'
+                    AND a.person_id NOT IN (
+                      SELECT DISTINCT person_id FROM attendance aa JOIN events ee ON ee.id = aa.event_id
+                      WHERE aa.church_id = '${cid}' AND ee.cell_id IS NOT NULL
+                        AND aa.attendance_status = 'present' AND ee.event_date >= NOW() - INTERVAL '21 days'
+                    )
+                `
+              }).single(),
+              admin.rpc('execute_readonly_sql', {
+                sql: `SELECT SUM(amount) AS total, COUNT(*) AS gifts FROM giving WHERE church_id = '${cid}' AND given_at >= NOW() - INTERVAL '30 days'`
+              }).single(),
+            ])
+
+            const snapshot = {
+              recent_services: recentServicesRes.data,
+              cell_health: cellHealthRes.data,
+              pending_follow_ups: followUpRes.count ?? 0,
+              at_risk_members: (atRiskRes.data as unknown as { at_risk: number }[])?.[0]?.at_risk ?? 0,
+              giving_last_30_days: givingRes.data,
+            }
+            return { type: 'tool_result' as const, tool_use_id: block.id, content: JSON.stringify(snapshot) }
           }
 
           // ── run_sql ──────────────────────────────────────────────────
@@ -427,8 +498,8 @@ export async function POST(req: Request) {
       msgs = [...msgs, { role: 'assistant', content: response.content }, { role: 'user', content: toolResults }]
 
       response = await anthropic.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 2048,
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4096,
         system: systemPrompt,
         tools,
         messages: msgs,

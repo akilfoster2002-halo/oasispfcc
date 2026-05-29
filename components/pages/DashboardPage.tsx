@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams } from 'next/navigation'
 import { Send, Sparkles, Bot, User, Plus, MessageSquare, Trash2, Menu } from 'lucide-react'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
@@ -52,9 +53,130 @@ function groupSessions(sessions: ChatSession[]) {
   return groups.filter(g => g.items.length > 0)
 }
 
+function PersonHoverCard({
+  personId, anchor, slug,
+  onMouseEnter, onMouseLeave,
+}: {
+  personId: string
+  anchor: DOMRect
+  slug: string
+  onMouseEnter: () => void
+  onMouseLeave: () => void
+}) {
+  const [profile, setProfile] = useState<Record<string, string> | null>(null)
+  const [events, setEvents]   = useState<{ name: string; event_date: string; event_kind: string }[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const sb = getSupabaseBrowser()
+    Promise.all([
+      sb.from('people').select('first_name, last_name, cell_name, group_name').eq('id', personId).single(),
+      sb.from('attendance')
+        .select('events!inner(name, event_date, service_type, cell_id)')
+        .eq('person_id', personId)
+        .eq('attendance_status', 'present'),
+    ]).then(([profileRes, attRes]) => {
+      setProfile(profileRes.data as Record<string, string> | null)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw = (attRes.data ?? []) as any[]
+      const sorted = raw
+        .map(a => {
+          const ev = Array.isArray(a.events) ? a.events[0] : a.events
+          if (!ev) return null
+          return { name: ev.name as string, event_date: ev.event_date as string, event_kind: ev.cell_id ? 'cell' : 'service' }
+        })
+        .filter(Boolean) as { name: string; event_date: string; event_kind: string }[]
+      sorted.sort((a, b) => b.event_date.localeCompare(a.event_date))
+      sorted.splice(7)
+      setEvents(sorted)
+      setLoading(false)
+    })
+  }, [personId])
+
+  const cardWidth = 288
+  const left = Math.min(anchor.left, (typeof window !== 'undefined' ? window.innerWidth : 1200) - cardWidth - 16)
+  const showAbove = anchor.top > 240
+  const top = showAbove ? anchor.top - 8 : anchor.bottom + 8
+
+  const card = (
+    <div
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      style={{
+        position: 'fixed', zIndex: 9999,
+        top, left,
+        transform: showAbove ? 'translateY(-100%)' : 'none',
+        width: cardWidth,
+        background: 'var(--aq-elevated)',
+        border: '0.5px solid var(--aq-border)',
+        borderRadius: 12,
+        padding: 16,
+        pointerEvents: 'auto',
+      }}
+    >
+      {loading ? (
+        <p style={{ color: 'var(--aq-text-muted)', fontSize: 13, margin: 0 }}>Loading…</p>
+      ) : (
+        <>
+          <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--aq-text-primary)', margin: '0 0 2px' }}>
+            {profile?.first_name} {profile?.last_name}
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--aq-text-tertiary)', margin: '0 0 14px' }}>
+            {profile?.cell_name ?? 'No cell'}{profile?.group_name ? ` · ${profile.group_name}` : ''}
+          </p>
+
+          <p style={{ fontSize: 11, fontWeight: 500, color: 'var(--aq-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 8px' }}>
+            Recent attendance
+          </p>
+
+          {events.length === 0 ? (
+            <p style={{ fontSize: 12, color: 'var(--aq-text-tertiary)', margin: 0 }}>No records found</p>
+          ) : events.map((e, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: i < events.length - 1 ? '0.5px solid var(--aq-border)' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, backgroundColor: e.event_kind === 'service' ? 'var(--aq-gold)' : 'var(--aq-sage)' }} />
+                <span style={{ fontSize: 12, color: 'var(--aq-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</span>
+              </div>
+              <span style={{ fontSize: 11, color: 'var(--aq-text-muted)', flexShrink: 0, marginLeft: 8 }}>
+                {new Date(e.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+            </div>
+          ))}
+
+          <Link
+            href={`/${slug}/people/${personId}`}
+            style={{ display: 'block', marginTop: 12, fontSize: 12, color: 'var(--aq-gold)', fontWeight: 500 }}
+          >
+            View full profile →
+          </Link>
+        </>
+      )}
+    </div>
+  )
+
+  if (typeof document === 'undefined') return null
+  return createPortal(card, document.body)
+}
+
 function MessageBubble({ message }: { message: Message }) {
   const params = useParams()
   const slug = (params?.slug as string) ?? ''
+  const [hoverState, setHoverState] = useState<{ personId: string; anchor: DOMRect } | null>(null)
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function showCard(personId: string, e: React.MouseEvent) {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current)
+    const anchor = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    hoverTimer.current = setTimeout(() => setHoverState({ personId, anchor }), 220)
+  }
+  function startHide() {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current)
+    hoverTimer.current = setTimeout(() => setHoverState(null), 180)
+  }
+  function cancelHide() {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current)
+  }
+
   const isUser = message.role === 'user'
   if (isUser) {
     return (
@@ -124,19 +246,32 @@ function MessageBubble({ message }: { message: Message }) {
               if (href?.startsWith('person:')) {
                 const personId = href.replace('person:', '')
                 return (
-                  <Link
-                    href={`/${slug}/people/${personId}`}
-                    style={{
-                      color: 'var(--aq-gold)',
-                      textDecoration: 'underline',
-                      textDecorationColor: 'rgba(200,169,107,0.35)',
-                      textUnderlineOffset: '3px',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {children}
-                  </Link>
+                  <>
+                    <Link
+                      href={`/${slug}/people/${personId}`}
+                      onMouseEnter={(e) => showCard(personId, e)}
+                      onMouseLeave={startHide}
+                      style={{
+                        color: 'var(--aq-gold)',
+                        textDecoration: 'underline',
+                        textDecorationColor: 'rgba(200,169,107,0.35)',
+                        textUnderlineOffset: '3px',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {children}
+                    </Link>
+                    {hoverState?.personId === personId && (
+                      <PersonHoverCard
+                        personId={personId}
+                        anchor={hoverState.anchor}
+                        slug={slug}
+                        onMouseEnter={cancelHide}
+                        onMouseLeave={startHide}
+                      />
+                    )}
+                  </>
                 )
               }
               return <a href={href} target="_blank" rel="noreferrer" style={{ color: 'var(--aq-gold)', textDecoration: 'underline' }}>{children}</a>

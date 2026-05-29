@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { Send, Sparkles, Bot, User, Plus, MessageSquare, Trash2, Menu } from 'lucide-react'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
 import ReactMarkdown from 'react-markdown'
+import Link from 'next/link'
 
 const supabase = getSupabaseBrowser()
 
@@ -52,6 +53,8 @@ function groupSessions(sessions: ChatSession[]) {
 }
 
 function MessageBubble({ message }: { message: Message }) {
+  const params = useParams()
+  const slug = (params?.slug as string) ?? ''
   const isUser = message.role === 'user'
   if (isUser) {
     return (
@@ -117,6 +120,27 @@ function MessageBubble({ message }: { message: Message }) {
               </code>
             ),
             hr: () => <hr style={{ border: 'none', borderTop: '0.5px solid var(--aq-border)', margin: '0.5em 0' }} />,
+            a: ({ href, children }) => {
+              if (href?.startsWith('person:')) {
+                const personId = href.replace('person:', '')
+                return (
+                  <Link
+                    href={`/${slug}/people/${personId}`}
+                    style={{
+                      color: 'var(--aq-gold)',
+                      textDecoration: 'underline',
+                      textDecorationColor: 'rgba(200,169,107,0.35)',
+                      textUnderlineOffset: '3px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {children}
+                  </Link>
+                )
+              }
+              return <a href={href} target="_blank" rel="noreferrer" style={{ color: 'var(--aq-gold)', textDecoration: 'underline' }}>{children}</a>
+            },
           }}
         >
           {message.content}

@@ -50,3 +50,5 @@ next-env.d.ts
 .agents/
 skills-lock.json
 supabase/
+aquila-mobile/node_modules/
+aquila-mobile/.expo/

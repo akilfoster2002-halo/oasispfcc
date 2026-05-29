@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Aquila",
+    "slug": "aquila-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#111318",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.oasispfcc.aquila"
+    },
+    "android": {
+      "package": "com.oasispfcc.aquila",
+      "adaptiveIcon": {
+        "backgroundColor": "#111318",
+        "foregroundImage": "./assets/icon.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/icon.png"
+    },
+    "scheme": "aquila",
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-secure-store",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

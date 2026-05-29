@@ -59,10 +59,8 @@ function MessageBubble({ message }: { message: Message }) {
         <div
           className="max-w-[75%] px-4 py-2.5 rounded-2xl rounded-tr-sm leading-relaxed"
           style={{
-            background: 'linear-gradient(135deg, #C9A84C 0%, #DDB95A 100%)',
+            background: 'var(--aq-gold)',
             color: 'rgba(6,7,14,0.95)',
-            boxShadow: '0 4px 20px rgba(201,168,76,0.30)',
-            fontFamily: 'var(--font-cormorant, "Cormorant Garamond"), Georgia, serif',
             fontSize: '1.05rem',
             letterSpacing: '0.01em',
           }}
@@ -72,11 +70,11 @@ function MessageBubble({ message }: { message: Message }) {
         <div
           className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5"
           style={{
-            background: 'linear-gradient(135deg, rgba(201,168,76,0.25) 0%, rgba(221,185,90,0.12) 100%)',
-            border: '1px solid rgba(201,168,76,0.30)',
+            background: 'rgba(200,169,107,0.25)',
+            border: '0.5px solid var(--aq-border)',
           }}
         >
-          <User className="w-3.5 h-3.5" style={{ color: '#C9A84C' }} />
+          <User className="w-3.5 h-3.5" style={{ color: 'var(--aq-gold)' }} />
         </div>
       </div>
     )
@@ -86,20 +84,18 @@ function MessageBubble({ message }: { message: Message }) {
       <div
         className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5"
         style={{
-          background: 'linear-gradient(135deg, rgba(52,211,153,0.20) 0%, rgba(34,211,238,0.12) 100%)',
-          border: '1px solid rgba(52,211,153,0.25)',
+          background: 'rgba(127,168,135,0.20)',
+          border: '0.5px solid var(--aq-border)',
         }}
       >
-        <Bot className="w-3.5 h-3.5" style={{ color: '#34d399' }} />
+        <Bot className="w-3.5 h-3.5" style={{ color: 'var(--aq-sage)' }} />
       </div>
       <div
         className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-tl-sm leading-relaxed"
         style={{
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.04) 100%)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255,255,255,0.09)',
-          color: 'rgba(255,255,255,0.88)',
-          fontFamily: 'var(--font-cormorant, "Cormorant Garamond"), Georgia, serif',
+          background: 'var(--aq-elevated)',
+          border: '0.5px solid var(--aq-border)',
+          color: 'var(--aq-text-primary)',
           fontSize: '1.05rem',
           letterSpacing: '0.01em',
         }}
@@ -107,20 +103,20 @@ function MessageBubble({ message }: { message: Message }) {
         <ReactMarkdown
           components={{
             p:      ({ children }) => <p style={{ margin: '0 0 0.5em', lineHeight: '1.7' }}>{children}</p>,
-            strong: ({ children }) => <strong style={{ color: '#f0e6c8', fontWeight: 600 }}>{children}</strong>,
-            em:     ({ children }) => <em style={{ color: 'rgba(255,255,255,0.75)' }}>{children}</em>,
+            strong: ({ children }) => <strong style={{ color: '#f0e6c8', fontWeight: 500 }}>{children}</strong>,
+            em:     ({ children }) => <em style={{ color: 'var(--aq-text-secondary)' }}>{children}</em>,
             ul:     ({ children }) => <ul style={{ margin: '0.4em 0', paddingLeft: '1.25em', listStyleType: 'disc' }}>{children}</ul>,
             ol:     ({ children }) => <ol style={{ margin: '0.4em 0', paddingLeft: '1.25em' }}>{children}</ol>,
             li:     ({ children }) => <li style={{ marginBottom: '0.2em' }}>{children}</li>,
-            h1:     ({ children }) => <p style={{ fontWeight: 700, fontSize: '1.05em', marginBottom: '0.35em', color: '#f0e6c8' }}>{children}</p>,
-            h2:     ({ children }) => <p style={{ fontWeight: 700, fontSize: '1em', marginBottom: '0.3em', color: '#e8ddb5' }}>{children}</p>,
-            h3:     ({ children }) => <p style={{ fontWeight: 600, marginBottom: '0.25em', color: '#e8ddb5' }}>{children}</p>,
+            h1:     ({ children }) => <p style={{ fontWeight: 500, fontSize: '1.05em', marginBottom: '0.35em', color: '#f0e6c8' }}>{children}</p>,
+            h2:     ({ children }) => <p style={{ fontWeight: 500, fontSize: '1em', marginBottom: '0.3em', color: '#e8ddb5' }}>{children}</p>,
+            h3:     ({ children }) => <p style={{ fontWeight: 500, marginBottom: '0.25em', color: '#e8ddb5' }}>{children}</p>,
             code:   ({ children }) => (
-              <code style={{ background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: '4px', fontSize: '0.85em', fontFamily: 'monospace' }}>
+              <code style={{ background: 'var(--aq-elevated)', padding: '1px 5px', borderRadius: '4px', fontSize: '0.85em', fontFamily: 'monospace' }}>
                 {children}
               </code>
             ),
-            hr: () => <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.12)', margin: '0.5em 0' }} />,
+            hr: () => <hr style={{ border: 'none', borderTop: '0.5px solid var(--aq-border)', margin: '0.5em 0' }} />,
           }}
         >
           {message.content}
@@ -136,17 +132,17 @@ function TypingIndicator() {
       <div
         className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
         style={{
-          background: 'linear-gradient(135deg, rgba(52,211,153,0.20) 0%, rgba(34,211,238,0.12) 100%)',
-          border: '1px solid rgba(52,211,153,0.25)',
+          background: 'rgba(127,168,135,0.20)',
+          border: '0.5px solid var(--aq-border)',
         }}
       >
-        <Bot className="w-3.5 h-3.5" style={{ color: '#34d399' }} />
+        <Bot className="w-3.5 h-3.5" style={{ color: 'var(--aq-sage)' }} />
       </div>
       <div
         className="px-4 py-3 rounded-2xl rounded-tl-sm"
         style={{
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.04) 100%)',
-          border: '1px solid rgba(255,255,255,0.09)',
+          background: 'var(--aq-elevated)',
+          border: '0.5px solid var(--aq-border)',
         }}
       >
         <div className="flex gap-1 items-center h-4">
@@ -154,7 +150,7 @@ function TypingIndicator() {
             <span
               key={i}
               className="w-1.5 h-1.5 rounded-full animate-bounce"
-              style={{ backgroundColor: 'rgba(201,168,76,0.60)', animationDelay: `${i * 0.15}s` }}
+              style={{ backgroundColor: 'rgba(200,169,107,0.60)', animationDelay: `${i * 0.15}s` }}
             />
           ))}
         </div>
@@ -321,12 +317,12 @@ export default function ChatPage() {
           onClick={newChat}
           className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
           style={{
-            background: 'linear-gradient(135deg, rgba(201,168,76,0.18) 0%, rgba(221,185,90,0.10) 100%)',
-            border: '1px solid rgba(201,168,76,0.28)',
-            color: '#C9A84C',
+            background: 'rgba(200,169,107,0.18)',
+            border: '0.5px solid var(--aq-border)',
+            color: 'var(--aq-gold)',
           }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, rgba(201,168,76,0.28) 0%, rgba(221,185,90,0.18) 100%)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, rgba(201,168,76,0.18) 0%, rgba(221,185,90,0.10) 100%)' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(200,169,107,0.28)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(200,169,107,0.18)' }}
         >
           <Plus className="w-4 h-4 shrink-0" />
           New Chat
@@ -334,14 +330,14 @@ export default function ChatPage() {
       </div>
       <div className="flex-1 overflow-y-auto px-2 pb-4">
         {sessionGroups.length === 0 ? (
-          <p className="text-xs text-center mt-8 px-3" style={{ color: 'rgba(255,255,255,0.25)' }}>
+          <p className="text-xs text-center mt-8 px-3" style={{ color: 'var(--aq-text-muted)' }}>
             No conversations yet
           </p>
         ) : sessionGroups.map(group => (
           <div key={group.label} className="mb-3">
             <p
               className="px-2 py-1 text-[9px] font-bold uppercase tracking-[0.12em]"
-              style={{ color: 'rgba(255,255,255,0.22)' }}
+              style={{ color: 'var(--aq-text-tertiary)' }}
             >
               {group.label}
             </p>
@@ -352,21 +348,21 @@ export default function ChatPage() {
                 className="flex items-center gap-2 px-2 py-2 rounded-xl cursor-pointer group transition-all duration-150"
                 style={{
                   background: activeSessionId === s.id
-                    ? 'linear-gradient(135deg, rgba(201,168,76,0.14) 0%, rgba(221,185,90,0.07) 100%)'
+                    ? 'rgba(200,169,107,0.14)'
                     : 'transparent',
-                  border: activeSessionId === s.id ? '1px solid rgba(201,168,76,0.22)' : '1px solid transparent',
-                  color: activeSessionId === s.id ? '#C9A84C' : 'rgba(255,255,255,0.52)',
+                  border: activeSessionId === s.id ? '0.5px solid var(--aq-border)' : '0.5px solid transparent',
+                  color: activeSessionId === s.id ? 'var(--aq-gold)' : 'var(--aq-text-secondary)',
                 }}
                 onMouseEnter={e => {
                   if (activeSessionId !== s.id) {
-                    (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'
-                    ;(e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.80)'
+                    (e.currentTarget as HTMLElement).style.background = 'var(--aq-surface)'
+                    ;(e.currentTarget as HTMLElement).style.color = 'var(--aq-text-primary)'
                   }
                 }}
                 onMouseLeave={e => {
                   if (activeSessionId !== s.id) {
                     (e.currentTarget as HTMLElement).style.background = 'transparent'
-                    ;(e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.52)'
+                    ;(e.currentTarget as HTMLElement).style.color = 'var(--aq-text-secondary)'
                   }
                 }}
               >
@@ -377,7 +373,7 @@ export default function ChatPage() {
                   className="opacity-0 group-hover:opacity-100 p-0.5 rounded transition-opacity shrink-0"
                   title="Delete"
                 >
-                  <Trash2 className="w-3 h-3" style={{ color: '#f87171' }} />
+                  <Trash2 className="w-3 h-3" style={{ color: 'var(--aq-rose)' }} />
                 </button>
               </div>
             ))}
@@ -395,7 +391,7 @@ export default function ChatPage() {
       {/* Desktop sessions panel */}
       <div
         className="hidden md:flex flex-col w-52 shrink-0"
-        style={{ borderRight: '1px solid rgba(255,255,255,0.06)', background: 'rgba(8,12,26,0.55)' }}
+        style={{ borderRight: '0.5px solid var(--aq-border)', background: 'var(--aq-surface)' }}
       >
         {SessionList}
       </div>
@@ -403,25 +399,25 @@ export default function ChatPage() {
       {/* Mobile drawer */}
       {showDrawer && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowDrawer(false)} />
+          <div className="absolute inset-0 bg-black/60" onClick={() => setShowDrawer(false)} />
           <div
-            className="absolute left-0 top-0 bottom-0 w-64 shadow-2xl z-10 flex flex-col"
+            className="absolute left-0 top-0 bottom-0 w-64 z-10 flex flex-col"
             style={{
-              background: 'linear-gradient(180deg, rgba(10,14,35,0.98) 0%, rgba(8,12,26,0.99) 100%)',
-              borderRight: '1px solid rgba(255,255,255,0.08)',
+              background: 'var(--aq-base)',
+              borderRight: '0.5px solid var(--aq-border)',
             }}
           >
             <div
               className="flex items-center justify-between px-4 pt-3 pb-2 shrink-0"
-              style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+              style={{ borderBottom: '0.5px solid var(--aq-border)' }}
             >
-              <span className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.70)' }}>
+              <span className="text-xs font-medium" style={{ color: 'var(--aq-text-secondary)' }}>
                 Chat History
               </span>
               <button
                 onClick={() => setShowDrawer(false)}
                 className="text-xs px-2 py-1 rounded-lg"
-                style={{ color: 'rgba(255,255,255,0.40)', background: 'rgba(255,255,255,0.06)' }}
+                style={{ color: 'var(--aq-text-tertiary)', background: 'var(--aq-surface)' }}
               >
                 Close
               </button>
@@ -438,34 +434,32 @@ export default function ChatPage() {
         <div
           className="shrink-0 px-4 py-3 flex items-center gap-3"
           style={{
-            background: 'rgba(8,12,26,0.80)',
-            backdropFilter: 'blur(20px)',
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            background: 'var(--aq-surface)',
+            borderBottom: '0.5px solid var(--aq-border)',
           }}
         >
           <button
             className="md:hidden p-1.5 rounded-xl transition-colors"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+            style={{ background: 'var(--aq-surface)', border: '0.5px solid var(--aq-border)' }}
             onClick={() => setShowDrawer(true)}
             title="Chat history"
           >
-            <Menu className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.60)' }} />
+            <Menu className="w-4 h-4" style={{ color: 'var(--aq-text-secondary)' }} />
           </button>
           <div
             className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
             style={{
-              background: 'linear-gradient(135deg, rgba(52,211,153,0.25) 0%, rgba(34,211,238,0.15) 100%)',
-              border: '1px solid rgba(52,211,153,0.25)',
-              boxShadow: '0 0 12px rgba(52,211,153,0.20)',
+              background: 'rgba(127,168,135,0.25)',
+              border: '0.5px solid var(--aq-border)',
             }}
           >
-            <Sparkles className="w-4 h-4" style={{ color: '#34d399' }} />
+            <Sparkles className="w-4 h-4" style={{ color: 'var(--aq-sage)' }} />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.92)' }}>
+            <h1 className="text-sm font-medium" style={{ color: 'var(--aq-text-primary)' }}>
               Aquila Agent
             </h1>
-            <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <p className="text-xs truncate" style={{ color: 'var(--aq-text-tertiary)' }}>
               {activeSessionId
                 ? (sessions.find(s => s.id === activeSessionId)?.title ?? 'Chat')
                 : 'Ask anything about your congregation'}
@@ -475,12 +469,12 @@ export default function ChatPage() {
             onClick={newChat}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200"
             style={{
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.09)',
-              color: 'rgba(255,255,255,0.60)',
+              background: 'var(--aq-surface)',
+              border: '0.5px solid var(--aq-border)',
+              color: 'var(--aq-text-secondary)',
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.10)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--aq-elevated)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--aq-surface)' }}
           >
             <Plus className="w-3.5 h-3.5" />
             New
@@ -498,7 +492,7 @@ export default function ChatPage() {
                     className="rounded-full animate-bounce"
                     style={{
                       width: 5, height: 5,
-                      backgroundColor: 'rgba(201,168,76,0.50)',
+                      backgroundColor: 'rgba(200,169,107,0.50)',
                       animationDelay: `${i * 0.14}s`,
                     }}
                   />
@@ -514,24 +508,23 @@ export default function ChatPage() {
                 <div style={{
                   position: 'absolute', inset: -16,
                   borderRadius: '50%',
-                  background: 'radial-gradient(circle, rgba(52,211,153,0.08) 0%, transparent 70%)',
+                  background: 'radial-gradient(circle, rgba(127,168,135,0.08) 0%, transparent 70%)',
                 }} />
                 {/* Outer ring */}
                 <div style={{
                   position: 'absolute', inset: 0,
                   borderRadius: '50%',
-                  border: '1px solid rgba(52,211,153,0.15)',
+                  border: '0.5px solid var(--aq-border)',
                 }} />
                 {/* Icon container */}
                 <div style={{
                   position: 'absolute', inset: 8,
                   borderRadius: '50%',
-                  background: 'linear-gradient(145deg, rgba(52,211,153,0.18) 0%, rgba(14,165,233,0.10) 100%)',
-                  border: '1px solid rgba(52,211,153,0.22)',
-                  boxShadow: '0 0 28px rgba(52,211,153,0.14), 0 0 0 1px rgba(52,211,153,0.08) inset',
+                  background: 'var(--aq-elevated)',
+                  border: '0.5px solid var(--aq-border)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Sparkles style={{ width: 28, height: 28, color: '#34d399' }} />
+                  <Sparkles style={{ width: 28, height: 28, color: 'var(--aq-sage)' }} />
                 </div>
               </div>
 
@@ -539,7 +532,7 @@ export default function ChatPage() {
               <h2 className="text-display" style={{ marginBottom: 10 }}>
                 {firstName ? `Good to see you, ${firstName}.` : 'See your church clearly.'}
               </h2>
-              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.36)', maxWidth: 300, lineHeight: 1.6, marginBottom: 36 }}>
+              <p style={{ fontSize: 14, color: 'var(--aq-text-tertiary)', maxWidth: 300, lineHeight: 1.6, marginBottom: 36 }}>
                 Ask anything about your congregation — members, attendance, cells, or trends.
               </p>
 
@@ -559,10 +552,9 @@ export default function ChatPage() {
                       padding: '12px 14px',
                       textAlign: 'left',
                       borderRadius: 14,
-                      background: 'linear-gradient(145deg, rgba(255,255,255,0.050) 0%, rgba(255,255,255,0.018) 100%)',
-                      border: '1px solid rgba(255,255,255,0.068)',
-                      boxShadow: '0 1px 0 rgba(255,255,255,0.05) inset',
-                      color: 'rgba(255,255,255,0.58)',
+                      background: 'var(--aq-surface)',
+                      border: '0.5px solid var(--aq-border)',
+                      color: 'var(--aq-text-secondary)',
                       fontSize: 12,
                       lineHeight: 1.45,
                       cursor: 'pointer',
@@ -570,16 +562,14 @@ export default function ChatPage() {
                     }}
                     onMouseEnter={e => {
                       const el = e.currentTarget as HTMLElement
-                      el.style.color = 'rgba(255,255,255,0.88)'
-                      el.style.background = 'linear-gradient(145deg, rgba(255,255,255,0.075) 0%, rgba(255,255,255,0.032) 100%)'
-                      el.style.borderColor = 'rgba(255,255,255,0.10)'
+                      el.style.color = 'var(--aq-text-primary)'
+                      el.style.background = 'var(--aq-elevated)'
                       el.style.transform = 'translateY(-1px)'
                     }}
                     onMouseLeave={e => {
                       const el = e.currentTarget as HTMLElement
-                      el.style.color = 'rgba(255,255,255,0.58)'
-                      el.style.background = 'linear-gradient(145deg, rgba(255,255,255,0.050) 0%, rgba(255,255,255,0.018) 100%)'
-                      el.style.borderColor = 'rgba(255,255,255,0.068)'
+                      el.style.color = 'var(--aq-text-secondary)'
+                      el.style.background = 'var(--aq-surface)'
                       el.style.transform = 'none'
                     }}
                   >
@@ -599,16 +589,15 @@ export default function ChatPage() {
         <div
           className="shrink-0 px-4 py-3"
           style={{
-            background: 'rgba(8,12,26,0.80)',
-            backdropFilter: 'blur(20px)',
-            borderTop: '1px solid rgba(255,255,255,0.06)',
+            background: 'var(--aq-surface)',
+            borderTop: '0.5px solid var(--aq-border)',
           }}
         >
           <div
             className="flex items-end gap-3 rounded-2xl px-4 py-3 transition-all duration-200"
             style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%)',
-              border: '1px solid rgba(255,255,255,0.09)',
+              background: 'var(--aq-elevated)',
+              border: '0.5px solid var(--aq-border)',
             }}
           >
             <textarea
@@ -623,7 +612,7 @@ export default function ChatPage() {
               onKeyDown={handleKeyDown}
               placeholder="Ask about your congregation…"
               className="flex-1 resize-none bg-transparent text-sm outline-none leading-relaxed"
-              style={{ color: 'rgba(255,255,255,0.88)', maxHeight: '120px' }}
+              style={{ color: 'var(--aq-text-primary)', maxHeight: '120px' }}
               disabled={loading}
             />
             <button
@@ -631,14 +620,13 @@ export default function ChatPage() {
               disabled={!input.trim() || loading}
               className="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 disabled:opacity-30"
               style={{
-                background: 'linear-gradient(135deg, #C9A84C 0%, #A88A35 100%)',
-                boxShadow: '0 4px 16px rgba(201,168,76,0.35)',
+                background: 'var(--aq-gold)',
               }}
             >
               <Send className="w-3.5 h-3.5" style={{ color: 'rgba(6,7,14,0.90)' }} />
             </button>
           </div>
-          <p className="text-center text-[10px] mt-2" style={{ color: 'rgba(255,255,255,0.18)' }}>
+          <p className="text-center text-[10px] mt-2" style={{ color: 'var(--aq-text-muted)' }}>
             Shift + Enter for new line · Enter to send
           </p>
         </div>

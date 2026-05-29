@@ -29,9 +29,9 @@ function from24(value: string): { h12: number; min: string; period: 'AM' | 'PM' 
 
 const sel: React.CSSProperties = {
   appearance: 'none',
-  background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.10)',
-  color: 'rgba(255,255,255,0.88)',
+  background: 'var(--aq-elevated)',
+  border: '0.5px solid var(--aq-border)',
+  color: 'var(--aq-text-primary)',
   borderRadius: 10,
   padding: '9px 28px 9px 12px',
   fontSize: 14,
@@ -49,14 +49,14 @@ export default function TimePicker({ value, onChange, style }: TimePickerProps) 
 
   const wrap: React.CSSProperties = { display: 'flex', gap: 6, ...style }
   const rel: React.CSSProperties  = { position: 'relative' }
-  const icon: React.CSSProperties = { position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'rgba(255,255,255,0.30)' }
+  const icon: React.CSSProperties = { position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--aq-text-tertiary)' }
 
   return (
     <div style={wrap}>
       {/* Hour */}
       <div style={rel}>
         <select value={h12} onChange={e => setHour(Number(e.target.value))} style={{ ...sel, width: 70 }}>
-          {HOURS.map(h => <option key={h} value={h} style={{ background: '#0a0e23' }}>{h}</option>)}
+          {HOURS.map(h => <option key={h} value={h} style={{ background: 'var(--aq-base)' }}>{h}</option>)}
         </select>
         <ChevronDown size={12} style={icon} />
       </div>
@@ -64,7 +64,7 @@ export default function TimePicker({ value, onChange, style }: TimePickerProps) 
       {/* Minute */}
       <div style={rel}>
         <select value={min} onChange={e => setMin(e.target.value)} style={{ ...sel, width: 68 }}>
-          {MINUTES.map(m => <option key={m} value={m} style={{ background: '#0a0e23' }}>{m}</option>)}
+          {MINUTES.map(m => <option key={m} value={m} style={{ background: 'var(--aq-base)' }}>{m}</option>)}
         </select>
         <ChevronDown size={12} style={icon} />
       </div>
@@ -72,8 +72,8 @@ export default function TimePicker({ value, onChange, style }: TimePickerProps) 
       {/* AM/PM */}
       <div style={rel}>
         <select value={period} onChange={e => setPeriod(e.target.value as 'AM' | 'PM')} style={{ ...sel, width: 68 }}>
-          <option value="AM" style={{ background: '#0a0e23' }}>AM</option>
-          <option value="PM" style={{ background: '#0a0e23' }}>PM</option>
+          <option value="AM" style={{ background: 'var(--aq-base)' }}>AM</option>
+          <option value="PM" style={{ background: 'var(--aq-base)' }}>PM</option>
         </select>
         <ChevronDown size={12} style={icon} />
       </div>

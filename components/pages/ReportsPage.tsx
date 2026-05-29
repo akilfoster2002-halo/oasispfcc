@@ -109,12 +109,11 @@ const TYPE_COLORS: Record<string, string> = {
 }
 
 const TOOLTIP_STYLE = {
-  backgroundColor: 'rgba(10,14,35,0.95)',
-  border: '1px solid rgba(255,255,255,0.10)',
+  backgroundColor: 'var(--aq-base)',
+  border: '0.5px solid var(--aq-border)',
   borderRadius: '10px',
   fontSize: '12px',
-  color: 'rgba(255,255,255,0.88)',
-  boxShadow: '0 8px 32px rgba(0,0,0,0.50)',
+  color: 'var(--aq-text-primary)',
 }
 
 const GRID_STROKE = 'rgba(255,255,255,0.05)'
@@ -156,10 +155,8 @@ function GlassCard({ children, className = '', style = {} }: {
     <div
       className={`${className}`}
       style={{
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.022) 100%)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'var(--aq-surface)',
+        border: '0.5px solid var(--aq-border)',
         borderRadius: '18px',
         ...style,
       }}
@@ -178,8 +175,8 @@ function CardPad({ children, className = '', style = {} }: {
 function ChartTitle({ children, sub }: { children: React.ReactNode; sub?: string }) {
   return (
     <div className="mb-4">
-      <p className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>{children}</p>
-      {sub && <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.38)' }}>{sub}</p>}
+      <p className="text-sm font-medium" style={{ color: 'var(--aq-text-primary)' }}>{children}</p>
+      {sub && <p className="text-[11px] mt-0.5" style={{ color: 'var(--aq-text-tertiary)' }}>{sub}</p>}
     </div>
   )
 }
@@ -188,7 +185,7 @@ function Pulse({ h = 200 }: { h?: number }) {
   return (
     <div
       className="rounded-xl shimmer"
-      style={{ height: h, background: 'rgba(255,255,255,0.04)' }}
+      style={{ height: h, background: 'var(--aq-surface)' }}
     />
   )
 }
@@ -199,9 +196,9 @@ function Empty({ h = 180, label = 'No data in this range' }: { h?: number; label
       className="flex items-center justify-center rounded-xl text-xs"
       style={{
         height: h,
-        color: 'rgba(255,255,255,0.22)',
-        background: 'rgba(255,255,255,0.02)',
-        border: '1px dashed rgba(255,255,255,0.08)',
+        color: 'var(--aq-text-muted)',
+        background: 'var(--aq-surface)',
+        border: '0.5px dashed var(--aq-border)',
       }}
     >
       {label}
@@ -215,20 +212,20 @@ function KPICard({ label, value, sub, icon: Icon, color = C.indigo, trend }: {
 }) {
   const TrendIcon  = trend === undefined || trend === 0 ? Minus : trend > 0 ? ArrowUpRight : ArrowDownRight
   const trendColor = trend === undefined || trend === 0
-    ? 'rgba(255,255,255,0.28)'
-    : trend > 0 ? C.green : C.red
+    ? 'var(--aq-text-muted)'
+    : trend > 0 ? 'var(--aq-sage)' : 'var(--aq-rose)'
   return (
-    <GlassCard className="p-5 glass-hover" style={{ transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s' }}>
+    <GlassCard className="p-5 glass-hover" style={{ transition: 'transform 0.2s, border-color 0.2s' }}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.45)' }}>{label}</p>
+          <p className="text-xs font-medium" style={{ color: 'var(--aq-text-tertiary)' }}>{label}</p>
           <p
-            className="text-2xl font-bold mt-1.5 leading-none tracking-tight"
-            style={{ color: 'rgba(255,255,255,0.92)' }}
+            className="text-2xl font-medium mt-1.5 leading-none tracking-tight"
+            style={{ color: 'var(--aq-text-primary)' }}
           >
             {value}
           </p>
-          {sub && <p className="text-[11px] mt-1" style={{ color: 'rgba(255,255,255,0.32)' }}>{sub}</p>}
+          {sub && <p className="text-[11px] mt-1" style={{ color: 'var(--aq-text-tertiary)' }}>{sub}</p>}
         </div>
         <div
           className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
@@ -240,7 +237,7 @@ function KPICard({ label, value, sub, icon: Icon, color = C.indigo, trend }: {
       {trend !== undefined && (
         <div
           className="flex items-center gap-1 mt-3 pt-3"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
+          style={{ borderTop: '0.5px solid var(--aq-border)' }}
         >
           <TrendIcon className="w-3.5 h-3.5 shrink-0" style={{ color: trendColor }} />
           <span className="text-[11px]" style={{ color: trendColor }}>
@@ -267,10 +264,10 @@ function DynamicChart({ config, data }: { config: ChartConfig; data: Record<stri
       <div className="overflow-x-auto">
         <table className="w-full text-xs border-collapse">
           <thead>
-            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
+            <tr style={{ borderBottom: '0.5px solid var(--aq-border)' }}>
               {cols.map(c => (
-                <th key={c} className="text-left py-2 pr-4 font-semibold"
-                  style={{ color: 'rgba(255,255,255,0.45)' }}>
+                <th key={c} className="text-left py-2 pr-4 font-medium"
+                  style={{ color: 'var(--aq-text-tertiary)' }}>
                   {c.replace(/_/g, ' ')}
                 </th>
               ))}
@@ -278,9 +275,9 @@ function DynamicChart({ config, data }: { config: ChartConfig; data: Record<stri
           </thead>
           <tbody>
             {data.map((row, i) => (
-              <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <tr key={i} style={{ borderBottom: '0.5px solid var(--aq-border)' }}>
                 {cols.map(c => (
-                  <td key={c} className="py-2 pr-4" style={{ color: 'rgba(255,255,255,0.80)' }}>
+                  <td key={c} className="py-2 pr-4" style={{ color: 'var(--aq-text-primary)' }}>
                     {String(row[c] ?? '')}
                   </td>
                 ))}
@@ -315,8 +312,8 @@ function DynamicChart({ config, data }: { config: ChartConfig; data: Record<stri
           {items.map(item => (
             <div key={item.name} className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: item.color }} />
-              <span className="text-xs" style={{ color: 'rgba(255,255,255,0.50)' }}>{item.name}</span>
-              <span className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
+              <span className="text-xs" style={{ color: 'var(--aq-text-secondary)' }}>{item.name}</span>
+              <span className="text-xs font-medium" style={{ color: 'var(--aq-text-primary)' }}>
                 {item.value} ({total > 0 ? Math.round((item.value / total) * 100) : 0}%)
               </span>
             </div>
@@ -420,10 +417,10 @@ function fmtDateRange(start: string, end: string) {
 
 function Delta({ cur, prev }: { cur: number; prev: number }) {
   const diff = cur - prev
-  if (prev === 0 && cur === 0) return <span style={{ color: 'rgba(255,255,255,0.22)' }}>—</span>
+  if (prev === 0 && cur === 0) return <span style={{ color: 'var(--aq-text-muted)' }}>—</span>
   const up = diff >= 0
   return (
-    <span style={{ color: up ? C.green : C.red, fontSize: '10px', marginLeft: '4px' }}>
+    <span style={{ color: up ? 'var(--aq-sage)' : 'var(--aq-rose)', fontSize: '10px', marginLeft: '4px' }}>
       {up ? '▲' : '▼'}{Math.abs(diff)}
     </span>
   )
@@ -443,17 +440,17 @@ function WeeklyReport({
   const thStyle: React.CSSProperties = {
     padding: '8px 10px',
     fontSize: '10px',
-    fontWeight: 600,
-    color: 'rgba(255,255,255,0.40)',
+    fontWeight: 500,
+    color: 'var(--aq-text-tertiary)',
     textAlign: 'left',
     whiteSpace: 'nowrap',
-    borderBottom: '1px solid rgba(255,255,255,0.08)',
+    borderBottom: '0.5px solid var(--aq-border)',
   }
   const tdStyle: React.CSSProperties = {
     padding: '8px 10px',
     fontSize: '12px',
-    color: 'rgba(255,255,255,0.82)',
-    borderBottom: '1px solid rgba(255,255,255,0.04)',
+    color: 'var(--aq-text-primary)',
+    borderBottom: '0.5px solid var(--aq-border)',
     whiteSpace: 'nowrap',
   }
   const numTd: React.CSSProperties = { ...tdStyle, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }
@@ -464,25 +461,25 @@ function WeeklyReport({
       <div className="flex items-center gap-2">
         <div
           className="w-1 h-5 rounded-full"
-          style={{ background: 'linear-gradient(180deg, #A88A35, #C9A84C)' }}
+          style={{ background: 'var(--aq-gold)' }}
         />
-        <h2 className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
+        <h2 className="text-sm font-medium" style={{ color: 'var(--aq-text-primary)' }}>
           Weekly Report
         </h2>
         <span
           className="text-xs px-2 py-0.5 rounded-full"
-          style={{ background: 'rgba(201,168,76,0.14)', color: '#C9A84C', border: '1px solid rgba(201,168,76,0.20)' }}
+          style={{ background: 'rgba(200,169,107,0.14)', color: 'var(--aq-gold)', border: '0.5px solid var(--aq-border)' }}
         >
           {tw}
         </span>
-        <span className="text-xs" style={{ color: 'rgba(255,255,255,0.28)' }}>vs {lw}</span>
+        <span className="text-xs" style={{ color: 'var(--aq-text-muted)' }}>vs {lw}</span>
       </div>
 
       {/* Group summary table */}
       <CardPad style={{ padding: 0, overflow: 'hidden' }}>
-        <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <p className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.75)' }}>Group Summary</p>
-          <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.30)' }}>
+        <div className="px-5 pt-4 pb-3" style={{ borderBottom: '0.5px solid var(--aq-border)' }}>
+          <p className="text-xs font-medium" style={{ color: 'var(--aq-text-primary)' }}>Group Summary</p>
+          <p className="text-[10px] mt-0.5" style={{ color: 'var(--aq-text-tertiary)' }}>
             This week vs last week · arrows show change
           </p>
         </div>
@@ -505,7 +502,7 @@ function WeeklyReport({
               <tbody>
                 {groups.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ ...tdStyle, textAlign: 'center', padding: '24px', color: 'rgba(255,255,255,0.22)' }}>
+                    <td colSpan={7} style={{ ...tdStyle, textAlign: 'center', padding: '24px', color: 'var(--aq-text-muted)' }}>
                       No group data for this week
                     </td>
                   </tr>
@@ -513,45 +510,45 @@ function WeeklyReport({
                   <tr key={g.groupName}
                     className="transition-colors"
                     style={{ background: 'transparent' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--aq-surface)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
                     <td style={{ ...tdStyle, paddingLeft: 20 }}>
-                      <span className="font-semibold" style={{ color: groupColor(g.groupName) }}>
+                      <span className="font-medium" style={{ color: groupColor(g.groupName) }}>
                         {g.groupName}
                       </span>
                     </td>
                     <td style={numTd}>
-                      <span className="font-semibold">{g.cellAttThis}</span>
+                      <span className="font-medium">{g.cellAttThis}</span>
                       <Delta cur={g.cellAttThis} prev={g.cellAttLast} />
-                      <span style={{ color: 'rgba(255,255,255,0.28)', marginLeft: 4 }}>/ {g.cellAttLast}</span>
+                      <span style={{ color: 'var(--aq-text-muted)', marginLeft: 4 }}>/ {g.cellAttLast}</span>
                     </td>
                     <td style={numTd}>
-                      <span className="font-semibold">{g.sundayAttThis}</span>
+                      <span className="font-medium">{g.sundayAttThis}</span>
                       <Delta cur={g.sundayAttThis} prev={g.sundayAttLast} />
-                      <span style={{ color: 'rgba(255,255,255,0.28)', marginLeft: 4 }}>/ {g.sundayAttLast}</span>
+                      <span style={{ color: 'var(--aq-text-muted)', marginLeft: 4 }}>/ {g.sundayAttLast}</span>
                     </td>
                     <td style={numTd}>
-                      <span className="font-semibold">{g.sunFirstTimersThis}</span>
+                      <span className="font-medium">{g.sunFirstTimersThis}</span>
                       <Delta cur={g.sunFirstTimersThis} prev={g.sunFirstTimersLast} />
-                      <span style={{ color: 'rgba(255,255,255,0.28)', marginLeft: 4 }}>/ {g.sunFirstTimersLast}</span>
+                      <span style={{ color: 'var(--aq-text-muted)', marginLeft: 4 }}>/ {g.sunFirstTimersLast}</span>
                     </td>
                     <td style={numTd}>
-                      <span className="font-semibold">{g.wedAttThis}</span>
+                      <span className="font-medium">{g.wedAttThis}</span>
                       <Delta cur={g.wedAttThis} prev={g.wedAttLast} />
-                      <span style={{ color: 'rgba(255,255,255,0.28)', marginLeft: 4 }}>/ {g.wedAttLast}</span>
+                      <span style={{ color: 'var(--aq-text-muted)', marginLeft: 4 }}>/ {g.wedAttLast}</span>
                     </td>
                     <td style={numTd}>
-                      <span className="font-semibold" style={{ color: g.soulWonThis > 0 ? C.green : undefined }}>
+                      <span className="font-medium" style={{ color: g.soulWonThis > 0 ? 'var(--aq-sage)' : undefined }}>
                         {g.soulWonThis}
                       </span>
                       <Delta cur={g.soulWonThis} prev={g.soulWonLast} />
-                      <span style={{ color: 'rgba(255,255,255,0.28)', marginLeft: 4 }}>/ {g.soulWonLast}</span>
+                      <span style={{ color: 'var(--aq-text-muted)', marginLeft: 4 }}>/ {g.soulWonLast}</span>
                     </td>
                     <td style={{ ...numTd, paddingRight: 20 }}>
-                      <span className="font-semibold">{g.uniqueThis}</span>
+                      <span className="font-medium">{g.uniqueThis}</span>
                       <Delta cur={g.uniqueThis} prev={g.uniqueLast} />
-                      <span style={{ color: 'rgba(255,255,255,0.28)', marginLeft: 4 }}>/ {g.uniqueLast}</span>
+                      <span style={{ color: 'var(--aq-text-muted)', marginLeft: 4 }}>/ {g.uniqueLast}</span>
                     </td>
                   </tr>
                 ))}
@@ -563,9 +560,9 @@ function WeeklyReport({
 
       {/* Cell detail table */}
       <CardPad style={{ padding: 0, overflow: 'hidden' }}>
-        <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <p className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.75)' }}>Cell Detail</p>
-          <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.30)' }}>
+        <div className="px-5 pt-4 pb-3" style={{ borderBottom: '0.5px solid var(--aq-border)' }}>
+          <p className="text-xs font-medium" style={{ color: 'var(--aq-text-primary)' }}>Cell Detail</p>
+          <p className="text-[10px] mt-0.5" style={{ color: 'var(--aq-text-tertiary)' }}>
             Per-cell metrics for the reported week
           </p>
         </div>
@@ -589,7 +586,7 @@ function WeeklyReport({
               <tbody>
                 {cells.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ ...tdStyle, textAlign: 'center', padding: '24px', color: 'rgba(255,255,255,0.22)' }}>
+                    <td colSpan={7} style={{ ...tdStyle, textAlign: 'center', padding: '24px', color: 'var(--aq-text-muted)' }}>
                       No cell meetings this week
                     </td>
                   </tr>
@@ -597,7 +594,7 @@ function WeeklyReport({
                   <tr key={i}
                     className="transition-colors"
                     style={{ background: 'transparent' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--aq-surface)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
                     <td style={{ ...tdStyle, paddingLeft: 20, fontWeight: 500 }}>{c.cellName}</td>
@@ -605,11 +602,11 @@ function WeeklyReport({
                       {c.groupName}
                     </td>
                     <td style={numTd}>
-                      <span className="font-semibold">{c.attThis}</span>
+                      <span className="font-medium">{c.attThis}</span>
                       <Delta cur={c.attThis} prev={c.attLast} />
                     </td>
-                    <td style={{ ...numTd, color: 'rgba(255,255,255,0.40)' }}>{c.attLast}</td>
-                    <td style={{ ...numTd, color: c.soulWon > 0 ? C.green : undefined }}>{c.soulWon}</td>
+                    <td style={{ ...numTd, color: 'var(--aq-text-tertiary)' }}>{c.attLast}</td>
+                    <td style={{ ...numTd, color: c.soulWon > 0 ? 'var(--aq-sage)' : undefined }}>{c.soulWon}</td>
                     <td style={{ ...numTd, color: c.fsEnrolled > 0 ? C.teal : undefined }}>{c.fsEnrolled}</td>
                     <td style={{ ...numTd, color: c.substantiations > 0 ? C.purple : undefined }}>{c.substantiations}</td>
                     <td style={{ ...numTd, paddingRight: 20 }}>{c.firstTimers}</td>
@@ -684,15 +681,13 @@ export default function AnalyticsPage() {
 
   // Filter pill styles
   const pill = (active: boolean) => ({
-    background: active
-      ? 'linear-gradient(135deg, rgba(201,168,76,0.22) 0%, rgba(201,168,76,0.15) 100%)'
-      : 'transparent',
-    border: active ? '1px solid rgba(201,168,76,0.28)' : '1px solid transparent',
-    color:   active ? '#C9A84C' : 'rgba(255,255,255,0.45)',
+    background: active ? 'rgba(200,169,107,0.22)' : 'transparent',
+    border: active ? '0.5px solid var(--aq-border)' : '0.5px solid transparent',
+    color:   active ? 'var(--aq-gold)' : 'var(--aq-text-tertiary)',
     borderRadius: '10px',
     padding: '6px 14px',
     fontSize: '12px',
-    fontWeight: active ? '600' : '500',
+    fontWeight: active ? '500' : '500',
     transition: 'all 0.2s',
     cursor: 'pointer',
   })
@@ -703,10 +698,10 @@ export default function AnalyticsPage() {
       {/* ── Page header ─────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'rgba(255,255,255,0.92)' }}>
+          <h1 className="text-2xl font-medium tracking-tight" style={{ color: 'var(--aq-text-primary)' }}>
             Analytics
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.38)' }}>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--aq-text-tertiary)' }}>
             Ministry health, attendance trends, and member engagement
           </p>
         </div>
@@ -715,7 +710,7 @@ export default function AnalyticsPage() {
           {/* Group filter */}
           <div
             className="flex gap-0.5 p-1 rounded-xl"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}
+            style={{ background: 'var(--aq-elevated)', border: '0.5px solid var(--aq-border)' }}
           >
             {['all', ...groups].map(g => (
               <button key={g} onClick={() => setGroup(g)} style={pill(group === g)}>
@@ -727,7 +722,7 @@ export default function AnalyticsPage() {
           {/* Date range */}
           <div
             className="flex gap-0.5 p-1 rounded-xl"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}
+            style={{ background: 'var(--aq-elevated)', border: '0.5px solid var(--aq-border)' }}
           >
             {RANGES.map(r => (
               <button key={r.value} onClick={() => setRange(r.value)} style={pill(range === r.value)}>
@@ -741,7 +736,7 @@ export default function AnalyticsPage() {
       {error && (
         <div
           className="px-4 py-3 rounded-xl text-sm"
-          style={{ background: 'rgba(248,113,113,0.10)', color: '#f87171', border: '1px solid rgba(248,113,113,0.20)' }}
+          style={{ background: 'rgba(194,95,95,0.10)', color: 'var(--aq-rose)', border: '0.5px solid rgba(194,95,95,0.20)' }}
         >
           {error}
         </div>
@@ -752,14 +747,14 @@ export default function AnalyticsPage() {
           <div className="text-center py-14">
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-              style={{ background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.20)' }}
+              style={{ background: 'rgba(200,169,107,0.12)', border: '0.5px solid var(--aq-border)' }}
             >
-              <BarChart2 className="w-7 h-7" style={{ color: C.indigo }} />
+              <BarChart2 className="w-7 h-7" style={{ color: 'var(--aq-gold)' }} />
             </div>
-            <p className="font-semibold" style={{ color: 'rgba(255,255,255,0.75)' }}>
+            <p className="font-medium" style={{ color: 'var(--aq-text-primary)' }}>
               No attendance data in this range
             </p>
-            <p className="text-sm mt-1 max-w-xs mx-auto" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            <p className="text-sm mt-1 max-w-xs mx-auto" style={{ color: 'var(--aq-text-tertiary)' }}>
               Import attendance files or adjust the date range to see data.
             </p>
           </div>
@@ -849,7 +844,7 @@ export default function AnalyticsPage() {
                   className="grid gap-2 mt-3 pt-3"
                   style={{
                     gridTemplateColumns: `repeat(${Math.min(data.groups.length, 3)}, 1fr)`,
-                    borderTop: '1px solid rgba(255,255,255,0.06)',
+                    borderTop: '0.5px solid var(--aq-border)',
                   }}
                 >
                   {data.groups.map(g => (
@@ -862,10 +857,10 @@ export default function AnalyticsPage() {
                         style={{ color: groupColor(g.name) }}>
                         {g.name}
                       </div>
-                      <div className="text-lg font-bold" style={{ color: 'rgba(255,255,255,0.88)' }}>
+                      <div className="text-lg font-medium" style={{ color: 'var(--aq-text-primary)' }}>
                         {g.totalAttendance.toLocaleString()}
                       </div>
-                      <div className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                      <div className="text-[10px] mt-0.5" style={{ color: 'var(--aq-text-tertiary)' }}>
                         {g.meetings} meetings · avg {g.avgPerMeeting}
                       </div>
                     </div>
@@ -937,7 +932,7 @@ export default function AnalyticsPage() {
             {loading ? (
               <div className="space-y-2.5">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="h-10 rounded-xl shimmer" style={{ background: 'rgba(255,255,255,0.04)' }} />
+                  <div key={i} className="h-10 rounded-xl shimmer" style={{ background: 'var(--aq-surface)' }} />
                 ))}
               </div>
             ) : data?.cells.length ? (
@@ -949,27 +944,27 @@ export default function AnalyticsPage() {
                   const col = groupColor(c.group)
                   return (
                     <div key={c.name} className="flex items-center gap-2.5">
-                      <span className="w-5 text-xs font-bold text-right shrink-0"
-                        style={{ color: top ? C.amber : 'rgba(255,255,255,0.20)' }}>
+                      <span className="w-5 text-xs font-medium text-right shrink-0"
+                        style={{ color: top ? 'var(--aq-amber)' : 'var(--aq-text-muted)' }}>
                         {i + 1}
                       </span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium truncate" style={{ color: 'rgba(255,255,255,0.82)' }}>
+                          <span className="text-xs font-medium truncate" style={{ color: 'var(--aq-text-primary)' }}>
                             {c.name}
                           </span>
                           <div className="flex items-center gap-2 shrink-0 ml-2">
-                            <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                            <span className="text-[10px]" style={{ color: 'var(--aq-text-tertiary)' }}>
                               {c.sessions}× · avg {c.avg}
                             </span>
-                            <span className="text-xs font-bold" style={{ color: top ? C.amber : col }}>
+                            <span className="text-xs font-medium" style={{ color: top ? 'var(--aq-amber)' : col }}>
                               {c.total}
                             </span>
                           </div>
                         </div>
                         <div
                           className="h-1.5 rounded-full overflow-hidden"
-                          style={{ background: 'rgba(255,255,255,0.06)' }}
+                          style={{ background: 'var(--aq-surface)' }}
                         >
                           <div
                             className="h-full rounded-full transition-all duration-500"
@@ -998,8 +993,8 @@ export default function AnalyticsPage() {
             {loading || !mounted ? <Pulse h={200} /> : data ? (() => {
               const total = data.newVsReturning.new + data.newVsReturning.returning
               const items = [
-                { label: 'Returning',    value: data.newVsReturning.returning, color: C.indigo },
-                { label: 'First-Timers', value: data.newVsReturning.new,       color: C.green  },
+                { label: 'Returning',    value: data.newVsReturning.returning, color: 'var(--aq-gold)' },
+                { label: 'First-Timers', value: data.newVsReturning.new,       color: 'var(--aq-sage)'  },
               ]
               return (
                 <>
@@ -1017,12 +1012,12 @@ export default function AnalyticsPage() {
                       <div key={item.label} className="text-center">
                         <div className="flex items-center gap-1.5 justify-center mb-0.5">
                           <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: item.color }} />
-                          <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.48)' }}>{item.label}</span>
+                          <span className="text-[11px]" style={{ color: 'var(--aq-text-secondary)' }}>{item.label}</span>
                         </div>
-                        <div className="text-xl font-bold" style={{ color: 'rgba(255,255,255,0.88)' }}>
+                        <div className="text-xl font-medium" style={{ color: 'var(--aq-text-primary)' }}>
                           {item.value}
                         </div>
-                        <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.30)' }}>
+                        <div className="text-[10px]" style={{ color: 'var(--aq-text-tertiary)' }}>
                           {total > 0 ? Math.round((item.value / total) * 100) : 0}%
                         </div>
                       </div>
@@ -1042,9 +1037,9 @@ export default function AnalyticsPage() {
               const r = data.retention
               const total = r.active + r.lapsing + r.lapsed
               const items = [
-                { label: 'Active (0–30d)',   value: r.active,  color: C.green  },
-                { label: 'Lapsing (30–60d)', value: r.lapsing, color: C.amber  },
-                { label: 'Lapsed (60d+)',    value: r.lapsed,  color: C.red    },
+                { label: 'Active (0–30d)',   value: r.active,  color: 'var(--aq-sage)'  },
+                { label: 'Lapsing (30–60d)', value: r.lapsing, color: 'var(--aq-amber)' },
+                { label: 'Lapsed (60d+)',    value: r.lapsed,  color: 'var(--aq-rose)'  },
               ]
               return (
                 <>
@@ -1062,11 +1057,11 @@ export default function AnalyticsPage() {
                       <div key={item.label} className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: item.color }} />
-                          <span style={{ color: 'rgba(255,255,255,0.50)' }}>{item.label}</span>
+                          <span style={{ color: 'var(--aq-text-secondary)' }}>{item.label}</span>
                         </div>
-                        <span className="font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                        <span className="font-medium" style={{ color: 'var(--aq-text-primary)' }}>
                           {item.value}
-                          <span className="font-normal ml-1" style={{ color: 'rgba(255,255,255,0.30)' }}>
+                          <span className="font-normal ml-1" style={{ color: 'var(--aq-text-tertiary)' }}>
                             ({total > 0 ? Math.round((item.value / total) * 100) : 0}%)
                           </span>
                         </span>
@@ -1099,17 +1094,17 @@ export default function AnalyticsPage() {
                 </ResponsiveContainer>
                 <div
                   className="flex gap-5 text-xs mt-2 pt-3"
-                  style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+                  style={{ borderTop: '0.5px solid var(--aq-border)' }}
                 >
                   <div>
-                    <span style={{ color: 'rgba(255,255,255,0.40)' }}>One-timers </span>
-                    <span className="font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                    <span style={{ color: 'var(--aq-text-tertiary)' }}>One-timers </span>
+                    <span className="font-medium" style={{ color: 'var(--aq-text-primary)' }}>
                       {data.distribution.find(d => d.bucket === '1')?.people ?? 0}
                     </span>
                   </div>
                   <div>
-                    <span style={{ color: 'rgba(255,255,255,0.40)' }}>Regulars (7+) </span>
-                    <span className="font-semibold" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                    <span style={{ color: 'var(--aq-text-tertiary)' }}>Regulars (7+) </span>
+                    <span className="font-medium" style={{ color: 'var(--aq-text-primary)' }}>
                       {data.distribution
                         .filter(d => ['7–10','11–20','21+'].includes(d.bucket))
                         .reduce((s, d) => s + d.people, 0)}
@@ -1145,7 +1140,7 @@ export default function AnalyticsPage() {
                   <Bar  yAxisId="l" dataKey="total"  name="Check-ins" fill={C.indigo} radius={[4, 4, 0, 0]} opacity={0.80} />
                   <Line yAxisId="r" type="monotone" dataKey="growth" name="Growth %"
                     stroke={C.green} strokeWidth={2}
-                    dot={{ r: 3, fill: C.green, stroke: 'rgba(10,14,35,0.90)', strokeWidth: 2 }}
+                    dot={{ r: 3, fill: C.green, stroke: 'var(--aq-base)', strokeWidth: 2 }}
                     activeDot={{ r: 5 }} />
                 </ComposedChart>
               </ResponsiveContainer>
@@ -1157,7 +1152,7 @@ export default function AnalyticsPage() {
             {loading ? (
               <div className="space-y-2.5">
                 {Array.from({ length: 10 }).map((_, i) => (
-                  <div key={i} className="h-8 rounded-xl shimmer" style={{ background: 'rgba(255,255,255,0.04)' }} />
+                  <div key={i} className="h-8 rounded-xl shimmer" style={{ background: 'var(--aq-surface)' }} />
                 ))}
               </div>
             ) : data?.topAttendees.length ? (
@@ -1168,21 +1163,21 @@ export default function AnalyticsPage() {
                   const top = i < 3
                   return (
                     <div key={i} className="flex items-center gap-2.5">
-                      <span className="w-5 text-xs font-bold text-right shrink-0"
-                        style={{ color: top ? C.amber : 'rgba(255,255,255,0.18)' }}>
+                      <span className="w-5 text-xs font-medium text-right shrink-0"
+                        style={{ color: top ? 'var(--aq-amber)' : 'var(--aq-text-muted)' }}>
                         {i + 1}
                       </span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium truncate" style={{ color: 'rgba(255,255,255,0.82)' }}>
+                          <span className="text-xs font-medium truncate" style={{ color: 'var(--aq-text-primary)' }}>
                             {p.name}
                           </span>
-                          <span className="text-xs font-bold shrink-0 ml-2"
-                            style={{ color: top ? C.amber : C.indigo }}>
+                          <span className="text-xs font-medium shrink-0 ml-2"
+                            style={{ color: top ? 'var(--aq-amber)' : 'var(--aq-gold)' }}>
                             {p.times}×
                           </span>
                         </div>
-                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--aq-surface)' }}>
                           <div className="h-full rounded-full"
                             style={{ width: `${pct}%`, backgroundColor: top ? C.amber : C.indigo, opacity: 0.75 }} />
                         </div>
@@ -1206,18 +1201,17 @@ export default function AnalyticsPage() {
           <div
             className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
             style={{
-              background: 'linear-gradient(135deg, rgba(201,168,76,0.30) 0%, rgba(201,168,76,0.18) 100%)',
-              border: '1px solid rgba(201,168,76,0.25)',
-              boxShadow: '0 0 16px rgba(201,168,76,0.15)',
+              background: 'rgba(200,169,107,0.30)',
+              border: '0.5px solid var(--aq-border)',
             }}
           >
-            <Sparkles className="w-4 h-4" style={{ color: '#C9A84C' }} strokeWidth={2} />
+            <Sparkles className="w-4 h-4" style={{ color: 'var(--aq-gold)' }} strokeWidth={2} />
           </div>
           <div>
-            <h2 className="text-base font-semibold" style={{ color: 'rgba(255,255,255,0.88)' }}>
+            <h2 className="text-base font-medium" style={{ color: 'var(--aq-text-primary)' }}>
               AI Analytics
             </h2>
-            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.38)' }}>
+            <p className="text-xs" style={{ color: 'var(--aq-text-tertiary)' }}>
               Ask any question — the AI queries the database and generates a chart
             </p>
           </div>
@@ -1232,28 +1226,28 @@ export default function AnalyticsPage() {
               disabled={aiLoading}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200"
               style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.09)',
-                color: 'rgba(255,255,255,0.55)',
+                background: 'var(--aq-surface)',
+                border: '0.5px solid var(--aq-border)',
+                color: 'var(--aq-text-secondary)',
                 cursor: aiLoading ? 'not-allowed' : 'pointer',
                 opacity: aiLoading ? 0.45 : 1,
               }}
               onMouseEnter={e => {
                 if (!aiLoading) {
-                  (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.85)'
-                  ;(e.currentTarget as HTMLElement).style.background = 'rgba(201,168,76,0.12)'
-                  ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(201,168,76,0.22)'
+                  (e.currentTarget as HTMLElement).style.color = 'var(--aq-text-primary)'
+                  ;(e.currentTarget as HTMLElement).style.background = 'rgba(200,169,107,0.12)'
+                  ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(200,169,107,0.22)'
                 }
               }}
               onMouseLeave={e => {
                 if (!aiLoading) {
-                  (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.55)'
-                  ;(e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'
-                  ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.09)'
+                  (e.currentTarget as HTMLElement).style.color = 'var(--aq-text-secondary)'
+                  ;(e.currentTarget as HTMLElement).style.background = 'var(--aq-surface)'
+                  ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--aq-border)'
                 }
               }}
             >
-              <ChevronRight className="w-3 h-3 shrink-0" style={{ color: C.indigo }} />
+              <ChevronRight className="w-3 h-3 shrink-0" style={{ color: 'var(--aq-gold)' }} />
               {q}
             </button>
           ))}
@@ -1269,7 +1263,7 @@ export default function AnalyticsPage() {
               onKeyDown={e => e.key === 'Enter' && !aiLoading && submitAI(aiPrompt)}
               placeholder="Ask anything about your church data…"
               className="flex-1 bg-transparent text-sm outline-none"
-              style={{ color: 'rgba(255,255,255,0.88)' }}
+              style={{ color: 'var(--aq-text-primary)' }}
               disabled={aiLoading}
             />
             <button
@@ -1278,10 +1272,9 @@ export default function AnalyticsPage() {
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200"
               style={{
                 background: aiLoading || !aiPrompt.trim()
-                  ? 'rgba(255,255,255,0.06)'
-                  : 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)',
-                color: aiLoading || !aiPrompt.trim() ? 'rgba(255,255,255,0.28)' : '#FFFFFF',
-                boxShadow: aiLoading || !aiPrompt.trim() ? 'none' : '0 4px 16px rgba(201,168,76,0.40)',
+                  ? 'var(--aq-surface)'
+                  : 'var(--aq-gold)',
+                color: aiLoading || !aiPrompt.trim() ? 'var(--aq-text-muted)' : '#FFFFFF',
                 cursor: aiLoading || !aiPrompt.trim() ? 'not-allowed' : 'pointer',
               }}
             >
@@ -1309,7 +1302,7 @@ export default function AnalyticsPage() {
         {aiError && !aiLoading && (
           <div
             className="mt-4 px-4 py-3 rounded-xl text-sm"
-            style={{ background: 'rgba(248,113,113,0.10)', color: '#f87171', border: '1px solid rgba(248,113,113,0.20)' }}
+            style={{ background: 'rgba(194,95,95,0.10)', color: 'var(--aq-rose)', border: '0.5px solid rgba(194,95,95,0.20)' }}
           >
             {aiError}
           </div>
@@ -1319,10 +1312,10 @@ export default function AnalyticsPage() {
         {aiResult && !aiLoading && (
           <CardPad className="mt-4 fade-up">
             <div className="mb-4">
-              <h3 className="font-semibold" style={{ color: 'rgba(255,255,255,0.88)' }}>
+              <h3 className="font-medium" style={{ color: 'var(--aq-text-primary)' }}>
                 {aiResult.chart.title}
               </h3>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.38)' }}>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--aq-text-tertiary)' }}>
                 {aiResult.chart.description}
               </p>
             </div>
@@ -1332,13 +1325,13 @@ export default function AnalyticsPage() {
             <div
               className="mt-5 pt-4 rounded-xl p-4"
               style={{
-                background: 'linear-gradient(135deg, rgba(201,168,76,0.10) 0%, rgba(201,168,76,0.06) 100%)',
-                border: '1px solid rgba(201,168,76,0.16)',
+                background: 'rgba(200,169,107,0.10)',
+                border: '0.5px solid var(--aq-border)',
               }}
             >
               <div className="flex items-start gap-2.5">
-                <Sparkles className="w-4 h-4 mt-0.5 shrink-0" style={{ color: C.indigo }} />
-                <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.72)' }}>
+                <Sparkles className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--aq-gold)' }} />
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--aq-text-secondary)' }}>
                   {aiResult.insight}
                 </p>
               </div>
@@ -1348,7 +1341,7 @@ export default function AnalyticsPage() {
               <button
                 onClick={() => setShowSql(s => !s)}
                 className="text-xs font-medium transition-colors"
-                style={{ color: showSql ? C.indigo : 'rgba(255,255,255,0.28)' }}
+                style={{ color: showSql ? 'var(--aq-gold)' : 'var(--aq-text-muted)' }}
               >
                 {showSql ? 'Hide SQL' : 'View SQL'}
               </button>
@@ -1356,9 +1349,9 @@ export default function AnalyticsPage() {
                 <pre
                   className="mt-2 p-3 rounded-xl overflow-x-auto text-xs leading-relaxed"
                   style={{
-                    background: 'rgba(0,0,0,0.40)',
-                    border: '1px solid rgba(255,255,255,0.07)',
-                    color: 'rgba(255,255,255,0.65)',
+                    background: 'var(--aq-base)',
+                    border: '0.5px solid var(--aq-border)',
+                    color: 'var(--aq-text-secondary)',
                     fontFamily: 'var(--font-geist-mono), monospace',
                   }}
                 >

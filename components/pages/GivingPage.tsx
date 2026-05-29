@@ -21,11 +21,11 @@ interface Person { id: string; first_name: string; last_name: string }
 const METHODS = ['cash', 'check', 'online', 'card', 'other'] as const
 const METHOD_LABEL: Record<string, string> = { cash: 'Cash', check: 'Check', online: 'Online', card: 'Card', other: 'Other' }
 const METHOD_COLOR: Record<string, string> = {
-  cash: 'rgba(52,211,153,0.15)', check: 'rgba(251,191,36,0.15)',
-  online: 'rgba(201,168,76,0.15)', card: 'rgba(96,165,250,0.15)', other: 'rgba(255,255,255,0.08)',
+  cash: 'rgba(127,168,135,0.15)', check: 'rgba(200,169,107,0.15)',
+  online: 'rgba(200,169,107,0.15)', card: 'rgba(100,130,180,0.15)', other: 'rgba(255,255,255,0.08)',
 }
 const METHOD_TEXT: Record<string, string> = {
-  cash: '#34d399', check: '#fbbf24', online: '#C9A84C', card: '#60a5fa', other: 'rgba(255,255,255,0.45)',
+  cash: 'var(--aq-sage)', check: 'var(--aq-amber)', online: 'var(--aq-gold)', card: 'var(--aq-slate)', other: 'var(--aq-text-secondary)',
 }
 
 function fmt(n: number) {
@@ -37,8 +37,8 @@ function initials(name: string) {
 
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '10px 13px', borderRadius: 10, fontSize: 13,
-  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
-  color: 'rgba(255,255,255,0.88)', outline: 'none', boxSizing: 'border-box',
+  background: 'var(--aq-elevated)', border: '0.5px solid var(--aq-border)',
+  color: 'var(--aq-text-primary)', outline: 'none', boxSizing: 'border-box',
 }
 
 export default function GivingPage() {
@@ -148,12 +148,12 @@ export default function GivingPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, rgba(52,211,153,0.20), rgba(16,185,129,0.10))', border: '1px solid rgba(52,211,153,0.22)' }}>
-            <DollarSign style={{ width: 22, height: 22, color: '#34d399' }} />
+          <div style={{ width: 44, height: 44, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--aq-surface)', border: '0.5px solid var(--aq-border)' }}>
+            <DollarSign style={{ width: 22, height: 22, color: 'var(--aq-sage)' }} />
           </div>
           <div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'rgba(255,255,255,0.94)', margin: 0, letterSpacing: '-0.02em' }}>Giving</h1>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', margin: '2px 0 0' }}>Track and manage church giving records</p>
+            <h1 style={{ fontSize: 20, fontWeight: 500, color: 'var(--aq-text-primary)', margin: 0, letterSpacing: '-0.02em' }}>Giving</h1>
+            <p style={{ fontSize: 13, color: 'var(--aq-text-tertiary)', margin: '2px 0 0' }}>Track and manage church giving records</p>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -163,11 +163,11 @@ export default function GivingPage() {
               setLinkCopied(true)
               setTimeout(() => setLinkCopied(false), 2000)
             }}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 16px', borderRadius: 11, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', color: linkCopied ? '#34d399' : 'rgba(255,255,255,0.60)', transition: 'all 0.15s ease' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 16px', borderRadius: 11, fontSize: 13, fontWeight: 500, cursor: 'pointer', background: 'var(--aq-elevated)', border: '0.5px solid var(--aq-border)', color: linkCopied ? 'var(--aq-sage)' : 'var(--aq-text-secondary)', transition: 'all 0.15s ease' }}
           >
             <Link2 style={{ width: 14, height: 14 }} /> {linkCopied ? 'Copied!' : 'Give Link'}
           </button>
-          <button onClick={() => setShowForm(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', borderRadius: 11, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #A88A35, #C9A84C)', color: '#fff', boxShadow: '0 4px 14px rgba(201,168,76,0.35)' }}>
+          <button onClick={() => setShowForm(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', borderRadius: 11, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer', background: 'var(--aq-gold)', color: '#fff' }}>
             <Plus style={{ width: 15, height: 15 }} /> Record Gift
           </button>
         </div>
@@ -176,17 +176,17 @@ export default function GivingPage() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 24 }}>
         {[
-          { icon: DollarSign, label: 'Total Given', value: fmt(totalGiven), color: '#34d399', bg: 'rgba(52,211,153,0.10)', border: 'rgba(52,211,153,0.18)' },
-          { icon: Users, label: 'Unique Givers', value: uniqueGivers.toString(), color: '#C9A84C', bg: 'rgba(201,168,76,0.10)', border: 'rgba(201,168,76,0.18)' },
-          { icon: TrendingUp, label: 'Avg per Gift', value: filtered.length ? fmt(totalGiven / filtered.length) : '$0', color: '#60a5fa', bg: 'rgba(96,165,250,0.10)', border: 'rgba(96,165,250,0.18)' },
-          { icon: Calendar, label: 'Total Records', value: filtered.length.toString(), color: '#fbbf24', bg: 'rgba(251,191,36,0.10)', border: 'rgba(251,191,36,0.18)' },
+          { icon: DollarSign, label: 'Total Given', value: fmt(totalGiven), color: 'var(--aq-sage)', bg: 'rgba(127,168,135,0.10)', border: 'rgba(127,168,135,0.18)' },
+          { icon: Users, label: 'Unique Givers', value: uniqueGivers.toString(), color: 'var(--aq-gold)', bg: 'rgba(200,169,107,0.10)', border: 'rgba(200,169,107,0.18)' },
+          { icon: TrendingUp, label: 'Avg per Gift', value: filtered.length ? fmt(totalGiven / filtered.length) : '$0', color: 'var(--aq-slate)', bg: 'rgba(100,130,180,0.10)', border: 'rgba(100,130,180,0.18)' },
+          { icon: Calendar, label: 'Total Records', value: filtered.length.toString(), color: 'var(--aq-amber)', bg: 'rgba(200,169,107,0.10)', border: 'rgba(200,169,107,0.18)' },
         ].map(s => (
           <div key={s.label} style={{ padding: '16px 18px', borderRadius: 16, background: s.bg, border: `1px solid ${s.border}` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
               <s.icon style={{ width: 14, height: 14, color: s.color }} />
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{s.label}</span>
+              <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--aq-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{s.label}</span>
             </div>
-            <p style={{ fontSize: 22, fontWeight: 700, color: s.color, margin: 0, letterSpacing: '-0.03em' }}>{s.value}</p>
+            <p style={{ fontSize: 22, fontWeight: 500, color: s.color, margin: 0, letterSpacing: '-0.03em' }}>{s.value}</p>
           </div>
         ))}
       </div>
@@ -194,18 +194,18 @@ export default function GivingPage() {
       {/* Controls */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
-          <Search style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: 'rgba(255,255,255,0.28)', pointerEvents: 'none' }} />
+          <Search style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: 'var(--aq-text-tertiary)', pointerEvents: 'none' }} />
           <input placeholder="Search by name…" value={search} onChange={e => setSearch(e.target.value)} style={{ ...inputStyle, paddingLeft: 36 }} />
         </div>
         <div style={{ position: 'relative' }}>
           <select value={fundFilter} onChange={e => setFundFilter(e.target.value)} style={{ ...inputStyle, width: 'auto', paddingRight: 32, appearance: 'none', cursor: 'pointer' }}>
-            {funds.map(f => <option key={f} value={f} style={{ background: '#0a0e23' }}>{f}</option>)}
+            {funds.map(f => <option key={f} value={f} style={{ background: 'var(--aq-base)' }}>{f}</option>)}
           </select>
-          <ChevronDown style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, color: 'rgba(255,255,255,0.35)', pointerEvents: 'none' }} />
+          <ChevronDown style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, color: 'var(--aq-text-tertiary)', pointerEvents: 'none' }} />
         </div>
-        <div style={{ display: 'flex', borderRadius: 10, padding: 3, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+        <div style={{ display: 'flex', borderRadius: 10, padding: 3, background: 'var(--aq-surface)', border: '0.5px solid var(--aq-border)' }}>
           {(['all', 'by-person'] as const).map(v => (
-            <button key={v} onClick={() => setView(v)} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer', background: view === v ? 'rgba(201,168,76,0.22)' : 'transparent', color: view === v ? '#C9A84C' : 'rgba(255,255,255,0.38)' }}>
+            <button key={v} onClick={() => setView(v)} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer', background: view === v ? 'rgba(200,169,107,0.22)' : 'transparent', color: view === v ? 'var(--aq-gold)' : 'var(--aq-text-tertiary)' }}>
               {v === 'all' ? 'All Gifts' : 'By Person'}
             </button>
           ))}
@@ -215,29 +215,29 @@ export default function GivingPage() {
       {/* Content */}
       {loading ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {[1,2,3,4].map(i => <div key={i} style={{ height: 58, borderRadius: 14, background: 'rgba(255,255,255,0.04)' }} />)}
+          {[1,2,3,4].map(i => <div key={i} style={{ height: 58, borderRadius: 14, background: 'var(--aq-surface)' }} />)}
         </div>
       ) : view === 'all' ? (
         filtered.length === 0 ? (
-          <p style={{ textAlign: 'center', padding: '64px 0', color: 'rgba(255,255,255,0.22)', fontSize: 13 }}>
-            No gifts recorded yet — click <strong style={{ color: 'rgba(255,255,255,0.40)' }}>Record Gift</strong> to add one.
+          <p style={{ textAlign: 'center', padding: '64px 0', color: 'var(--aq-text-tertiary)', fontSize: 13 }}>
+            No gifts recorded yet — click <strong style={{ color: 'var(--aq-text-secondary)' }}>Record Gift</strong> to add one.
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {filtered.map(g => (
-              <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '13px 16px', borderRadius: 14, background: 'rgba(255,255,255,0.034)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <div style={{ width: 38, height: 38, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'rgba(201,168,76,0.14)', fontSize: 12, fontWeight: 700, color: '#C9A84C' }}>
+              <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '13px 16px', borderRadius: 14, background: 'var(--aq-elevated)', border: '0.5px solid var(--aq-border)' }}>
+                <div style={{ width: 38, height: 38, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'rgba(200,169,107,0.14)', fontSize: 12, fontWeight: 500, color: 'var(--aq-gold)' }}>
                   {initials(g.person_name)}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.88)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.person_name}</p>
-                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.34)', margin: '2px 0 0' }}>{g.fund} · {formatDate(g.given_at)}</p>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--aq-text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.person_name}</p>
+                  <p style={{ fontSize: 12, color: 'var(--aq-text-tertiary)', margin: '2px 0 0' }}>{g.fund} · {formatDate(g.given_at)}</p>
                 </div>
-                <span style={{ padding: '3px 10px', borderRadius: 100, fontSize: 11, fontWeight: 600, background: METHOD_COLOR[g.method], color: METHOD_TEXT[g.method], flexShrink: 0 }}>
+                <span style={{ padding: '3px 10px', borderRadius: 100, fontSize: 11, fontWeight: 500, background: METHOD_COLOR[g.method], color: METHOD_TEXT[g.method], flexShrink: 0 }}>
                   {METHOD_LABEL[g.method]}
                 </span>
-                <p style={{ fontSize: 16, fontWeight: 700, color: '#34d399', margin: 0, flexShrink: 0, minWidth: 72, textAlign: 'right' }}>{fmt(g.amount)}</p>
-                <button onClick={() => deleteGift(g.id)} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, borderRadius: 8, color: 'rgba(255,255,255,0.18)', flexShrink: 0 }}>
+                <p style={{ fontSize: 16, fontWeight: 500, color: 'var(--aq-sage)', margin: 0, flexShrink: 0, minWidth: 72, textAlign: 'right' }}>{fmt(g.amount)}</p>
+                <button onClick={() => deleteGift(g.id)} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, borderRadius: 8, color: 'var(--aq-text-muted)', flexShrink: 0 }}>
                   <Trash2 style={{ width: 14, height: 14 }} />
                 </button>
               </div>
@@ -246,29 +246,29 @@ export default function GivingPage() {
         )
       ) : (
         byPerson.length === 0 ? (
-          <p style={{ textAlign: 'center', padding: '64px 0', color: 'rgba(255,255,255,0.22)', fontSize: 13 }}>No gifts found.</p>
+          <p style={{ textAlign: 'center', padding: '64px 0', color: 'var(--aq-text-tertiary)', fontSize: 13 }}>No gifts found.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {byPerson.map(({ name, total, gifts: pg }) => (
-              <details key={name} style={{ borderRadius: 14, background: 'rgba(255,255,255,0.034)', border: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+              <details key={name} style={{ borderRadius: 14, background: 'var(--aq-elevated)', border: '0.5px solid var(--aq-border)', overflow: 'hidden' }}>
                 <summary style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', cursor: 'pointer', listStyle: 'none' }}>
-                  <div style={{ width: 38, height: 38, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'rgba(201,168,76,0.14)', fontSize: 12, fontWeight: 700, color: '#C9A84C' }}>
+                  <div style={{ width: 38, height: 38, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'rgba(200,169,107,0.14)', fontSize: 12, fontWeight: 500, color: 'var(--aq-gold)' }}>
                     {initials(name)}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.88)', margin: 0 }}>{name}</p>
-                    <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.34)', margin: '2px 0 0' }}>{pg.length} gift{pg.length !== 1 ? 's' : ''}</p>
+                    <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--aq-text-primary)', margin: 0 }}>{name}</p>
+                    <p style={{ fontSize: 12, color: 'var(--aq-text-tertiary)', margin: '2px 0 0' }}>{pg.length} gift{pg.length !== 1 ? 's' : ''}</p>
                   </div>
-                  <p style={{ fontSize: 18, fontWeight: 700, color: '#34d399', margin: 0 }}>{fmt(total)}</p>
-                  <ChevronDown style={{ width: 14, height: 14, color: 'rgba(255,255,255,0.28)', flexShrink: 0 }} />
+                  <p style={{ fontSize: 18, fontWeight: 500, color: 'var(--aq-sage)', margin: 0 }}>{fmt(total)}</p>
+                  <ChevronDown style={{ width: 14, height: 14, color: 'var(--aq-text-tertiary)', flexShrink: 0 }} />
                 </summary>
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '6px 16px 10px' }}>
+                <div style={{ borderTop: '0.5px solid var(--aq-border)', padding: '6px 16px 10px' }}>
                   {pg.map(g => (
-                    <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.38)', flex: 1 }}>{formatDate(g.given_at)} · {g.fund}</span>
-                      <span style={{ padding: '2px 8px', borderRadius: 100, fontSize: 11, fontWeight: 600, background: METHOD_COLOR[g.method], color: METHOD_TEXT[g.method] }}>{METHOD_LABEL[g.method]}</span>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: '#34d399', minWidth: 70, textAlign: 'right' }}>{fmt(g.amount)}</span>
-                      <button onClick={() => deleteGift(g.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'rgba(255,255,255,0.16)' }}>
+                    <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '0.5px solid var(--aq-border)' }}>
+                      <span style={{ fontSize: 12, color: 'var(--aq-text-tertiary)', flex: 1 }}>{formatDate(g.given_at)} · {g.fund}</span>
+                      <span style={{ padding: '2px 8px', borderRadius: 100, fontSize: 11, fontWeight: 500, background: METHOD_COLOR[g.method], color: METHOD_TEXT[g.method] }}>{METHOD_LABEL[g.method]}</span>
+                      <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--aq-sage)', minWidth: 70, textAlign: 'right' }}>{fmt(g.amount)}</span>
+                      <button onClick={() => deleteGift(g.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--aq-text-muted)' }}>
                         <Trash2 style={{ width: 13, height: 13 }} />
                       </button>
                     </div>
@@ -282,11 +282,11 @@ export default function GivingPage() {
 
       {/* Record Gift Modal */}
       {showForm && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)' }}>
-          <div style={{ width: '100%', maxWidth: 440, borderRadius: 24, background: 'linear-gradient(145deg, rgba(18,22,42,0.99), rgba(10,14,35,0.99))', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', padding: '28px 28px 24px' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.65)' }}>
+          <div style={{ width: '100%', maxWidth: 440, borderRadius: 24, background: 'var(--aq-elevated)', border: '0.5px solid var(--aq-border)', padding: '28px 28px 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.92)', margin: 0 }}>Record a Gift</h2>
-              <button onClick={() => { setShowForm(false); setPersonSearch(''); setFName(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.32)', padding: 4 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 500, color: 'var(--aq-text-primary)', margin: 0 }}>Record a Gift</h2>
+              <button onClick={() => { setShowForm(false); setPersonSearch(''); setFName(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--aq-text-tertiary)', padding: 4 }}>
                 <X style={{ width: 18, height: 18 }} />
               </button>
             </div>
@@ -294,7 +294,7 @@ export default function GivingPage() {
             <form onSubmit={submitGift} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {/* Person */}
               <div style={{ position: 'relative' }}>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.40)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Person *</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: 'var(--aq-text-tertiary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Person *</label>
                 <input
                   placeholder="Search or type name…"
                   value={fPersonId ? fName : personSearch}
@@ -303,11 +303,11 @@ export default function GivingPage() {
                   required style={inputStyle}
                 />
                 {showPersonDrop && filteredPeople.length > 0 && !fPersonId && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, marginTop: 4, borderRadius: 12, background: 'rgba(15,19,40,0.99)', border: '1px solid rgba(255,255,255,0.10)', overflow: 'hidden', boxShadow: '0 12px 32px rgba(0,0,0,0.5)' }}>
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, marginTop: 4, borderRadius: 12, background: 'var(--aq-elevated)', border: '0.5px solid var(--aq-border)', overflow: 'hidden' }}>
                     {filteredPeople.map(p => (
                       <button key={p.id} type="button"
                         onClick={() => { const n = `${p.first_name} ${p.last_name}`; setFName(n); setFPersonId(p.id); setPersonSearch(n); setShowPersonDrop(false) }}
-                        style={{ width: '100%', textAlign: 'left', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'rgba(255,255,255,0.78)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        style={{ width: '100%', textAlign: 'left', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--aq-text-primary)', borderBottom: '0.5px solid var(--aq-border)' }}>
                         {p.first_name} {p.last_name}
                       </button>
                     ))}
@@ -317,44 +317,44 @@ export default function GivingPage() {
 
               {/* Amount */}
               <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.40)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Amount *</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: 'var(--aq-text-tertiary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Amount *</label>
                 <input type="number" min="0.01" step="0.01" placeholder="0.00" value={fAmount} onChange={e => setFAmount(e.target.value)} required style={inputStyle} />
               </div>
 
               {/* Fund + Method */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.40)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Fund</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: 'var(--aq-text-tertiary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Fund</label>
                   <input placeholder="General" value={fFund} onChange={e => setFFund(e.target.value)} style={inputStyle} />
                 </div>
                 <div style={{ position: 'relative' }}>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.40)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Method</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: 'var(--aq-text-tertiary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Method</label>
                   <select value={fMethod} onChange={e => setFMethod(e.target.value as typeof METHODS[number])} style={{ ...inputStyle, appearance: 'none', cursor: 'pointer' }}>
-                    {METHODS.map(m => <option key={m} value={m} style={{ background: '#0a0e23' }}>{METHOD_LABEL[m]}</option>)}
+                    {METHODS.map(m => <option key={m} value={m} style={{ background: 'var(--aq-base)' }}>{METHOD_LABEL[m]}</option>)}
                   </select>
-                  <ChevronDown style={{ position: 'absolute', right: 10, bottom: 11, width: 13, height: 13, color: 'rgba(255,255,255,0.35)', pointerEvents: 'none' }} />
+                  <ChevronDown style={{ position: 'absolute', right: 10, bottom: 11, width: 13, height: 13, color: 'var(--aq-text-tertiary)', pointerEvents: 'none' }} />
                 </div>
               </div>
 
               {/* Date */}
               <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.40)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Date</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: 'var(--aq-text-tertiary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Date</label>
                 <input type="date" value={fDate} onChange={e => setFDate(e.target.value)} style={inputStyle} />
               </div>
 
               {/* Notes */}
               <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.40)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Notes (optional)</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: 'var(--aq-text-tertiary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Notes (optional)</label>
                 <input placeholder="Memo, occasion…" value={fNotes} onChange={e => setFNotes(e.target.value)} style={inputStyle} />
               </div>
 
-              {fError && <p style={{ fontSize: 12, color: '#f87171', margin: 0 }}>{fError}</p>}
+              {fError && <p style={{ fontSize: 12, color: 'var(--aq-rose)', margin: 0 }}>{fError}</p>}
 
               <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                <button type="button" onClick={() => { setShowForm(false); setPersonSearch(''); setFName('') }} style={{ flex: 1, padding: '12px 0', borderRadius: 11, fontSize: 13, fontWeight: 600, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.50)', cursor: 'pointer' }}>
+                <button type="button" onClick={() => { setShowForm(false); setPersonSearch(''); setFName('') }} style={{ flex: 1, padding: '12px 0', borderRadius: 11, fontSize: 13, fontWeight: 500, border: '0.5px solid var(--aq-border)', background: 'var(--aq-surface)', color: 'var(--aq-text-secondary)', cursor: 'pointer' }}>
                   Cancel
                 </button>
-                <button type="submit" disabled={fSaving} style={{ flex: 2, padding: '12px 0', borderRadius: 11, fontSize: 13, fontWeight: 600, border: 'none', cursor: fSaving ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg, #A88A35, #C9A84C)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, opacity: fSaving ? 0.65 : 1 }}>
+                <button type="submit" disabled={fSaving} style={{ flex: 2, padding: '12px 0', borderRadius: 11, fontSize: 13, fontWeight: 500, border: 'none', cursor: fSaving ? 'not-allowed' : 'pointer', background: 'var(--aq-gold)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, opacity: fSaving ? 0.65 : 1 }}>
                   {fSaving ? 'Saving…' : <><Check style={{ width: 14, height: 14 }} /> Save Gift</>}
                 </button>
               </div>

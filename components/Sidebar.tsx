@@ -66,15 +66,15 @@ function NavSection({ label }: { label: string }) {
     }}>
       <span style={{
         fontSize: 9,
-        fontWeight: 700,
+        fontWeight: 500,
         letterSpacing: '0.13em',
         textTransform: 'uppercase',
-        color: 'rgba(201,168,76,0.38)',
+        color: 'rgba(200,169,107,0.38)',
       }}>{label}</span>
       <div style={{
         flex: 1,
         height: 1,
-        background: 'linear-gradient(90deg, rgba(201,168,76,0.15) 0%, transparent 100%)',
+        background: 'rgba(200,169,107,0.15)',
       }}/>
     </div>
   )
@@ -107,29 +107,29 @@ function NavItem({
         marginLeft: 8,
         marginRight: 8,
         borderRadius: 9,
-        color: active ? 'rgba(255,248,225,0.92)' : 'rgba(255,255,255,0.34)',
+        color: active ? 'var(--aq-text-primary)' : 'var(--aq-text-tertiary)',
         background: active
-          ? 'linear-gradient(135deg, rgba(201,168,76,0.09) 0%, rgba(201,168,76,0.04) 100%)'
+          ? 'rgba(200,169,107,0.07)'
           : 'transparent',
         fontSize: small ? 12 : 13,
         fontWeight: active ? 500 : 400,
         letterSpacing: '-0.007em',
         textDecoration: 'none',
         transition: 'color 140ms ease, background 140ms ease',
-        borderLeft: active ? '2px solid rgba(201,168,76,0.55)' : '2px solid transparent',
+        borderLeft: active ? '2px solid rgba(200,169,107,0.55)' : '2px solid transparent',
         borderRight: '2px solid transparent',
       }}
       onMouseEnter={e => {
         if (!active) {
           const el = e.currentTarget as HTMLElement
-          el.style.color = 'rgba(255,248,225,0.62)'
-          el.style.background = 'rgba(255,248,225,0.04)'
+          el.style.color = 'var(--aq-text-secondary)'
+          el.style.background = 'var(--aq-surface)'
         }
       }}
       onMouseLeave={e => {
         if (!active) {
           const el = e.currentTarget as HTMLElement
-          el.style.color = 'rgba(255,255,255,0.34)'
+          el.style.color = 'var(--aq-text-tertiary)'
           el.style.background = 'transparent'
         }
       }}
@@ -143,8 +143,7 @@ function NavItem({
           bottom: '20%',
           width: 2,
           borderRadius: 99,
-          background: 'linear-gradient(180deg, #DDB95A 0%, #C9A84C 100%)',
-          boxShadow: '0 0 8px rgba(201,168,76,0.60)',
+          background: 'var(--aq-gold)',
         }}/>
       )}
 
@@ -152,7 +151,7 @@ function NavItem({
         width: small ? 13 : 14,
         height: small ? 13 : 14,
         flexShrink: 0,
-        color: active ? '#C9A84C' : 'inherit',
+        color: active ? 'var(--aq-gold)' : 'inherit',
         opacity: active ? 1 : 0.55,
         transition: 'color 140ms ease, opacity 140ms ease',
       }}/>
@@ -202,32 +201,32 @@ function FreemiumHUD({ slug }: { slug: string }) {
       margin: '8px 12px 4px',
       padding: '12px 14px',
       borderRadius: 14,
-      background: 'linear-gradient(135deg, rgba(201,168,76,0.07) 0%, rgba(201,168,76,0.03) 100%)',
-      border: '1px solid rgba(201,168,76,0.14)',
+      background: 'rgba(200,169,107,0.05)',
+      border: '0.5px solid var(--aq-border)',
     }}>
       {/* Agent messages */}
       {msgLeft !== null && (
         <div style={{ marginBottom: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(201,168,76,0.55)' }}>
+            <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(200,169,107,0.55)' }}>
               Agent Messages
             </span>
-            <span style={{ fontSize: 10, color: msgLeft === 0 ? 'rgba(241,117,117,0.7)' : 'rgba(255,255,255,0.45)' }}>
+            <span style={{ fontSize: 10, color: msgLeft === 0 ? 'var(--aq-rose)' : 'var(--aq-text-tertiary)' }}>
               {msgLeft}/{data.messages.limit} left
             </span>
           </div>
-          <div style={{ height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.06)' }}>
+          <div style={{ height: 3, borderRadius: 99, background: 'var(--aq-text-muted)' }}>
             <div style={{
               height: '100%', borderRadius: 99,
               width: `${data.messages.limit ? (msgLeft / data.messages.limit) * 100 : 0}%`,
               background: msgLeft === 0
-                ? 'rgba(241,117,117,0.5)'
-                : 'linear-gradient(90deg, #A88A35, #C9A84C)',
+                ? 'rgba(194,95,95,0.5)'
+                : 'var(--aq-gold)',
               transition: 'width 400ms ease',
             }} />
           </div>
           {msgLeft === 0 && (
-            <p style={{ fontSize: 9, color: 'rgba(241,117,117,0.65)', margin: '4px 0 0', letterSpacing: '0.02em' }}>
+            <p style={{ fontSize: 9, color: 'rgba(194,95,95,0.65)', margin: '4px 0 0', letterSpacing: '0.02em' }}>
               Resets tomorrow at midnight
             </p>
           )}
@@ -238,20 +237,20 @@ function FreemiumHUD({ slug }: { slug: string }) {
       {data.people.limit !== null && (
         <div style={{ marginBottom: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(201,168,76,0.55)' }}>
+            <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(200,169,107,0.55)' }}>
               People
             </span>
-            <span style={{ fontSize: 10, color: data.people.count >= data.people.limit ? 'rgba(241,117,117,0.7)' : 'rgba(255,255,255,0.45)' }}>
+            <span style={{ fontSize: 10, color: data.people.count >= data.people.limit ? 'var(--aq-rose)' : 'var(--aq-text-tertiary)' }}>
               {data.people.count}/{data.people.limit}
             </span>
           </div>
-          <div style={{ height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.06)' }}>
+          <div style={{ height: 3, borderRadius: 99, background: 'var(--aq-text-muted)' }}>
             <div style={{
               height: '100%', borderRadius: 99,
               width: `${Math.min(100, (data.people.count / data.people.limit) * 100)}%`,
               background: data.people.count >= data.people.limit
-                ? 'rgba(241,117,117,0.5)'
-                : 'linear-gradient(90deg, #A88A35, #C9A84C)',
+                ? 'rgba(194,95,95,0.5)'
+                : 'var(--aq-gold)',
               transition: 'width 400ms ease',
             }} />
           </div>
@@ -265,8 +264,8 @@ function FreemiumHUD({ slug }: { slug: string }) {
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '5px 10px', borderRadius: 8,
-            background: 'rgba(201,168,76,0.10)', border: '1px solid rgba(201,168,76,0.18)',
-            color: 'rgba(201,168,76,0.75)', fontSize: 11, fontWeight: 500,
+            background: 'rgba(200,169,107,0.10)', border: '0.5px solid var(--aq-border)',
+            color: 'rgba(200,169,107,0.75)', fontSize: 11, fontWeight: 500,
             cursor: 'pointer', letterSpacing: '-0.005em',
           }}
         >
@@ -281,9 +280,9 @@ function FreemiumHUD({ slug }: { slug: string }) {
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '5px 10px', borderRadius: 8,
-            background: 'linear-gradient(135deg, rgba(201,168,76,0.18) 0%, rgba(201,168,76,0.10) 100%)',
-            border: '1px solid rgba(201,168,76,0.28)',
-            color: '#C9A84C', fontSize: 11, fontWeight: 600,
+            background: 'rgba(200,169,107,0.14)',
+            border: '0.5px solid var(--aq-border)',
+            color: 'var(--aq-gold)', fontSize: 11, fontWeight: 500,
             textDecoration: 'none', letterSpacing: '-0.005em',
           }}
         >
@@ -314,15 +313,8 @@ export default function Sidebar() {
       className="hidden md:flex fixed inset-y-0 left-0 flex-col z-50"
       style={{
         width: 228,
-        /* Obsidian depth — warmer than pure black */
-        background: 'linear-gradient(180deg, #0A0B14 0%, #07080F 60%, #06070D 100%)',
-        backdropFilter: 'blur(48px) saturate(160%)',
-        WebkitBackdropFilter: 'blur(48px) saturate(160%)',
-        borderRight: '1px solid rgba(255,252,245,0.055)',
-        /* Subtle inner warmth on right edge — the glow of the platform within */
-        boxShadow:
-          '1px 0 0 rgba(201,168,76,0.06), ' +
-          'inset -1px 0 20px rgba(201,168,76,0.015)',
+        background: 'var(--aq-base)',
+        borderRight: '0.5px solid var(--aq-border)',
       }}
     >
       {/* ── Brand ───────────────────────────────────────────────────────────── */}
@@ -332,10 +324,8 @@ export default function Sidebar() {
         gap: 12,
         height: 64,
         padding: '0 16px',
-        borderBottom: '1px solid rgba(255,252,245,0.048)',
+        borderBottom: '0.5px solid var(--aq-border)',
         flexShrink: 0,
-        /* Subtle marble-warm top highlight */
-        background: 'linear-gradient(180deg, rgba(255,252,245,0.025) 0%, transparent 100%)',
       }}>
         <AquilaMark />
 
@@ -346,7 +336,7 @@ export default function Sidebar() {
             fontSize: 20,
             fontWeight: 300,
             letterSpacing: '0.04em',
-            color: 'rgba(255,248,225,0.94)',
+            color: 'var(--aq-text-primary)',
             lineHeight: 1,
             margin: 0,
           }}>
@@ -356,9 +346,9 @@ export default function Sidebar() {
           <p style={{
             fontSize: 9,
             marginTop: 5,
-            color: 'rgba(201,168,76,0.45)',
+            color: 'rgba(200,169,107,0.45)',
             letterSpacing: '0.12em',
-            fontWeight: 600,
+            fontWeight: 500,
             textTransform: 'uppercase',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -399,7 +389,7 @@ export default function Sidebar() {
         <div style={{
           margin: '6px 16px',
           height: 1,
-          background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.12) 40%, rgba(201,168,76,0.12) 60%, transparent)',
+          background: 'var(--aq-border)',
         }}/>
 
         <NavSection label="Tools" />
@@ -426,12 +416,10 @@ export default function Sidebar() {
       <div style={{
         paddingTop: 8,
         paddingBottom: 16,
-        borderTop: '1px solid rgba(255,252,245,0.042)',
+        borderTop: '0.5px solid var(--aq-border)',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
-        /* Subtle warm glow rising from footer */
-        background: 'linear-gradient(0deg, rgba(201,168,76,0.012) 0%, transparent 100%)',
       }}>
         {isMaster && (
           <>
@@ -454,7 +442,7 @@ export default function Sidebar() {
             <div style={{
               margin: '4px 16px 8px',
               height: 1,
-              background: 'rgba(255,252,245,0.038)',
+              background: 'var(--aq-border)',
             }}/>
           </>
         )}
@@ -470,7 +458,7 @@ export default function Sidebar() {
             marginRight: 8,
             padding: '5px 12px',
             borderRadius: 9,
-            color: 'rgba(255,255,255,0.22)',
+            color: 'var(--aq-text-muted)',
             background: 'transparent',
             border: 'none',
             fontSize: 12,
@@ -482,12 +470,12 @@ export default function Sidebar() {
           }}
           onMouseEnter={e => {
             const el = e.currentTarget as HTMLElement
-            el.style.color = 'rgba(241,117,117,0.70)'
-            el.style.background = 'rgba(241,117,117,0.06)'
+            el.style.color = 'rgba(194,95,95,0.70)'
+            el.style.background = 'rgba(194,95,95,0.06)'
           }}
           onMouseLeave={e => {
             const el = e.currentTarget as HTMLElement
-            el.style.color = 'rgba(255,255,255,0.22)'
+            el.style.color = 'var(--aq-text-muted)'
             el.style.background = 'transparent'
           }}
         >

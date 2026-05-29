@@ -103,14 +103,14 @@ export default function PeoplePage() {
   // Tab pill style
   const tabPill = (active: boolean) => ({
     background: active
-      ? 'linear-gradient(135deg, rgba(201,168,76,0.22) 0%, rgba(201,168,76,0.15) 100%)'
+      ? 'rgba(200,169,107,0.22)'
       : 'transparent',
-    border: active ? '1px solid rgba(201,168,76,0.28)' : '1px solid transparent',
-    color: active ? '#C9A84C' : 'rgba(255,255,255,0.40)',
+    border: active ? '0.5px solid var(--aq-border)' : '0.5px solid transparent',
+    color: active ? 'var(--aq-gold)' : 'var(--aq-text-tertiary)',
     borderRadius: '10px',
     padding: '6px 14px',
     fontSize: '12px',
-    fontWeight: active ? '600' : '500',
+    fontWeight: active ? '500' : '500',
     cursor: 'pointer',
     transition: 'all 0.2s',
     display: 'inline-flex',
@@ -121,7 +121,7 @@ export default function PeoplePage() {
   return (
     <div
       className="min-h-screen px-6 py-8"
-      style={{ background: 'linear-gradient(180deg, rgba(10,14,35,0.95) 0%, rgba(8,12,26,0.98) 100%)' }}
+      style={{ background: 'var(--aq-base)' }}
     >
       <div className="max-w-4xl mx-auto">
 
@@ -130,15 +130,15 @@ export default function PeoplePage() {
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center"
             style={{
-              background: 'linear-gradient(135deg, rgba(201,168,76,0.25) 0%, rgba(201,168,76,0.15) 100%)',
-              border: '1px solid rgba(201,168,76,0.25)',
+              background: 'rgba(200,169,107,0.25)',
+              border: '0.5px solid var(--aq-border)',
             }}
           >
-            <Users className="w-5 h-5" style={{ color: '#C9A84C' }} />
+            <Users className="w-5 h-5" style={{ color: 'var(--aq-gold)' }} />
           </div>
           <div>
-            <h1 className="text-lg font-semibold" style={{ color: 'rgba(255,255,255,0.92)' }}>People</h1>
-            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.40)' }}>
+            <h1 className="text-lg font-medium" style={{ color: 'var(--aq-text-primary)' }}>People</h1>
+            <p className="text-sm" style={{ color: 'var(--aq-text-tertiary)' }}>
               {loading ? '—' : `${active.length.toLocaleString()} active member${active.length !== 1 ? 's' : ''}`}
             </p>
           </div>
@@ -150,7 +150,7 @@ export default function PeoplePage() {
           {/* Active / Archived tabs */}
           <div
             className="flex gap-0.5 p-1 rounded-xl"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}
+            style={{ background: 'var(--aq-elevated)', border: '0.5px solid var(--aq-border)' }}
           >
             <button onClick={() => { setTab('active'); setQuery('') }} style={tabPill(tab === 'active')}>
               <Users className="w-3.5 h-3.5" />
@@ -159,8 +159,8 @@ export default function PeoplePage() {
                 <span
                   className="text-[10px] px-1.5 py-0.5 rounded-full"
                   style={{
-                    backgroundColor: tab === 'active' ? 'rgba(201,168,76,0.25)' : 'rgba(255,255,255,0.08)',
-                    color: tab === 'active' ? '#C9A84C' : 'rgba(255,255,255,0.35)',
+                    backgroundColor: tab === 'active' ? 'rgba(200,169,107,0.25)' : 'rgba(255,255,255,0.08)',
+                    color: tab === 'active' ? 'var(--aq-gold)' : 'var(--aq-text-muted)',
                   }}
                 >
                   {active.length}
@@ -174,8 +174,8 @@ export default function PeoplePage() {
                 <span
                   className="text-[10px] px-1.5 py-0.5 rounded-full"
                   style={{
-                    backgroundColor: tab === 'archived' ? 'rgba(201,168,76,0.25)' : 'rgba(255,255,255,0.08)',
-                    color: tab === 'archived' ? '#C9A84C' : 'rgba(255,255,255,0.35)',
+                    backgroundColor: tab === 'archived' ? 'rgba(200,169,107,0.25)' : 'rgba(255,255,255,0.08)',
+                    color: tab === 'archived' ? 'var(--aq-gold)' : 'var(--aq-text-muted)',
                   }}
                 >
                   {archived.length}
@@ -188,18 +188,18 @@ export default function PeoplePage() {
           <div
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl flex-1"
             style={{
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.09)',
+              background: 'var(--aq-elevated)',
+              border: '0.5px solid var(--aq-border)',
               maxWidth: 320,
             }}
           >
-            <Search className="w-4 h-4 shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }} />
+            <Search className="w-4 h-4 shrink-0" style={{ color: 'var(--aq-text-tertiary)' }} />
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search by name or phone…"
               className="flex-1 bg-transparent text-sm outline-none"
-              style={{ color: 'rgba(255,255,255,0.80)' }}
+              style={{ color: 'var(--aq-text-secondary)' }}
             />
           </div>
         </div>
@@ -207,14 +207,14 @@ export default function PeoplePage() {
         {/* Table */}
         <div
           className="rounded-2xl overflow-hidden"
-          style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(8,12,26,0.55)' }}
+          style={{ border: '0.5px solid var(--aq-border)', background: 'var(--aq-surface)' }}
         >
           {/* Column headers */}
           <div
-            className="px-5 py-3 text-xs font-semibold uppercase tracking-wide"
+            className="px-5 py-3 text-xs font-medium uppercase tracking-wide"
             style={{
-              borderBottom: '1px solid rgba(255,255,255,0.06)',
-              color: 'rgba(255,255,255,0.30)',
+              borderBottom: '0.5px solid var(--aq-border)',
+              color: 'var(--aq-text-tertiary)',
               display: 'grid',
               gridTemplateColumns: tab === 'archived' ? '2fr 1.5fr auto' : '2fr 1.5fr 1fr',
               gap: '1rem',
@@ -229,26 +229,26 @@ export default function PeoplePage() {
             <div className="p-5 space-y-3">
               {[1, 2, 3, 4, 5].map(i => (
                 <div key={i} className="h-12 rounded-xl animate-pulse"
-                  style={{ background: 'rgba(255,255,255,0.05)' }} />
+                  style={{ background: 'var(--aq-surface)' }} />
               ))}
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-16 text-center">
               {tab === 'archived' ? (
                 <>
-                  <Archive className="w-10 h-10 mx-auto mb-3" style={{ color: 'rgba(255,255,255,0.12)' }} />
-                  <p className="text-sm" style={{ color: 'rgba(255,255,255,0.30)' }}>
+                  <Archive className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--aq-text-muted)' }} />
+                  <p className="text-sm" style={{ color: 'var(--aq-text-tertiary)' }}>
                     {query ? `No archived members matching "${query}"` : 'No archived members'}
                   </p>
                 </>
               ) : (
-                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.30)' }}>
+                <p className="text-sm" style={{ color: 'var(--aq-text-tertiary)' }}>
                   {query ? `No results for "${query}"` : 'No members yet.'}
                 </p>
               )}
             </div>
           ) : (
-            <ul className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+            <ul className="divide-y" style={{ borderColor: 'var(--aq-border)' }}>
               {filtered.map(person => {
                 const color = avatarColor(person.name)
                 const isActing = acting === person.id
@@ -263,17 +263,17 @@ export default function PeoplePage() {
                         {/* Avatar + Name */}
                         <div className="flex items-center gap-3 min-w-0 flex-1">
                           <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold text-white"
+                            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-medium text-white"
                             style={{ background: color, opacity: 0.6 }}
                           >
                             {initials(person.name)}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-medium truncate" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                            <p className="text-sm font-medium truncate" style={{ color: 'var(--aq-text-secondary)' }}>
                               {person.name}
                             </p>
                             {person.phone && (
-                              <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                              <p className="text-xs truncate" style={{ color: 'var(--aq-text-muted)' }}>
                                 {person.phone}
                               </p>
                             )}
@@ -288,12 +288,12 @@ export default function PeoplePage() {
                             title="Restore to active"
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
                             style={{
-                              backgroundColor: 'rgba(5,150,105,0.12)',
-                              border: '1px solid rgba(5,150,105,0.25)',
-                              color: '#34d399',
+                              backgroundColor: 'rgba(127,168,135,0.12)',
+                              border: '0.5px solid var(--aq-border)',
+                              color: 'var(--aq-sage)',
                             }}
-                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(5,150,105,0.22)')}
-                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(5,150,105,0.12)')}
+                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(127,168,135,0.22)')}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(127,168,135,0.12)')}
                           >
                             <RotateCcw className="w-3.5 h-3.5" />
                             Restore
@@ -304,12 +304,12 @@ export default function PeoplePage() {
                             title="Permanently delete"
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
                             style={{
-                              backgroundColor: 'rgba(248,113,113,0.10)',
-                              border: '1px solid rgba(248,113,113,0.22)',
-                              color: '#f87171',
+                              backgroundColor: 'rgba(194,95,95,0.10)',
+                              border: '0.5px solid var(--aq-border)',
+                              color: 'var(--aq-rose)',
                             }}
-                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(248,113,113,0.20)')}
-                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(248,113,113,0.10)')}
+                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(194,95,95,0.20)')}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(194,95,95,0.10)')}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                             Delete
@@ -327,26 +327,26 @@ export default function PeoplePage() {
                       href={`/${slug}/people/${person.id}`}
                       className="grid gap-4 items-center px-5 py-3.5 transition-colors"
                       style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1fr' }}
-                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)')}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--aq-surface)')}
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold text-white"
+                          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-medium text-white"
                           style={{ background: color }}
                         >
                           {initials(person.name)}
                         </div>
-                        <span className="text-sm font-medium truncate" style={{ color: 'rgba(255,255,255,0.88)' }}>
+                        <span className="text-sm font-medium truncate" style={{ color: 'var(--aq-text-primary)' }}>
                           {person.name}
                         </span>
                       </div>
 
-                      <span className="hidden sm:block text-sm truncate" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                        {person.phone ?? <span style={{ color: 'rgba(255,255,255,0.18)' }}>—</span>}
+                      <span className="hidden sm:block text-sm truncate" style={{ color: 'var(--aq-text-secondary)' }}>
+                        {person.phone ?? <span style={{ color: 'var(--aq-text-muted)' }}>—</span>}
                       </span>
 
-                      <span className="hidden md:block text-sm" style={{ color: 'rgba(255,255,255,0.30)' }}>
+                      <span className="hidden md:block text-sm" style={{ color: 'var(--aq-text-tertiary)' }}>
                         {new Date(person.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                       </span>
                     </Link>
@@ -358,7 +358,7 @@ export default function PeoplePage() {
         </div>
 
         {!loading && filtered.length > 0 && (
-          <p className="mt-3 text-xs" style={{ color: 'rgba(255,255,255,0.22)' }}>
+          <p className="mt-3 text-xs" style={{ color: 'var(--aq-text-muted)' }}>
             Showing {filtered.length.toLocaleString()} of {list.length.toLocaleString()} {tab === 'archived' ? 'archived' : 'active'} members
           </p>
         )}
@@ -368,9 +368,9 @@ export default function PeoplePage() {
           <div
             className="mt-4 px-4 py-3 rounded-xl text-xs"
             style={{
-              background: 'rgba(248,113,113,0.07)',
-              border: '1px solid rgba(248,113,113,0.15)',
-              color: 'rgba(255,255,255,0.40)',
+              background: 'rgba(194,95,95,0.07)',
+              border: '0.5px solid var(--aq-border)',
+              color: 'var(--aq-text-tertiary)',
             }}
           >
             Deleting a person is permanent and removes all their attendance records. Use Restore to move them back to active.

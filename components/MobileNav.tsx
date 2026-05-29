@@ -21,10 +21,8 @@ export default function MobileNav() {
     <nav
       className="md:hidden fixed bottom-0 left-0 right-0 z-50"
       style={{
-        background: 'linear-gradient(180deg, rgba(5,8,18,0.94) 0%, rgba(7,10,20,0.99) 100%)',
-        backdropFilter: 'blur(32px) saturate(160%)',
-        WebkitBackdropFilter: 'blur(32px) saturate(160%)',
-        borderTop: '1px solid rgba(255,255,255,0.055)',
+        background: 'var(--aq-base)',
+        borderTop: '0.5px solid var(--aq-border)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
@@ -37,7 +35,7 @@ export default function MobileNav() {
               key={path}
               href={href}
               className="flex-1 flex flex-col items-center justify-center gap-[5px] transition-all duration-150"
-              style={{ color: active ? '#C9A84C' : 'rgba(255,255,255,0.28)' }}
+              style={{ color: active ? 'var(--aq-gold)' : 'var(--aq-text-tertiary)' }}
             >
               <div
                 style={{
@@ -47,7 +45,7 @@ export default function MobileNav() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: active ? 'rgba(201,168,76,0.14)' : 'transparent',
+                  background: active ? 'rgba(200,169,107,0.14)' : 'transparent',
                   transition: 'background 0.15s ease',
                 }}
               >
@@ -57,7 +55,7 @@ export default function MobileNav() {
                 fontSize: 10,
                 fontWeight: active ? 500 : 400,
                 letterSpacing: '0.01em',
-                color: active ? '#C9A84C' : 'rgba(255,255,255,0.28)',
+                color: active ? 'var(--aq-gold)' : 'var(--aq-text-tertiary)',
               }}>
                 {label}
               </span>

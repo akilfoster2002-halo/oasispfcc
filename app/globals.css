@@ -1,465 +1,224 @@
 @import "tailwindcss";
 
-@theme inline {
-  --font-sans:      var(--font-geist-sans);
-  --font-mono:      var(--font-geist-mono);
-  --font-display:   var(--font-display);
-  --font-cormorant: var(--font-cormorant);
+/* ─── Design tokens ─────────────────────────────────────────────────────────── */
 
-  /* ── Core palette ──────────────────────────────────────────── */
-  --color-app-bg:          #050810;
-  --color-surface:         rgba(255,255,255,0.030);
-  --color-surface-raised:  rgba(255,255,255,0.050);
-  --color-surface-overlay: rgba(255,255,255,0.070);
-  --color-border:          rgba(255,255,255,0.060);
-  --color-border-bright:   rgba(255,255,255,0.100);
-  --color-text-primary:    rgba(255,255,255,0.92);
-  --color-text-secondary:  rgba(255,255,255,0.44);
-  --color-text-muted:      rgba(255,255,255,0.22);
-  --color-text-dim:        rgba(255,255,255,0.12);
-  --color-accent:          #C9A84C;
-  --color-accent-deep:     #A88A35;
-  --color-accent-glow:     rgba(201,168,76,0.25);
-  --color-success:         #34d399;
-  --color-warning:         #fbbf24;
-  --color-danger:          #f87171;
-  --color-cyan:            #22d3ee;
+:root {
+  /* Surfaces */
+  --aq-base:     #111318;
+  --aq-surface:  #1C2028;
+  --aq-elevated: #252A34;
+  --aq-border:   #3A3F4A;
+
+  /* Accent */
+  --aq-gold:      #C8A96B;
+  --aq-gold-dark: #A8865A;
+  --aq-slate:     #6B7FA3;
+
+  /* Semantic */
+  --aq-sage:  #7FA887;
+  --aq-amber: #D97706;
+  --aq-rose:  #C25F5F;
+
+  /* Text */
+  --aq-text-primary:   #FFFFFF;
+  --aq-text-secondary: rgba(255,255,255,0.65);
+  --aq-text-tertiary:  rgba(255,255,255,0.35);
+
+  /* Compatibility aliases for --ds-* variables used in components/ui/index.tsx */
+  --ds-text-tertiary:  var(--aq-text-tertiary);
+  --ds-text-faint:     var(--aq-text-muted);
+  --ds-accent:         var(--aq-gold);
+  --ds-accent-soft:    rgba(200,169,107,0.09);
+  --ds-accent-line:    rgba(200,169,107,0.25);
+  --ds-success:        var(--aq-sage);
+  --ds-success-soft:   rgba(127,168,135,0.10);
+  --ds-warning:        var(--aq-amber);
+  --ds-warning-soft:   rgba(217,119,6,0.10);
+  --ds-danger:         var(--aq-rose);
+  --ds-danger-soft:    rgba(194,95,95,0.08);
+  --aq-text-muted:     rgba(255,255,255,0.20);
+
+  /* Typography */
+  --font-sans:    var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-cormorant), Georgia, 'Times New Roman', serif;
+  --font-mono:    var(--font-geist-mono), monospace;
+
+  /* Motion */
+  --aq-ease:     cubic-bezier(0.4, 0, 0.2, 1);
+  --aq-spring:   cubic-bezier(0.16, 1, 0.3, 1);
+  --aq-dur-fast: 120ms;
+  --aq-dur:      180ms;
+  --aq-dur-slow: 320ms;
 }
 
-/* ── Reset ──────────────────────────────────────────────────────────────────── */
+/* ─── Reset ─────────────────────────────────────────────────────────────────── */
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; padding: 0; }
 
+/* ─── Base ──────────────────────────────────────────────────────────────────── */
+
 html {
-  background-color: #0a0a0e;
+  background-color: var(--aq-base);
   color-scheme: dark;
 }
 
-/* ── Aquila cinematic atmosphere ────────────────────────────────────────────── */
-/* Obsidian base. Warm gold breath from below — like candles in a cathedral.
-   A platinum mist drifts from the upper left — cool marble in morning light.
-   Deep vignette at the edges draws the eye inward. Nothing loud. Everything felt. */
-
 body {
-  background-color: #07080F;
-  background-image:
-    /* Warm gold breath — candlelight from below, stronger presence */
-    radial-gradient(ellipse 120% 60% at 50% 120%,
-      rgba(201,168,76,0.045) 0%, transparent 52%),
-    /* Aegean depth — upper left, cool mineral clarity */
-    radial-gradient(ellipse 55% 65% at -5% 8%,
-      rgba(79,120,190,0.030) 0%, transparent 55%),
-    /* Right horizon warmth — subtle balance */
-    radial-gradient(ellipse 40% 50% at 110% 60%,
-      rgba(79,127,196,0.020) 0%, transparent 52%),
-    /* Cinematic vignette — pulls eye inward */
-    radial-gradient(ellipse 100% 90% at 50% 50%,
-      transparent 30%, rgba(0,0,0,0.55) 100%);
-  min-height: 100%;
-  color: rgba(255,255,255,0.92);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  font-feature-settings: 'rlig' 1, 'calt' 1, 'ss01' 1, 'ss02' 1;
-  letter-spacing: -0.011em;
+  background-color: var(--aq-base);
+  color: var(--aq-text-secondary);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
-input, select, textarea, button { font-family: inherit; letter-spacing: inherit; }
+input, select, textarea, button { font-family: inherit; }
 
-/* ── Scrollbar ──────────────────────────────────────────────────────────────── */
+/* ─── Scrollbar ─────────────────────────────────────────────────────────────── */
 
 ::-webkit-scrollbar            { width: 3px; height: 3px; }
 ::-webkit-scrollbar-track      { background: transparent; }
-::-webkit-scrollbar-thumb      { background: rgba(255,255,255,0.09); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover{ background: rgba(255,255,255,0.18); }
+::-webkit-scrollbar-thumb      { background: var(--aq-border); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover{ background: #4A5060; }
 
-/* ── Noise SVG data URI — applied as overlay on glass surfaces ──────────────── */
-/* Derived from: fractalNoise baseFrequency="0.80" numOctaves="4" — premium grain */
+/* ─── Layout ─────────────────────────────────────────────────────────────────── */
 
-.noise-overlay::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.80' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.40'/%3E%3C/svg%3E");
-  opacity: 0.022;
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* ── Glass material system ──────────────────────────────────────────────────── */
-
-/* Level 0 — recessed / input fields */
-.glass-0 {
-  background: rgba(255,255,255,0.025);
-  border: 1px solid rgba(255,255,255,0.055);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-/* Level 1 — standard card */
-.glass-card {
-  position: relative;
-  background: linear-gradient(
-    145deg,
-    rgba(255,255,255,0.052) 0%,
-    rgba(255,255,255,0.018) 100%
-  );
-  backdrop-filter: blur(32px) saturate(180%);
-  -webkit-backdrop-filter: blur(32px) saturate(180%);
-  border: 1px solid rgba(255,255,255,0.065);
-  border-radius: 20px;
-  /* Inner top-edge highlight — frosted glass catching light */
-  box-shadow:
-    0 1px 0 rgba(255,255,255,0.07) inset,
-    0 -1px 0 rgba(0,0,0,0.20) inset,
-    0 16px 48px rgba(0,0,0,0.35),
-    0 4px 16px rgba(0,0,0,0.20);
-}
-
-/* Level 2 — elevated / modal / popover */
-.glass-raised {
-  position: relative;
-  background: linear-gradient(
-    145deg,
-    rgba(255,255,255,0.075) 0%,
-    rgba(255,255,255,0.030) 100%
-  );
-  backdrop-filter: blur(40px) saturate(200%);
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
-  border: 1px solid rgba(255,255,255,0.090);
-  border-radius: 22px;
-  box-shadow:
-    0 1px 0 rgba(255,255,255,0.10) inset,
-    0 -1px 0 rgba(0,0,0,0.25) inset,
-    0 24px 64px rgba(0,0,0,0.50),
-    0 8px 24px rgba(0,0,0,0.30);
-}
-
-/* Hover lift */
-.glass-hover {
-  transition:
-    transform      0.22s cubic-bezier(0.25,0.46,0.45,0.94),
-    box-shadow     0.22s cubic-bezier(0.25,0.46,0.45,0.94),
-    border-color   0.22s ease;
-}
-.glass-hover:hover {
-  transform: translateY(-2px);
-  border-color: rgba(255,255,255,0.10);
-  box-shadow:
-    0 1px 0 rgba(255,255,255,0.09) inset,
-    0 -1px 0 rgba(0,0,0,0.22) inset,
-    0 24px 64px rgba(0,0,0,0.50),
-    0 8px 32px rgba(0,0,0,0.30);
-}
-
-/* ── Accent glow chip — gold version ───────────────────────────────────────── */
-
-.accent-surface {
-  background: linear-gradient(135deg,
-    rgba(201,168,76,0.15) 0%,
-    rgba(201,168,76,0.07) 100%);
-  border: 1px solid rgba(201,168,76,0.25);
-}
-
-/* ── Primary button — gold on obsidian ─────────────────────────────────────── */
-
-.btn-primary {
-  background: linear-gradient(135deg, #C9A84C 0%, #A88A35 100%);
-  color: #06070E;
-  border: 1px solid rgba(201,168,76,0.45);
-  box-shadow:
-    0 1px 0 rgba(255,248,225,0.20) inset,
-    0 6px 20px rgba(201,168,76,0.22);
-  transition:
-    background    0.18s ease,
-    box-shadow    0.18s ease,
-    transform     0.12s ease;
-  cursor: pointer;
-}
-.btn-primary:hover {
-  background: linear-gradient(135deg, #DDB95A 0%, #C9A84C 100%);
-  transform: translateY(-1px);
-  box-shadow:
-    0 1px 0 rgba(255,248,225,0.28) inset,
-    0 10px 28px rgba(201,168,76,0.32);
-}
-.btn-primary:active  { transform: translateY(0); }
-.btn-primary:disabled{ opacity: 0.38; transform: none; cursor: not-allowed; }
-
-/* ── Typography system ──────────────────────────────────────────────────────── */
-
-/* Display — Space Grotesk — for hero numbers, major section headings */
-.text-display-xl {
-  font-family: var(--font-display), var(--font-geist-sans), system-ui, sans-serif;
-  font-size: clamp(40px, 5vw, 56px);
-  font-weight: 700;
-  letter-spacing: -0.040em;
-  line-height: 1.00;
-  color: rgba(255,255,255,0.94);
-}
-.text-display {
-  font-family: var(--font-display), var(--font-geist-sans), system-ui, sans-serif;
-  font-size: clamp(24px, 3vw, 32px);
-  font-weight: 600;
-  letter-spacing: -0.030em;
-  line-height: 1.05;
-  color: rgba(255,255,255,0.92);
-}
-.text-heading {
-  font-family: var(--font-display), var(--font-geist-sans), system-ui, sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -0.020em;
-  line-height: 1.2;
-  color: rgba(255,255,255,0.90);
-}
-.text-subheading {
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: -0.010em;
-  color: rgba(255,255,255,0.72);
-}
-/* Microscopic label — all-caps, wide tracking */
-.text-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.10em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.28);
-}
-/* KPI number — massive, confident */
-.text-kpi {
-  font-family: var(--font-display), var(--font-geist-sans), system-ui, sans-serif;
-  font-size: clamp(36px, 4vw, 48px);
-  font-weight: 700;
-  letter-spacing: -0.045em;
-  line-height: 1.00;
-  color: rgba(255,255,255,0.95);
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── Animations ─────────────────────────────────────────────────────────────── */
-
-@keyframes shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position:  200% center; }
-}
-.shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(255,255,255,0.000) 25%,
-    rgba(255,255,255,0.048) 50%,
-    rgba(255,255,255,0.000) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.6s infinite linear;
-}
-
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.fade-up { animation: fade-up 0.38s cubic-bezier(0.22,1,0.36,1) forwards; }
-
-@keyframes fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-.fade-in { animation: fade-in 0.30s ease forwards; }
-
-@keyframes scale-in {
-  from { opacity: 0; transform: scale(0.95); }
-  to   { opacity: 1; transform: scale(1); }
-}
-.scale-in { animation: scale-in 0.26s cubic-bezier(0.34,1.56,0.64,1) forwards; }
-
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 12px rgba(201,168,76,0.22), 0 0 0 1px rgba(201,168,76,0.14) inset; }
-  50%       { box-shadow: 0 0 28px rgba(201,168,76,0.42), 0 0 0 1px rgba(201,168,76,0.28) inset; }
-}
-.glow-pulse { animation: glow-pulse 3.5s ease-in-out infinite; }
-
-@keyframes spin-slow {
-  to { transform: rotate(360deg); }
-}
-.spin-slow { animation: spin-slow 1.1s linear infinite; }
-
-/* ── Accent line — 1px top border glow ─────────────────────────────────────── */
-.accent-line-top {
-  border-top: 1px solid rgba(201,168,76,0.28);
-  box-shadow: 0 -1px 12px rgba(201,168,76,0.12);
-}
-
-/* ── Input ──────────────────────────────────────────────────────────────────── */
-.input-dark {
-  background: rgba(255,255,255,0.032);
-  border: 1px solid rgba(255,255,255,0.080);
-  color: rgba(255,255,255,0.88);
-  border-radius: 12px;
-  padding: 10px 14px;
-  font-size: 14px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  outline: none;
-}
-.input-dark::placeholder { color: rgba(255,255,255,0.22); }
-.input-dark:focus {
-  border-color: rgba(201,168,76,0.50);
-  box-shadow: 0 0 0 3px rgba(201,168,76,0.10), 0 0 0 1px rgba(201,168,76,0.50);
-}
-
-/* ── Layout ─────────────────────────────────────────────────────────────────── */
 @media (min-width: 768px) {
   .main-content { margin-left: 228px; }
 }
 
-/* ── Thin separator ─────────────────────────────────────────────────────────── */
-.divider {
-  border: none;
-  height: 1px;
-  background: rgba(255,255,255,0.055);
+/* ─── Typography classes ─────────────────────────────────────────────────────── */
+
+.text-display {
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--aq-text-primary);
 }
 
-/* ╔════════════════════════════════════════════════════════════════════════╗
-   ║  Design system v2  —  calm / premium / restrained                       ║
-   ║  Apple-iCloud / Things vibe in dark mode. Use these on new surfaces.    ║
-   ║  Older `.glass-*` and `.btn-primary` classes still work for legacy.     ║
-   ╚════════════════════════════════════════════════════════════════════════╝ */
-
-:root {
-  /* Tokens — kept in :root so they're available to inline-styled callers too */
-  --ds-bg:                 #0a0a0e;
-  --ds-surface:            #15151c;
-  --ds-surface-soft:       rgba(255,255,255,0.024);
-  --ds-surface-hover:      rgba(255,255,255,0.045);
-  --ds-surface-active:     rgba(255,255,255,0.065);
-  --ds-border:             rgba(255,255,255,0.06);
-  --ds-border-strong:      rgba(255,255,255,0.10);
-
-  --ds-text:               rgba(255,255,255,0.94);
-  --ds-text-secondary:     rgba(255,255,255,0.62);
-  --ds-text-tertiary:      rgba(255,255,255,0.38);
-  --ds-text-faint:         rgba(255,255,255,0.22);
-
-  /* Gold is the Aquila accent — aegean blue is the action colour */
-  --ds-accent:             #C9A84C;
-  --ds-accent-strong:      #A88A35;
-  --ds-accent-soft:        rgba(201,168,76,0.09);
-  --ds-accent-line:        rgba(201,168,76,0.25);
-
-  --ds-action:             #4F7FC4;
-  --ds-action-strong:      #3A6BAE;
-  --ds-action-soft:        rgba(79,127,196,0.10);
-  --ds-action-line:        rgba(79,127,196,0.28);
-
-  --ds-success:            #5ad199;
-  --ds-success-soft:       rgba(90,209,153,0.10);
-  --ds-warning:            #f5b352;
-  --ds-warning-soft:       rgba(245,179,82,0.10);
-  --ds-danger:             #f17575;
-  --ds-danger-soft:        rgba(241,117,117,0.08);
-
-  --ds-radius-sm:          8px;
-  --ds-radius:             12px;
-  --ds-radius-lg:          18px;
-  --ds-radius-xl:          22px;
-
-  --ds-shadow-card:        0 0 0 0.5px rgba(255,255,255,0.04), 0 12px 32px rgba(0,0,0,0.28);
-  --ds-shadow-elevated:    0 0 0 0.5px rgba(255,255,255,0.06), 0 20px 48px rgba(0,0,0,0.40);
-  --ds-shadow-press:       0 0 0 0.5px rgba(255,255,255,0.03), 0 4px 12px rgba(0,0,0,0.20);
-
-  --ds-ease:               cubic-bezier(0.4, 0, 0.2, 1);
-  --ds-ease-out:           cubic-bezier(0.16, 1, 0.3, 1);
-  --ds-dur-fast:           120ms;
-  --ds-dur:                180ms;
-  --ds-dur-slow:           320ms;
+.text-heading {
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--aq-text-primary);
 }
 
-/* ── Card ──────────────────────────────────────────────────────────────────── */
+.text-kpi {
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.0;
+  color: var(--aq-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.text-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--aq-text-tertiary);
+}
+
+/* ─── Card / panel ───────────────────────────────────────────────────────────── */
 
 .ds-card {
-  background: var(--ds-surface);
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius-lg);
-  box-shadow: var(--ds-shadow-card);
-}
-.ds-card-quiet {
-  background: var(--ds-surface-soft);
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius);
+  background: var(--aq-surface);
+  border: 0.5px solid var(--aq-border);
+  border-radius: 10px;
+  padding: 20px;
 }
 
-/* ── Button ───────────────────────────────────────────────────────────────── */
+/* ─── Hover lift (no shadow) ─────────────────────────────────────────────────── */
 
+.glass-hover {
+  transition: background-color var(--aq-dur) var(--aq-ease),
+              border-color     var(--aq-dur) var(--aq-ease);
+}
+.glass-hover:hover {
+  background: var(--aq-elevated);
+  border-color: #4A5060;
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────────── */
+
+/* Primary CTA — gold, flat, no gradient, no shadow */
+.btn-primary,
+.ds-btn.ds-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--aq-gold);
+  color: #111318;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background var(--aq-dur) var(--aq-ease);
+}
+.btn-primary:hover,
+.ds-btn.ds-btn-primary:hover {
+  background: var(--aq-gold-dark);
+}
+.btn-primary:disabled,
+.ds-btn.ds-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Secondary / ghost */
 .ds-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 40px;
-  padding: 0 16px;
-  border-radius: var(--ds-radius);
-  font-size: 14px;
+  border-radius: 8px;
+  font-size: 13px;
   font-weight: 500;
-  letter-spacing: -0.005em;
-  border: 1px solid transparent;
   cursor: pointer;
-  transition:
-    background-color var(--ds-dur) var(--ds-ease),
-    border-color     var(--ds-dur) var(--ds-ease),
-    color            var(--ds-dur) var(--ds-ease),
-    transform        var(--ds-dur-fast) var(--ds-ease),
-    opacity          var(--ds-dur) var(--ds-ease);
+  transition: background var(--aq-dur) var(--aq-ease),
+              color     var(--aq-dur) var(--aq-ease),
+              border-color var(--aq-dur) var(--aq-ease);
   user-select: none;
-  -webkit-user-select: none;
 }
 .ds-btn:disabled { cursor: not-allowed; opacity: 0.45; }
-.ds-btn:active:not(:disabled) { transform: scale(0.985); }
 
-/* Primary — gold on obsidian. Luxury. Unmistakable. */
-.ds-btn-primary {
-  background: linear-gradient(135deg, #C9A84C 0%, #A88A35 100%);
-  color: #06070E;
-  border-color: rgba(201,168,76,0.50);
-  box-shadow:
-    0 1px 0 rgba(255,248,225,0.22) inset,
-    0 4px 16px rgba(201,168,76,0.22);
-}
-.ds-btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #DDB95A 0%, #C9A84C 100%);
-  border-color: rgba(201,168,76,0.65);
-  box-shadow:
-    0 1px 0 rgba(255,248,225,0.28) inset,
-    0 6px 24px rgba(201,168,76,0.32);
-}
-
-/* Secondary — soft surface */
 .ds-btn-secondary {
-  background: var(--ds-surface-soft);
-  border-color: var(--ds-border-strong);
-  color: var(--ds-text);
+  background: transparent;
+  border: 0.5px solid var(--aq-border);
+  color: var(--aq-text-secondary);
 }
 .ds-btn-secondary:hover:not(:disabled) {
-  background: var(--ds-surface-hover);
+  background: var(--aq-elevated);
+  color: var(--aq-text-primary);
 }
 
-/* Ghost — bare button, only shows on hover */
+.ds-btn-sm  { height: 32px; padding: 0 12px; font-size: 12px; border-radius: 6px; }
+.ds-btn-lg  { height: 48px; padding: 0 22px; font-size: 15px; border-radius: 8px; }
+
+.ds-btn-primary {
+  background: var(--aq-gold);
+  color: #111318;
+  border: none;
+}
+.ds-btn-primary:hover:not(:disabled) { background: var(--aq-gold-dark); }
+
 .ds-btn-ghost {
   background: transparent;
-  color: var(--ds-text-secondary);
+  border: none;
+  color: var(--aq-text-secondary);
 }
 .ds-btn-ghost:hover:not(:disabled) {
-  background: var(--ds-surface-soft);
-  color: var(--ds-text);
+  background: var(--aq-surface);
+  color: var(--aq-text-primary);
 }
 
-/* Sizes */
-.ds-btn-sm  { height: 32px; padding: 0 12px; font-size: 13px; border-radius: var(--ds-radius-sm); }
-.ds-btn-lg  { height: 48px; padding: 0 22px; font-size: 15px; border-radius: var(--ds-radius); }
-
-/* ── Icon button ─────────────────────────────────────────────────────────── */
+/* ─── Icon button ─────────────────────────────────────────────────────────── */
 
 .ds-icon-btn {
   display: inline-flex;
@@ -467,155 +226,115 @@ input, select, textarea, button { font-family: inherit; letter-spacing: inherit;
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: var(--ds-radius-sm);
+  border-radius: 8px;
   background: transparent;
-  border: 1px solid transparent;
-  color: var(--ds-text-secondary);
+  border: none;
+  color: var(--aq-text-secondary);
   cursor: pointer;
-  transition: background-color var(--ds-dur) var(--ds-ease),
-              color var(--ds-dur) var(--ds-ease),
-              border-color var(--ds-dur) var(--ds-ease);
+  transition: background var(--aq-dur) var(--aq-ease), color var(--aq-dur) var(--aq-ease);
 }
-.ds-icon-btn:hover {
-  background: var(--ds-surface-hover);
-  color: var(--ds-text);
-}
-.ds-icon-btn-bordered {
-  border-color: var(--ds-border);
-  background: var(--ds-surface-soft);
+.ds-icon-btn:hover { background: var(--aq-surface); color: var(--aq-text-primary); }
+.ds-icon-btn-bordered { border: 0.5px solid var(--aq-border); background: var(--aq-elevated); }
+
+/* ─── Card quiet ─────────────────────────────────────────────────────────── */
+
+.ds-card-quiet {
+  background: var(--aq-surface);
+  border: 0.5px solid var(--aq-border);
+  border-radius: 8px;
 }
 
-/* ── Input ────────────────────────────────────────────────────────────────── */
+/* ─── Form inputs ────────────────────────────────────────────────────────────── */
 
-.ds-input {
-  width: 100%;
-  height: 44px;
-  padding: 0 14px;
-  border-radius: var(--ds-radius);
-  background: var(--ds-surface-soft);
-  border: 1px solid var(--ds-border);
-  color: var(--ds-text);
+.ds-input,
+.input-dark {
+  background: var(--aq-elevated);
+  border: 0.5px solid var(--aq-border);
+  border-radius: 8px;
+  color: var(--aq-text-primary);
+  padding: 10px 14px;
   font-size: 14px;
-  letter-spacing: -0.005em;
   outline: none;
-  transition: border-color var(--ds-dur) var(--ds-ease),
-              box-shadow   var(--ds-dur) var(--ds-ease),
-              background   var(--ds-dur) var(--ds-ease);
+  width: 100%;
+  transition: border-color var(--aq-dur) var(--aq-ease),
+              box-shadow   var(--aq-dur) var(--aq-ease);
 }
-.ds-input::placeholder { color: var(--ds-text-faint); }
-.ds-input:hover { border-color: var(--ds-border-strong); }
-.ds-input:focus {
-  border-color: var(--ds-accent-line);
-  box-shadow: 0 0 0 3px var(--ds-accent-soft);
-  background: var(--ds-surface-hover);
+.ds-input::placeholder,
+.input-dark::placeholder { color: var(--aq-text-tertiary); }
+.ds-input:focus,
+.input-dark:focus {
+  border-color: var(--aq-gold);
+  box-shadow: 0 0 0 3px rgba(200, 169, 107, 0.12);
 }
-.ds-input-success { border-color: rgba(90,209,153,0.40); }
-.ds-input-error   { border-color: rgba(241,117,117,0.45); }
+.ds-input-success { border-color: rgba(127,168,135,0.50); }
+.ds-input-error   { border-color: rgba(194,95,95,0.50); }
 
-/* ── Label ─────────────────────────────────────────────────────────────────── */
+/* ─── Labels ─────────────────────────────────────────────────────────────────── */
 
 .ds-label {
   display: block;
   font-size: 13px;
   font-weight: 500;
-  color: var(--ds-text-secondary);
+  color: var(--aq-text-secondary);
   margin-bottom: 8px;
-  letter-spacing: -0.005em;
+  letter-spacing: 0.01em;
 }
+
 .ds-label-micro {
   display: block;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ds-text-tertiary);
+  letter-spacing: 0.03em;
+  color: var(--aq-text-tertiary);
   margin-bottom: 10px;
 }
 
-/* ── Badge / chip ────────────────────────────────────────────────────────── */
+/* ─── Badges / status pills ──────────────────────────────────────────────────── */
 
 .ds-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 20px;
-  padding: 0 8px;
+  padding: 2px 8px;
   border-radius: 999px;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.01em;
-  background: var(--ds-surface-soft);
-  border: 1px solid var(--ds-border);
-  color: var(--ds-text-secondary);
+  background: var(--aq-surface);
+  border: 0.5px solid var(--aq-border);
+  color: var(--aq-text-secondary);
 }
 
-/* ── Skeleton ────────────────────────────────────────────────────────────── */
+.badge-rose   { background: rgba(194,95,95,0.12);  color: var(--aq-rose);  border: 0.5px solid rgba(194,95,95,0.25); }
+.badge-amber  { background: rgba(217,119,6,0.12);  color: var(--aq-amber); border: 0.5px solid rgba(217,119,6,0.25); }
+.badge-sage   { background: rgba(127,168,135,0.12);color: var(--aq-sage);  border: 0.5px solid rgba(127,168,135,0.25); }
+.badge-slate  { background: rgba(107,127,163,0.12);color: var(--aq-slate); border: 0.5px solid rgba(107,127,163,0.25); }
 
-.ds-skeleton {
-  background: linear-gradient(
-    90deg,
-    rgba(255,255,255,0.032) 0%,
-    rgba(255,255,255,0.060) 50%,
-    rgba(255,255,255,0.032) 100%
-  );
-  background-size: 200% 100%;
-  animation: ds-skeleton-shimmer 1.6s ease-in-out infinite;
-  border-radius: var(--ds-radius-sm);
-}
-@keyframes ds-skeleton-shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* ── Inline message (success/error/info) ─────────────────────────────────── */
-
-.ds-message {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: var(--ds-radius);
-  font-size: 13px;
-  line-height: 1.5;
-  border: 1px solid;
-}
-.ds-message-error   { background: var(--ds-danger-soft);  border-color: rgba(241,117,117,0.20); color: var(--ds-danger); }
-.ds-message-success { background: var(--ds-success-soft); border-color: rgba(90,209,153,0.22); color: var(--ds-success); }
-.ds-message-info    { background: var(--ds-accent-soft);  border-color: var(--ds-accent-line); color: var(--ds-accent); }
-
-/* ── Divider ─────────────────────────────────────────────────────────────── */
-
-.ds-divider {
-  height: 1px;
-  background: var(--ds-border);
-  border: none;
-  margin: 0;
-}
-
-/* ── Surface row (list item with hover) ──────────────────────────────────── */
-
-.ds-row {
-  display: flex;
+/* Shared badge shape */
+.badge-rose, .badge-amber, .badge-sage, .badge-slate {
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: var(--ds-radius);
-  transition: background-color var(--ds-dur) var(--ds-ease);
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
 }
-.ds-row:hover { background: var(--ds-surface-soft); }
 
-/* ── Dropdown menu ───────────────────────────────────────────────────────── */
+/* ─── Dropdown menu ──────────────────────────────────────────────────────────── */
 
 .ds-menu {
-  background: #1a1a22;
-  border: 1px solid var(--ds-border-strong);
-  border-radius: var(--ds-radius);
-  box-shadow: var(--ds-shadow-elevated);
+  background: var(--aq-elevated);
+  border: 0.5px solid var(--aq-border);
+  border-radius: 8px;
   padding: 4px;
   min-width: 160px;
-  animation: ds-menu-in var(--ds-dur) var(--ds-ease-out);
+  animation: ds-menu-in var(--aq-dur) var(--aq-spring);
   transform-origin: top right;
 }
+
 .ds-menu-item {
   display: flex;
   align-items: center;
@@ -625,331 +344,54 @@ input, select, textarea, button { font-family: inherit; letter-spacing: inherit;
   padding: 8px 10px;
   border-radius: 6px;
   font-size: 13px;
-  color: var(--ds-text-secondary);
+  color: var(--aq-text-secondary);
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: background-color 80ms ease;
+  transition: background var(--aq-dur-fast) var(--aq-ease),
+              color var(--aq-dur-fast) var(--aq-ease);
 }
-.ds-menu-item:hover { background: var(--ds-surface-hover); color: var(--ds-text); }
-.ds-menu-item-active { color: var(--ds-text); font-weight: 600; }
-.ds-menu-item-active::after {
-  content: '✓';
-  margin-left: auto;
-  color: var(--ds-accent);
-  font-weight: 700;
-}
+.ds-menu-item:hover { background: var(--aq-surface); color: var(--aq-text-primary); }
 
-@keyframes ds-menu-in {
-  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
-}
+/* ─── Divider ────────────────────────────────────────────────────────────────── */
 
-/* ── Page-level entrance ─────────────────────────────────────────────────── */
-
-@keyframes ds-fade-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.ds-fade-up { animation: ds-fade-up var(--ds-dur-slow) var(--ds-ease-out) both; }
-
-/* Stagger helpers — apply to children for sequential entrance */
-.ds-stagger > *      { animation: ds-fade-up var(--ds-dur-slow) var(--ds-ease-out) both; }
-.ds-stagger > *:nth-child(1)  { animation-delay: 0ms; }
-.ds-stagger > *:nth-child(2)  { animation-delay: 50ms; }
-.ds-stagger > *:nth-child(3)  { animation-delay: 100ms; }
-.ds-stagger > *:nth-child(4)  { animation-delay: 150ms; }
-.ds-stagger > *:nth-child(5)  { animation-delay: 200ms; }
-.ds-stagger > *:nth-child(6)  { animation-delay: 250ms; }
-.ds-stagger > *:nth-child(7)  { animation-delay: 300ms; }
-.ds-stagger > *:nth-child(8)  { animation-delay: 350ms; }
-.ds-stagger > *:nth-child(n+9){ animation-delay: 400ms; }
-
-/* ── Respect reduced-motion preference ───────────────────────────────────── */
-
-@media (prefers-reduced-motion: reduce) {
-  .ds-fade-up,
-  .ds-stagger > *,
-  .ds-menu,
-  .ds-skeleton {
-    animation: none !important;
-  }
-  * { transition-duration: 0.01ms !important; }
-}
-
-/* ╔══════════════════════════════════════════════════════════════════════════════╗
-   ║  AQUILA DESIGN SYSTEM — v3                                                  ║
-   ║  "A sacred operating system for visionary ministry."                        ║
-   ║                                                                              ║
-   ║  Aegean blue · Muted gold · Obsidian black · Marble white                   ║
-   ║  Cormorant Garamond display · Space Grotesk UI · Geist Sans body            ║
-   ╚══════════════════════════════════════════════════════════════════════════════╝ */
-
-:root {
-  /* ── Aquila gold — the keynote accent ───────────────────────────────────── */
-  --aq-gold:          #C9A84C;
-  --aq-gold-bright:   #DDB95A;
-  --aq-gold-dim:      #9E7D2F;
-  --aq-gold-soft:     rgba(201,168,76,0.08);
-  --aq-gold-mid:      rgba(201,168,76,0.14);
-  --aq-gold-line:     rgba(201,168,76,0.22);
-  --aq-gold-glow:     rgba(201,168,76,0.30);
-
-  /* ── Aegean blue — depth and vision ────────────────────────────────────── */
-  --aq-aegean:        #4F7FC4;
-  --aq-aegean-bright: #6898D8;
-  --aq-aegean-soft:   rgba(79,127,196,0.10);
-  --aq-aegean-line:   rgba(79,127,196,0.25);
-
-  /* ── Marble surfaces — warm stone light ─────────────────────────────────── */
-  --aq-marble:        rgba(255,252,245,0.04);
-  --aq-marble-line:   rgba(255,252,245,0.06);
-  --aq-ivory:         rgba(255,248,225,0.92);
-  --aq-ivory-dim:     rgba(255,248,225,0.55);
-  --aq-ivory-mute:    rgba(255,248,225,0.30);
-  --aq-ivory-faint:   rgba(255,248,225,0.15);
-
-  /* ── Obsidian depth ─────────────────────────────────────────────────────── */
-  --aq-void:          #06070E;
-  --aq-deep:          #0C0D18;
-  --aq-surface:       rgba(255,255,255,0.032);
-  --aq-surface-warm:  rgba(255,248,225,0.030);
-  --aq-surface-hover: rgba(255,248,225,0.048);
-
-  /* ── Typography ─────────────────────────────────────────────────────────── */
-  --aq-serif: var(--font-cormorant, 'Cormorant Garamond'), Georgia, 'Times New Roman', serif;
-  --aq-sans:  var(--font-geist-sans), system-ui, sans-serif;
-
-  /* ── Motion — spring-based, calm, deliberate ────────────────────────────── */
-  --aq-spring:     cubic-bezier(0.16, 1, 0.3, 1);
-  --aq-ease:       cubic-bezier(0.4, 0, 0.2, 1);
-  --aq-dur-xs:     80ms;
-  --aq-dur-sm:     150ms;
-  --aq-dur-md:     280ms;
-  --aq-dur-lg:     420ms;
-  --aq-dur-xl:     600ms;
-
-  /* ── Depth shadows — warm, not cold ────────────────────────────────────── */
-  --aq-shadow-sm:   0 2px 8px rgba(0,0,0,0.30), 0 0 0 0.5px rgba(255,248,225,0.04);
-  --aq-shadow-md:   0 8px 24px rgba(0,0,0,0.40), 0 0 0 0.5px rgba(255,248,225,0.05);
-  --aq-shadow-lg:   0 20px 56px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,248,225,0.06);
-  --aq-shadow-gold: 0 0 20px rgba(201,168,76,0.20), 0 4px 16px rgba(0,0,0,0.35);
-}
-
-/* ── Aquila glass — warmer, richer than the base glass system ───────────── */
-
-.aq-glass {
-  background: linear-gradient(
-    145deg,
-    rgba(255,252,245,0.048) 0%,
-    rgba(255,252,245,0.016) 100%
-  );
-  backdrop-filter: blur(36px) saturate(160%);
-  -webkit-backdrop-filter: blur(36px) saturate(160%);
-  border: 1px solid rgba(255,252,245,0.065);
-  box-shadow:
-    0 1px 0 rgba(255,248,225,0.06) inset,
-    0 -1px 0 rgba(0,0,0,0.22) inset,
-    var(--aq-shadow-md);
-}
-
-.aq-glass-raised {
-  background: linear-gradient(
-    145deg,
-    rgba(255,252,245,0.072) 0%,
-    rgba(255,252,245,0.028) 100%
-  );
-  backdrop-filter: blur(48px) saturate(180%);
-  -webkit-backdrop-filter: blur(48px) saturate(180%);
-  border: 1px solid rgba(255,252,245,0.085);
-  box-shadow:
-    0 1px 0 rgba(255,248,225,0.09) inset,
-    0 -1px 0 rgba(0,0,0,0.28) inset,
-    var(--aq-shadow-lg);
-}
-
-/* ── Gold accent surface — keynote moments ──────────────────────────────── */
-
-.aq-gold-surface {
-  background: linear-gradient(135deg,
-    rgba(201,168,76,0.12) 0%,
-    rgba(201,168,76,0.06) 100%);
-  border: 1px solid var(--aq-gold-line);
-  box-shadow: 0 0 24px rgba(201,168,76,0.08);
-}
-
-/* ── Aegean accent surface ──────────────────────────────────────────────── */
-
-.aq-aegean-surface {
-  background: linear-gradient(135deg,
-    rgba(79,127,196,0.14) 0%,
-    rgba(79,127,196,0.06) 100%);
-  border: 1px solid var(--aq-aegean-line);
-}
-
-/* ── Aquila display typography — Cormorant Garamond ────────────────────── */
-
-/* Grand title — hero moments, empty states, welcome screens */
-.aq-display-xl {
-  font-family: var(--aq-serif);
-  font-size: clamp(40px, 5.5vw, 64px);
-  font-weight: 300;
-  letter-spacing: -0.02em;
-  line-height: 1.00;
-  color: var(--aq-ivory);
-  font-style: normal;
-}
-
-/* Section display — dashboard headers, page titles */
-.aq-display {
-  font-family: var(--aq-serif);
-  font-size: clamp(26px, 3vw, 36px);
-  font-weight: 300;
-  letter-spacing: -0.015em;
-  line-height: 1.05;
-  color: var(--aq-ivory);
-}
-
-/* Card/panel heading — Cormorant at reading size */
-.aq-heading {
-  font-family: var(--aq-serif);
-  font-size: 20px;
-  font-weight: 400;
-  letter-spacing: -0.010em;
-  line-height: 1.2;
-  color: var(--aq-ivory);
-}
-
-/* Micro label — spaced all-caps, gold tint */
-.aq-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.10em;
-  text-transform: uppercase;
-  color: var(--aq-gold-dim);
-}
-
-/* KPI / stat — large tabular number */
-.aq-stat {
-  font-family: var(--aq-serif);
-  font-size: clamp(38px, 4vw, 52px);
-  font-weight: 300;
-  letter-spacing: -0.04em;
-  line-height: 1.00;
-  color: var(--aq-ivory);
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── Gold primary button — reserved for primary CTAs ───────────────────── */
-
-.aq-btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 44px;
-  padding: 0 22px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  border: 1px solid rgba(201,168,76,0.40);
-  background: linear-gradient(135deg,
-    rgba(201,168,76,0.22) 0%,
-    rgba(201,168,76,0.12) 100%);
-  color: var(--aq-gold-bright);
-  cursor: pointer;
-  transition:
-    background var(--aq-dur-sm) var(--aq-ease),
-    border-color var(--aq-dur-sm) var(--aq-ease),
-    box-shadow var(--aq-dur-sm) var(--aq-ease),
-    transform var(--aq-dur-xs) var(--aq-ease);
-  box-shadow: 0 0 0 0 rgba(201,168,76,0);
-}
-.aq-btn-primary:hover {
-  background: linear-gradient(135deg,
-    rgba(201,168,76,0.30) 0%,
-    rgba(201,168,76,0.18) 100%);
-  border-color: rgba(201,168,76,0.55);
-  box-shadow: var(--aq-shadow-gold);
-  transform: translateY(-1px);
-}
-.aq-btn-primary:active { transform: translateY(0); }
-
-/* ── Animated entrance — staggered, spring-based ───────────────────────── */
-
-@keyframes aq-rise {
-  from { opacity: 0; transform: translateY(14px) scale(0.99); filter: blur(2px); }
-  to   { opacity: 1; transform: translateY(0)   scale(1);    filter: blur(0); }
-}
-
-.aq-rise {
-  animation: aq-rise var(--aq-dur-lg) var(--aq-spring) both;
-}
-
-.aq-stagger > * {
-  animation: aq-rise var(--aq-dur-lg) var(--aq-spring) both;
-}
-.aq-stagger > *:nth-child(1) { animation-delay: 0ms; }
-.aq-stagger > *:nth-child(2) { animation-delay: 60ms; }
-.aq-stagger > *:nth-child(3) { animation-delay: 120ms; }
-.aq-stagger > *:nth-child(4) { animation-delay: 180ms; }
-.aq-stagger > *:nth-child(5) { animation-delay: 240ms; }
-.aq-stagger > *:nth-child(6) { animation-delay: 300ms; }
-.aq-stagger > *:nth-child(7) { animation-delay: 360ms; }
-.aq-stagger > *:nth-child(8) { animation-delay: 420ms; }
-.aq-stagger > *:nth-child(n+9) { animation-delay: 480ms; }
-
-/* ── Gold glow pulse — live indicators, active status ───────────────────── */
-
-@keyframes aq-gold-pulse {
-  0%, 100% { box-shadow: 0 0 8px rgba(201,168,76,0.20); }
-  50%       { box-shadow: 0 0 20px rgba(201,168,76,0.45); }
-}
-.aq-gold-pulse { animation: aq-gold-pulse 3s ease-in-out infinite; }
-
-/* ── Horizontal rule — gold ruled line ─────────────────────────────────── */
-.aq-rule {
+.ds-divider, .divider {
+  height: 0.5px;
+  background: var(--aq-border);
   border: none;
-  height: 1px;
-  background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(201,168,76,0.20) 20%,
-    rgba(201,168,76,0.30) 50%,
-    rgba(201,168,76,0.20) 80%,
-    transparent 100%);
   margin: 0;
 }
 
-/* ── Marble texture overlay — applied to premium surfaces ───────────────── */
-.aq-marble-surface {
-  position: relative;
+/* ─── Inline messages ────────────────────────────────────────────────────────── */
+
+.ds-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  border: 0.5px solid;
 }
-.aq-marble-surface::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background:
-    repeating-linear-gradient(
-      118deg,
-      rgba(255,252,245,0.000) 0px,
-      rgba(255,252,245,0.008) 1px,
-      rgba(255,252,245,0.000) 2px,
-      rgba(255,252,245,0.000) 60px
-    ),
-    repeating-linear-gradient(
-      -42deg,
-      rgba(255,252,245,0.000) 0px,
-      rgba(255,252,245,0.005) 1px,
-      rgba(255,252,245,0.000) 2px,
-      rgba(255,252,245,0.000) 80px
-    );
-  pointer-events: none;
-  z-index: 0;
+.ds-message-error   { background: rgba(194,95,95,0.08);   border-color: rgba(194,95,95,0.20);   color: var(--aq-rose); }
+.ds-message-success { background: rgba(127,168,135,0.08); border-color: rgba(127,168,135,0.22); color: var(--aq-sage); }
+.ds-message-info    { background: rgba(200,169,107,0.08); border-color: rgba(200,169,107,0.22); color: var(--aq-gold); }
+
+/* ─── Skeleton ───────────────────────────────────────────────────────────────── */
+
+.ds-skeleton {
+  background: var(--aq-surface);
+  border-radius: 6px;
+  animation: ds-skeleton-shimmer 1.6s ease-in-out infinite;
+}
+@keyframes ds-skeleton-shimmer {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 1;   }
 }
 
-/* ── Nav active indicator — left bar, gold ──────────────────────────────── */
+/* ─── Navigation active bar ──────────────────────────────────────────────────── */
+
 .aq-nav-active-bar {
   position: relative;
 }
@@ -963,18 +405,121 @@ input, select, textarea, button { font-family: inherit; letter-spacing: inherit;
   height: 60%;
   border-radius: 99px;
   background: var(--aq-gold);
-  box-shadow: 0 0 8px var(--aq-gold-glow);
 }
 
-/* ── Reduce motion ──────────────────────────────────────────────────────── */
+/* ─── Animations ─────────────────────────────────────────────────────────────── */
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fade-up 0.38s cubic-bezier(0.22,1,0.36,1) forwards; }
+
+@keyframes ds-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ds-fade-up { animation: ds-fade-up var(--aq-dur-slow) var(--aq-spring) both; }
+
+@keyframes aq-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.aq-rise { animation: aq-rise 420ms var(--aq-spring) both; }
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.000) 25%,
+    rgba(255,255,255,0.04) 50%,
+    rgba(255,255,255,0.000) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+.spin-slow { animation: spin-slow 1.1s linear infinite; }
+
+@keyframes ds-menu-in {
+  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ─── Landing page animations (keyframes only — colors applied inline) ──────── */
+
+@keyframes pulse-ring {
+  0%   { opacity: 0.55; transform: translate(-50%,-50%) scale(1); }
+  100% { opacity: 0;    transform: translate(-50%,-50%) scale(1.55); }
+}
+@keyframes float-slow {
+  0%,100% { transform: translateY(0px) translateX(0px); }
+  33%     { transform: translateY(-18px) translateX(8px); }
+  66%     { transform: translateY(10px) translateX(-6px); }
+}
+@keyframes float-med {
+  0%,100% { transform: translateY(0px) translateX(0px); }
+  50%     { transform: translateY(-24px) translateX(12px); }
+}
+@keyframes ping-dot {
+  0%,100% { transform: scale(1); opacity: 1; }
+  50%     { transform: scale(1.6); opacity: 0.5; }
+}
+@keyframes glow-pulse {
+  0%,100% { box-shadow: 0 0 20px rgba(200,169,107,0.22); }
+  50%     { box-shadow: 0 0 48px rgba(200,169,107,0.50); }
+}
+@keyframes glow-icon {
+  0%,100% { filter: drop-shadow(0 0 6px rgba(200,169,107,0.4)); }
+  50%     { filter: drop-shadow(0 0 16px rgba(200,169,107,0.8)); }
+}
+@keyframes particle-float {
+  0%,100% { transform: translateY(0); opacity: var(--op); }
+  50%     { transform: translateY(-20px); opacity: calc(var(--op) * 0.4); }
+}
+@keyframes scan-line {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(400%); opacity: 0; }
+}
+@keyframes typing-cursor {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+@keyframes shimmer-gold {
+  0%,100% { opacity: 0.7; }
+  50%     { opacity: 1; }
+}
+
+.ring-pulse { animation: pulse-ring 3.5s ease-out infinite; }
+.ring-delay  { animation: pulse-ring 3.5s ease-out 1.75s infinite; }
+.orb-1 { animation: float-slow 14s ease-in-out infinite; }
+.orb-2 { animation: float-med 10s ease-in-out 2s infinite; }
+.orb-3 { animation: float-slow 18s ease-in-out 5s infinite; }
+.glow-cta { animation: glow-pulse 3s ease-in-out infinite; }
+.glow-icon { animation: glow-icon 3s ease-in-out infinite; }
+
+/* ─── Reduced motion ─────────────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
+  .fade-up,
+  .ds-fade-up,
   .aq-rise,
-  .aq-stagger > *,
-  .aq-gold-pulse {
+  .ds-skeleton,
+  .shimmer,
+  .spin-slow,
+  .ring-pulse,
+  .ring-delay,
+  .orb-1, .orb-2, .orb-3,
+  .glow-cta, .glow-icon {
     animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-    filter: none !important;
   }
+  * { transition-duration: 0.01ms !important; }
 }

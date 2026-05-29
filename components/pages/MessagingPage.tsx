@@ -44,10 +44,9 @@ interface Message {
 // ─── Shared styles ────────────────────────────────────────────────────────────
 
 const card: React.CSSProperties = {
-  background: 'linear-gradient(145deg, rgba(255,255,255,0.052) 0%, rgba(255,255,255,0.018) 100%)',
-  border: '1px solid rgba(255,255,255,0.065)',
+  background: 'var(--aq-elevated)',
+  border: '0.5px solid var(--aq-border)',
   borderRadius: 18,
-  boxShadow: '0 1px 0 rgba(255,255,255,0.07) inset, 0 8px 24px rgba(0,0,0,0.25)',
 }
 
 function fmtDate(d: string) {
@@ -108,30 +107,30 @@ function FollowUpCard({
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
         <div style={{
           width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-          background: 'linear-gradient(135deg, rgba(201,168,76,0.30) 0%, rgba(201,168,76,0.20) 100%)',
-          border: '1px solid rgba(201,168,76,0.28)',
+          background: 'rgba(200,169,107,0.30)',
+          border: '0.5px solid var(--aq-border)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 14, fontWeight: 700, color: '#C9A84C',
+          fontSize: 14, fontWeight: 500, color: 'var(--aq-gold)',
         }}>
           {item.person_name.charAt(0)}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.90)', margin: 0 }}>
+          <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--aq-text-primary)', margin: 0 }}>
             {item.person_name}
           </p>
           {item.phone && (
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: '1px 0 0' }}>{item.phone}</p>
+            <p style={{ fontSize: 12, color: 'var(--aq-text-tertiary)', margin: '1px 0 0' }}>{item.phone}</p>
           )}
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <span style={{
-            fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 99,
-            background: 'rgba(201,168,76,0.12)', color: '#C9A84C',
-            border: '1px solid rgba(201,168,76,0.22)',
+            fontSize: 11, fontWeight: 500, padding: '3px 9px', borderRadius: 99,
+            background: 'rgba(200,169,107,0.12)', color: 'var(--aq-gold)',
+            border: '0.5px solid var(--aq-border)',
           }}>
             First Timer
           </span>
-          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', margin: '4px 0 0' }}>
+          <p style={{ fontSize: 11, color: 'var(--aq-text-muted)', margin: '4px 0 0' }}>
             {item.event_name} · {fmtDate(item.event_date)}
           </p>
         </div>
@@ -147,10 +146,9 @@ function FollowUpCard({
             autoFocus
             style={{
               width: '100%', padding: '10px 14px', borderRadius: 12, fontSize: 13,
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.40)',
-              color: 'rgba(255,255,255,0.88)', outline: 'none', resize: 'vertical',
+              background: 'var(--aq-elevated)', border: '0.5px solid var(--aq-border)',
+              color: 'var(--aq-text-primary)', outline: 'none', resize: 'vertical',
               boxSizing: 'border-box', lineHeight: 1.6,
-              boxShadow: '0 0 0 3px rgba(201,168,76,0.10)',
             }}
           />
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
@@ -158,9 +156,9 @@ function FollowUpCard({
               onClick={saveEdit}
               disabled={saving}
               style={{
-                padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                background: 'rgba(201,168,76,0.20)', border: '1px solid rgba(201,168,76,0.35)',
-                color: '#C9A84C', cursor: 'pointer',
+                padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500,
+                background: 'rgba(200,169,107,0.20)', border: '0.5px solid var(--aq-border)',
+                color: 'var(--aq-gold)', cursor: 'pointer',
               }}
             >
               {saving ? 'Saving…' : 'Save'}
@@ -169,8 +167,8 @@ function FollowUpCard({
               onClick={() => { setEditing(false); setDraft(item.message) }}
               style={{
                 padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500,
-                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                color: 'rgba(255,255,255,0.45)', cursor: 'pointer',
+                background: 'var(--aq-surface)', border: '0.5px solid var(--aq-border)',
+                color: 'var(--aq-text-secondary)', cursor: 'pointer',
               }}
             >
               Cancel
@@ -180,8 +178,8 @@ function FollowUpCard({
       ) : (
         <div style={{
           padding: '12px 14px', borderRadius: 12, marginBottom: 14,
-          background: 'rgba(255,255,255,0.028)', border: '1px solid rgba(255,255,255,0.055)',
-          fontSize: 13, color: 'rgba(255,255,255,0.72)', lineHeight: 1.65,
+          background: 'var(--aq-surface)', border: '0.5px solid var(--aq-border)',
+          fontSize: 13, color: 'var(--aq-text-secondary)', lineHeight: 1.65,
           whiteSpace: 'pre-wrap',
         }}>
           {draft}
@@ -196,10 +194,9 @@ function FollowUpCard({
             disabled={actionLoading !== null}
             style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 600,
-              background: 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)',
+              padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 500,
+              background: 'var(--aq-gold)',
               color: '#fff', border: 'none', cursor: actionLoading ? 'not-allowed' : 'pointer',
-              boxShadow: '0 3px 10px rgba(201,168,76,0.35)',
               opacity: actionLoading === 'send' ? 0.65 : 1,
               transition: 'opacity 0.12s ease',
             }}
@@ -213,8 +210,8 @@ function FollowUpCard({
             onClick={() => setEditing(true)}
             style={{
               padding: '9px 14px', borderRadius: 10, fontSize: 13, fontWeight: 500,
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
-              color: 'rgba(255,255,255,0.55)', cursor: 'pointer',
+              background: 'var(--aq-elevated)', border: '0.5px solid var(--aq-border)',
+              color: 'var(--aq-text-secondary)', cursor: 'pointer',
             }}
           >
             <Edit3 style={{ width: 13, height: 13 }} />
@@ -224,8 +221,8 @@ function FollowUpCard({
             disabled={actionLoading !== null}
             style={{
               padding: '9px 14px', borderRadius: 10, fontSize: 13, fontWeight: 500,
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
-              color: 'rgba(255,255,255,0.35)', cursor: actionLoading ? 'not-allowed' : 'pointer',
+              background: 'var(--aq-elevated)', border: '0.5px solid var(--aq-border)',
+              color: 'var(--aq-text-tertiary)', cursor: actionLoading ? 'not-allowed' : 'pointer',
               opacity: actionLoading === 'dismiss' ? 0.65 : 1,
             }}
           >
@@ -307,16 +304,16 @@ export default function MessagingPage({ churchId }: { churchId: string }) {
       style={{
         padding: '8px 18px', borderRadius: 10, fontSize: 13, fontWeight: 500,
         border: 'none', cursor: 'pointer', transition: 'all 0.12s ease',
-        background: tab === t ? 'rgba(201,168,76,0.18)' : 'transparent',
-        color: tab === t ? '#C9A84C' : 'rgba(255,255,255,0.40)',
-        outline: tab === t ? '1px solid rgba(201,168,76,0.30)' : '1px solid transparent',
+        background: tab === t ? 'rgba(200,169,107,0.18)' : 'transparent',
+        color: tab === t ? 'var(--aq-gold)' : 'var(--aq-text-secondary)',
+        outline: tab === t ? '1px solid rgba(200,169,107,0.30)' : '1px solid transparent',
       }}
     >
       {label}
       {count !== undefined && count > 0 && (
         <span style={{
-          marginLeft: 6, padding: '1px 6px', borderRadius: 99, fontSize: 11, fontWeight: 700,
-          background: 'rgba(201,168,76,0.25)', color: '#C9A84C',
+          marginLeft: 6, padding: '1px 6px', borderRadius: 99, fontSize: 11, fontWeight: 500,
+          background: 'rgba(200,169,107,0.25)', color: 'var(--aq-gold)',
         }}>
           {count}
         </span>
@@ -329,16 +326,16 @@ export default function MessagingPage({ churchId }: { churchId: string }) {
 
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.018em', color: 'rgba(255,255,255,0.92)', margin: '0 0 4px' }}>
+        <h1 style={{ fontSize: 22, fontWeight: 500, letterSpacing: '-0.018em', color: 'var(--aq-text-primary)', margin: '0 0 4px' }}>
           Messaging
         </h1>
-        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', margin: 0 }}>
+        <p style={{ fontSize: 13, color: 'var(--aq-text-tertiary)', margin: 0 }}>
           Follow up with first-timers and manage conversations
         </p>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.065)', borderRadius: 14, padding: 4, width: 'fit-content' }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: 'var(--aq-surface)', border: '0.5px solid var(--aq-border)', borderRadius: 14, padding: 4, width: 'fit-content' }}>
         {tabBtn('followup', 'Follow Up', followUps.length)}
         {tabBtn('conversations', 'Conversations')}
       </div>
@@ -348,7 +345,7 @@ export default function MessagingPage({ churchId }: { churchId: string }) {
         <div>
           {/* Sent toggle */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.40)', margin: 0 }}>
+            <p style={{ fontSize: 13, color: 'var(--aq-text-secondary)', margin: 0 }}>
               {fuLoading ? 'Loading…' : showSent ? `${followUps.length} sent` : followUps.length === 0 ? 'No pending follow-ups' : `${followUps.length} awaiting follow-up`}
             </p>
             <button
@@ -356,8 +353,8 @@ export default function MessagingPage({ churchId }: { churchId: string }) {
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 500,
-                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                color: 'rgba(255,255,255,0.40)', cursor: 'pointer',
+                background: 'var(--aq-surface)', border: '0.5px solid var(--aq-border)',
+                color: 'var(--aq-text-secondary)', cursor: 'pointer',
               }}
             >
               <Clock style={{ width: 12, height: 12 }} />
@@ -368,7 +365,7 @@ export default function MessagingPage({ churchId }: { churchId: string }) {
           {fuLoading ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {[1, 2, 3].map(i => (
-                <div key={i} className="shimmer" style={{ height: 180, borderRadius: 18, background: 'rgba(255,255,255,0.04)' }} />
+                <div key={i} className="shimmer" style={{ height: 180, borderRadius: 18, background: 'var(--aq-surface)' }} />
               ))}
             </div>
           ) : followUps.length === 0 ? (
@@ -376,11 +373,11 @@ export default function MessagingPage({ churchId }: { churchId: string }) {
               padding: '48px 24px', textAlign: 'center', borderRadius: 20,
               border: '1px dashed rgba(255,255,255,0.08)',
             }}>
-              <UserCheck style={{ width: 32, height: 32, color: 'rgba(255,255,255,0.12)', margin: '0 auto 12px' }} />
-              <p style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.35)', margin: '0 0 6px' }}>
+              <UserCheck style={{ width: 32, height: 32, color: 'var(--aq-text-muted)', margin: '0 auto 12px' }} />
+              <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--aq-text-tertiary)', margin: '0 0 6px' }}>
                 {showSent ? 'No sent follow-ups yet' : 'No pending follow-ups'}
               </p>
-              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.22)', margin: 0 }}>
+              <p style={{ fontSize: 13, color: 'var(--aq-text-muted)', margin: 0 }}>
                 {showSent ? 'Sent messages will appear here.' : 'When a first-timer checks in, a draft message will appear here for you to review and send.'}
               </p>
             </div>
@@ -406,19 +403,19 @@ export default function MessagingPage({ churchId }: { churchId: string }) {
             /* Thread view */
             <div style={{ ...card, display: 'flex', flexDirection: 'column', height: 560 }}>
               {/* Thread header */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.055)', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: '0.5px solid var(--aq-border)', flexShrink: 0 }}>
                 <button
                   onClick={() => { setActiveConv(null); setMessages([]) }}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'rgba(255,255,255,0.45)' }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--aq-text-secondary)' }}
                 >
                   <ArrowLeft style={{ width: 16, height: 16 }} />
                 </button>
-                <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(201,168,76,0.20)', border: '1px solid rgba(201,168,76,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#C9A84C', flexShrink: 0 }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(200,169,107,0.20)', border: '0.5px solid var(--aq-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 500, color: 'var(--aq-gold)', flexShrink: 0 }}>
                   {activeConv.name.charAt(0)}
                 </div>
                 <div>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.88)', margin: 0 }}>{activeConv.name}</p>
-                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.32)', margin: 0 }}>{activeConv.phone}</p>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--aq-text-primary)', margin: 0 }}>{activeConv.name}</p>
+                  <p style={{ fontSize: 12, color: 'var(--aq-text-muted)', margin: 0 }}>{activeConv.phone}</p>
                 </div>
               </div>
 
@@ -426,18 +423,18 @@ export default function MessagingPage({ churchId }: { churchId: string }) {
               <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {msgLoading ? (
                   <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}>
-                    <Loader2 style={{ width: 20, height: 20, color: 'rgba(255,255,255,0.25)', animation: 'spin 0.8s linear infinite' }} />
+                    <Loader2 style={{ width: 20, height: 20, color: 'var(--aq-text-muted)', animation: 'spin 0.8s linear infinite' }} />
                   </div>
                 ) : messages.length === 0 ? (
-                  <p style={{ textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.25)', marginTop: 40 }}>No messages yet</p>
+                  <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--aq-text-muted)', marginTop: 40 }}>No messages yet</p>
                 ) : messages.map(m => (
                   <div key={m.id} style={{ display: 'flex', justifyContent: m.direction === 'outbound' ? 'flex-end' : 'flex-start' }}>
                     <div style={{
                       maxWidth: '72%', padding: '9px 13px', borderRadius: 14,
                       fontSize: 13, lineHeight: 1.55,
-                      background: m.direction === 'outbound' ? 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)' : 'rgba(255,255,255,0.07)',
-                      color: m.direction === 'outbound' ? '#fff' : 'rgba(255,255,255,0.80)',
-                      border: m.direction === 'inbound' ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                      background: m.direction === 'outbound' ? 'var(--aq-gold)' : 'var(--aq-elevated)',
+                      color: m.direction === 'outbound' ? '#fff' : 'var(--aq-text-secondary)',
+                      border: m.direction === 'inbound' ? '0.5px solid var(--aq-border)' : 'none',
                     }}>
                       {m.body}
                       <p style={{ fontSize: 10, opacity: 0.55, margin: '4px 0 0', textAlign: 'right' }}>
@@ -450,7 +447,7 @@ export default function MessagingPage({ churchId }: { churchId: string }) {
               </div>
 
               {/* Reply bar */}
-              <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(255,255,255,0.055)', flexShrink: 0, display: 'flex', gap: 8 }}>
+              <div style={{ padding: '10px 14px', borderTop: '0.5px solid var(--aq-border)', flexShrink: 0, display: 'flex', gap: 8 }}>
                 <input
                   type="text"
                   value={reply}
@@ -459,8 +456,8 @@ export default function MessagingPage({ churchId }: { churchId: string }) {
                   placeholder="Type a message…"
                   style={{
                     flex: 1, padding: '9px 14px', borderRadius: 10, fontSize: 13, outline: 'none',
-                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
-                    color: 'rgba(255,255,255,0.88)',
+                    background: 'var(--aq-elevated)', border: '0.5px solid var(--aq-border)',
+                    color: 'var(--aq-text-primary)',
                   }}
                 />
                 <button
@@ -468,11 +465,11 @@ export default function MessagingPage({ churchId }: { churchId: string }) {
                   style={{
                     width: 38, height: 38, borderRadius: 10, flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: reply.trim() ? 'linear-gradient(135deg, #A88A35 0%, #C9A84C 100%)' : 'rgba(255,255,255,0.06)',
+                    background: reply.trim() ? 'var(--aq-gold)' : 'var(--aq-elevated)',
                     border: 'none', cursor: reply.trim() ? 'pointer' : 'not-allowed',
                   }}
                 >
-                  <Send style={{ width: 15, height: 15, color: reply.trim() ? '#fff' : 'rgba(255,255,255,0.25)' }} />
+                  <Send style={{ width: 15, height: 15, color: reply.trim() ? '#fff' : 'var(--aq-text-muted)' }} />
                 </button>
               </div>
             </div>
@@ -480,25 +477,25 @@ export default function MessagingPage({ churchId }: { churchId: string }) {
             /* Conversation list */
             <div>
               {/* Search */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', borderRadius: 12, marginBottom: 16, background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.075)' }}>
-                <Search style={{ width: 14, height: 14, color: 'rgba(255,255,255,0.28)', flexShrink: 0 }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', borderRadius: 12, marginBottom: 16, background: 'var(--aq-surface)', border: '0.5px solid var(--aq-border)' }}>
+                <Search style={{ width: 14, height: 14, color: 'var(--aq-text-muted)', flexShrink: 0 }} />
                 <input
                   type="text" value={convSearch} onChange={e => setConvSearch(e.target.value)}
                   placeholder="Search conversations…"
-                  style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 13, color: 'rgba(255,255,255,0.80)' }}
+                  style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 13, color: 'var(--aq-text-secondary)' }}
                 />
               </div>
 
               {convLoading ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {[1, 2, 3].map(i => (
-                    <div key={i} className="shimmer" style={{ height: 64, borderRadius: 14, background: 'rgba(255,255,255,0.04)' }} />
+                    <div key={i} className="shimmer" style={{ height: 64, borderRadius: 14, background: 'var(--aq-surface)' }} />
                   ))}
                 </div>
               ) : filteredConvs.length === 0 ? (
                 <div style={{ padding: '48px 24px', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.08)', borderRadius: 18 }}>
-                  <MessageSquare style={{ width: 28, height: 28, color: 'rgba(255,255,255,0.12)', margin: '0 auto 10px' }} />
-                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.30)', margin: 0 }}>No conversations yet</p>
+                  <MessageSquare style={{ width: 28, height: 28, color: 'var(--aq-text-muted)', margin: '0 auto 10px' }} />
+                  <p style={{ fontSize: 13, color: 'var(--aq-text-tertiary)', margin: 0 }}>No conversations yet</p>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -509,21 +506,21 @@ export default function MessagingPage({ churchId }: { churchId: string }) {
                       style={{
                         display: 'flex', alignItems: 'center', gap: 12,
                         padding: '12px 16px', borderRadius: 14, textAlign: 'left', width: '100%',
-                        background: 'rgba(255,255,255,0.030)', border: '1px solid rgba(255,255,255,0.055)',
+                        background: 'var(--aq-surface)', border: '0.5px solid var(--aq-border)',
                         cursor: 'pointer', transition: 'background 0.10s ease',
                       }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.055)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.030)')}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--aq-elevated)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'var(--aq-surface)')}
                     >
-                      <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: 'rgba(201,168,76,0.18)', border: '1px solid rgba(201,168,76,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#C9A84C' }}>
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: 'rgba(200,169,107,0.18)', border: '0.5px solid var(--aq-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 500, color: 'var(--aq-gold)' }}>
                         {c.name.charAt(0)}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</p>
-                        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.32)', margin: 0 }}>{c.phone}</p>
+                        <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--aq-text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</p>
+                        <p style={{ fontSize: 12, color: 'var(--aq-text-muted)', margin: 0 }}>{c.phone}</p>
                       </div>
                       {c.last_message_at && (
-                        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', flexShrink: 0 }}>
+                        <span style={{ fontSize: 11, color: 'var(--aq-text-muted)', flexShrink: 0 }}>
                           {fmtTs(c.last_message_at)}
                         </span>
                       )}

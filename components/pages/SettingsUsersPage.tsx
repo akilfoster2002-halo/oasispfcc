@@ -55,7 +55,7 @@ export default function UsersSettingsPage() {
         <div className="flex gap-1.5">
           {[0, 1, 2].map(i => (
             <span key={i} className="w-2 h-2 rounded-full animate-bounce"
-              style={{ backgroundColor: 'rgba(201,168,76,0.50)', animationDelay: `${i * 0.15}s` }} />
+              style={{ backgroundColor: 'rgba(200,169,107,0.50)', animationDelay: `${i * 0.15}s` }} />
           ))}
         </div>
       </div>
@@ -69,17 +69,17 @@ export default function UsersSettingsPage() {
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center"
           style={{
-            background: 'linear-gradient(135deg, rgba(201,168,76,0.25) 0%, rgba(201,168,76,0.15) 100%)',
-            border: '1px solid rgba(201,168,76,0.25)',
+            background: 'rgba(200,169,107,0.25)',
+            border: '0.5px solid var(--aq-border)',
           }}
         >
-          <Shield className="w-5 h-5" style={{ color: '#C9A84C' }} />
+          <Shield className="w-5 h-5" style={{ color: 'var(--aq-gold)' }} />
         </div>
         <div>
-          <h1 className="text-lg font-semibold" style={{ color: 'rgba(255,255,255,0.92)' }}>
+          <h1 className="text-lg font-medium" style={{ color: 'var(--aq-text-primary)' }}>
             User Access
           </h1>
-          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.40)' }}>
+          <p className="text-sm" style={{ color: 'var(--aq-text-secondary)' }}>
             Assign roles and group access to staff members
           </p>
         </div>
@@ -88,19 +88,19 @@ export default function UsersSettingsPage() {
       {/* Role legend */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         {[
-          { label: 'Master', desc: 'Sees all groups, all data, all conversations', color: '#C9A84C' },
-          { label: 'Group', desc: 'Sees only their assigned group\'s data and messages', color: '#34d399' },
+          { label: 'Master', desc: 'Sees all groups, all data, all conversations', color: 'var(--aq-gold)' },
+          { label: 'Group', desc: 'Sees only their assigned group\'s data and messages', color: 'var(--aq-sage)' },
         ].map(r => (
           <div
             key={r.label}
             className="px-4 py-3 rounded-xl"
             style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'var(--aq-elevated)',
+              border: '0.5px solid var(--aq-border)',
             }}
           >
-            <span className="text-xs font-bold" style={{ color: r.color }}>{r.label}</span>
-            <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.40)' }}>{r.desc}</p>
+            <span className="text-xs font-medium" style={{ color: r.color }}>{r.label}</span>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--aq-text-secondary)' }}>{r.desc}</p>
           </div>
         ))}
       </div>
@@ -108,20 +108,20 @@ export default function UsersSettingsPage() {
       {/* Users table */}
       <div
         className="rounded-2xl overflow-hidden"
-        style={{ border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(8,12,26,0.55)' }}
+        style={{ border: '0.5px solid var(--aq-border)', background: 'var(--aq-surface)' }}
       >
         <div
           className="flex items-center gap-2 px-5 py-3"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+          style={{ borderBottom: '0.5px solid var(--aq-border)' }}
         >
-          <Users className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.40)' }} />
-          <span className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.60)' }}>
+          <Users className="w-4 h-4" style={{ color: 'var(--aq-text-secondary)' }} />
+          <span className="text-xs font-medium" style={{ color: 'var(--aq-text-secondary)' }}>
             {users.length} user{users.length !== 1 ? 's' : ''}
           </span>
         </div>
 
         {users.length === 0 ? (
-          <p className="text-sm text-center py-10" style={{ color: 'rgba(255,255,255,0.30)' }}>
+          <p className="text-sm text-center py-10" style={{ color: 'var(--aq-text-tertiary)' }}>
             No users found
           </p>
         ) : (
@@ -136,11 +136,11 @@ export default function UsersSettingsPage() {
                 <div key={u.id} className="flex items-center gap-4 px-5 py-4">
                   {/* Avatar */}
                   <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-semibold"
+                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm font-medium"
                     style={{
-                      background: 'linear-gradient(135deg, rgba(201,168,76,0.25) 0%, rgba(201,168,76,0.15) 100%)',
-                      border: '1px solid rgba(201,168,76,0.20)',
-                      color: '#C9A84C',
+                      background: 'rgba(200,169,107,0.25)',
+                      border: '0.5px solid var(--aq-border)',
+                      color: 'var(--aq-gold)',
                     }}
                   >
                     {(u.name || u.email || '?')[0].toUpperCase()}
@@ -148,11 +148,11 @@ export default function UsersSettingsPage() {
 
                   {/* Identity */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: 'rgba(255,255,255,0.88)' }}>
+                    <p className="text-sm font-medium truncate" style={{ color: 'var(--aq-text-primary)' }}>
                       {u.name || u.email}
                     </p>
                     {u.name && (
-                      <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                      <p className="text-xs truncate" style={{ color: 'var(--aq-text-tertiary)' }}>
                         {u.email}
                       </p>
                     )}
@@ -167,12 +167,12 @@ export default function UsersSettingsPage() {
                       className="appearance-none text-xs font-medium px-3 py-1.5 pr-7 rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{
                         background: currentRole === 'master'
-                          ? 'rgba(201,168,76,0.15)'
-                          : 'rgba(52,211,153,0.12)',
+                          ? 'rgba(200,169,107,0.15)'
+                          : 'rgba(127,168,135,0.12)',
                         border: currentRole === 'master'
-                          ? '1px solid rgba(201,168,76,0.30)'
-                          : '1px solid rgba(52,211,153,0.25)',
-                        color: currentRole === 'master' ? '#C9A84C' : '#34d399',
+                          ? '0.5px solid var(--aq-border)'
+                          : '0.5px solid var(--aq-border)',
+                        color: currentRole === 'master' ? 'var(--aq-gold)' : 'var(--aq-sage)',
                         outline: 'none',
                       }}
                     >
@@ -180,7 +180,7 @@ export default function UsersSettingsPage() {
                       <option value="group">Group</option>
                     </select>
                     <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none"
-                      style={{ color: currentRole === 'master' ? '#C9A84C' : '#34d399' }} />
+                      style={{ color: currentRole === 'master' ? 'var(--aq-gold)' : 'var(--aq-sage)' }} />
                   </div>
 
                   {/* Group selector (only for group role) */}
@@ -192,9 +192,9 @@ export default function UsersSettingsPage() {
                         onChange={e => updateUser(u.id, 'group', e.target.value || null)}
                         className="appearance-none text-xs px-3 py-1.5 pr-7 rounded-lg cursor-pointer disabled:opacity-50"
                         style={{
-                          background: 'rgba(255,255,255,0.06)',
-                          border: '1px solid rgba(255,255,255,0.12)',
-                          color: 'rgba(255,255,255,0.70)',
+                          background: 'var(--aq-elevated)',
+                          border: '0.5px solid var(--aq-border)',
+                          color: 'var(--aq-text-secondary)',
                           outline: 'none',
                           minWidth: '120px',
                         }}
@@ -205,18 +205,18 @@ export default function UsersSettingsPage() {
                         ))}
                       </select>
                       <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none"
-                        style={{ color: 'rgba(255,255,255,0.40)' }} />
+                        style={{ color: 'var(--aq-text-secondary)' }} />
                     </div>
                   )}
 
                   {/* Saved indicator */}
                   {isSavingThis ? (
                     <span className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin shrink-0"
-                      style={{ borderColor: 'rgba(201,168,76,0.60)', borderTopColor: 'transparent' }} />
+                      style={{ borderColor: 'rgba(200,169,107,0.60)', borderTopColor: 'transparent' }} />
                   ) : u.profile ? (
-                    <Check className="w-4 h-4 shrink-0" style={{ color: 'rgba(52,211,153,0.60)' }} />
+                    <Check className="w-4 h-4 shrink-0" style={{ color: 'var(--aq-sage)' }} />
                   ) : (
-                    <span className="text-xs shrink-0" style={{ color: 'rgba(255,165,0,0.70)' }}>Unassigned</span>
+                    <span className="text-xs shrink-0" style={{ color: 'var(--aq-amber)' }}>Unassigned</span>
                   )}
                 </div>
               )
@@ -225,7 +225,7 @@ export default function UsersSettingsPage() {
         )}
       </div>
 
-      <p className="text-xs mt-4 text-center" style={{ color: 'rgba(255,255,255,0.20)' }}>
+      <p className="text-xs mt-4 text-center" style={{ color: 'var(--aq-text-muted)' }}>
         Changes take effect immediately on next page load.
       </p>
     </div>

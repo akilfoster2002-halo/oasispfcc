@@ -48,17 +48,17 @@ export default function GroupsPage() {
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center"
             style={{
-              background: 'linear-gradient(135deg, rgba(251,191,36,0.18) 0%, rgba(245,158,11,0.10) 100%)',
-              border: '1px solid rgba(251,191,36,0.22)',
+              background: 'var(--aq-surface)',
+              border: '0.5px solid var(--aq-border)',
             }}
           >
-            <Layers className="w-5 h-5" style={{ color: '#fbbf24' }} />
+            <Layers className="w-5 h-5" style={{ color: 'var(--aq-amber)' }} />
           </div>
           <div>
-            <h1 className="text-lg font-semibold" style={{ color: 'rgba(255,255,255,0.92)', letterSpacing: '-0.02em' }}>
+            <h1 className="text-lg font-semibold" style={{ color: 'var(--aq-text-primary)', letterSpacing: '-0.02em' }}>
               Groups
             </h1>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.36)', marginTop: 1 }}>
+            <p style={{ fontSize: 13, color: 'var(--aq-text-tertiary)', marginTop: 1 }}>
               {loading ? '—' : `${groups.length} group${groups.length !== 1 ? 's' : ''}`}
             </p>
           </div>
@@ -69,8 +69,7 @@ export default function GroupsPage() {
           className="flex items-center gap-2 rounded-xl text-sm font-medium text-white transition-all"
           style={{
             padding: '8px 16px',
-            background: 'linear-gradient(135deg, #A88A35 0%, #A88A35 100%)',
-            boxShadow: '0 4px 14px rgba(201,168,76,0.28)',
+            background: 'var(--aq-gold)',
             letterSpacing: '-0.01em',
           }}
         >
@@ -86,7 +85,7 @@ export default function GroupsPage() {
             <div
               key={i}
               className="h-[68px] rounded-2xl shimmer"
-              style={{ background: 'rgba(255,255,255,0.04)' }}
+              style={{ background: 'var(--aq-surface)' }}
             />
           ))}
         </div>
@@ -94,15 +93,15 @@ export default function GroupsPage() {
         <div
           className="rounded-2xl py-20 text-center"
           style={{
-            background: 'rgba(255,255,255,0.025)',
-            border: '1px dashed rgba(255,255,255,0.08)',
+            background: 'var(--aq-surface)',
+            border: '1px dashed var(--aq-border)',
           }}
         >
-          <Layers className="w-10 h-10 mx-auto mb-3" style={{ color: 'rgba(255,255,255,0.12)' }} />
-          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.38)', fontWeight: 500 }}>No groups yet</p>
+          <Layers className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--aq-text-muted)' }} />
+          <p style={{ fontSize: 14, color: 'var(--aq-text-tertiary)', fontWeight: 500 }}>No groups yet</p>
           <Link
             href={`/${slug}/groups/new`}
-            style={{ fontSize: 13, color: '#C9A84C', marginTop: 6, display: 'inline-block' }}
+            style={{ fontSize: 13, color: 'var(--aq-gold)', marginTop: 6, display: 'inline-block' }}
           >
             Create your first group →
           </Link>
@@ -118,22 +117,20 @@ export default function GroupsPage() {
                 className="flex items-center gap-4 rounded-2xl px-5 transition-all duration-150"
                 style={{
                   height: 68,
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.018) 100%)',
-                  border: '1px solid rgba(255,255,255,0.065)',
+                  background: 'var(--aq-elevated)',
+                  border: '0.5px solid var(--aq-border)',
                 }}
                 onMouseEnter={e => {
                   const el = e.currentTarget as HTMLElement
-                  el.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.065) 0%, rgba(255,255,255,0.030) 100%)'
-                  el.style.borderColor = 'rgba(255,255,255,0.10)'
+                  el.style.background = 'var(--aq-elevated)'
+                  el.style.borderColor = 'var(--aq-border)'
                   el.style.transform = 'translateY(-1px)'
-                  el.style.boxShadow = '0 8px 32px rgba(0,0,0,0.30)'
                 }}
                 onMouseLeave={e => {
                   const el = e.currentTarget as HTMLElement
-                  el.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.018) 100%)'
-                  el.style.borderColor = 'rgba(255,255,255,0.065)'
+                  el.style.background = 'var(--aq-elevated)'
+                  el.style.borderColor = 'var(--aq-border)'
                   el.style.transform = 'none'
-                  el.style.boxShadow = 'none'
                 }}
               >
                 {/* Color mark */}
@@ -152,7 +149,7 @@ export default function GroupsPage() {
                   <p style={{
                     fontSize: 14,
                     fontWeight: 500,
-                    color: 'rgba(255,255,255,0.88)',
+                    color: 'var(--aq-text-primary)',
                     letterSpacing: '-0.01em',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -160,12 +157,12 @@ export default function GroupsPage() {
                   }}>
                     {group.name}
                   </p>
-                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.30)', marginTop: 2 }}>
+                  <p style={{ fontSize: 12, color: 'var(--aq-text-muted)', marginTop: 2 }}>
                     Created {new Date(group.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                   </p>
                 </div>
 
-                <ChevronRight className="w-4 h-4 shrink-0" style={{ color: 'rgba(255,255,255,0.18)' }} />
+                <ChevronRight className="w-4 h-4 shrink-0" style={{ color: 'var(--aq-text-muted)' }} />
               </Link>
             )
           })}

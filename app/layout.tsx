@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono, Space_Grotesk, Cormorant_Garamond } from 'next/font/google'
+import { Inter, Geist_Mono, Cormorant_Garamond } from 'next/font/google'
 import './globals.css'
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+// Inter — body and UI sans-serif
+const inter = Inter({
+  variable: '--font-inter',
   subsets: ['latin'],
+  weight: ['400', '500'],
 })
 
 const geistMono = Geist_Mono({
@@ -12,19 +14,13 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 })
 
-const spaceGrotesk = Space_Grotesk({
-  variable: '--font-display',
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-})
-
-// Cormorant Garamond — the Aquila serif voice
-// Used for display headings, brand wordmark, and section titles
-// where classical gravitas is needed
+// Cormorant Garamond — display serif
+// Hero headlines, welcome headings, pull quotes only.
+// Never inside dashboard UI, nav, or data tables.
 const cormorant = Cormorant_Garamond({
   variable: '--font-cormorant',
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '500'],
   style: ['normal', 'italic'],
 })
 
@@ -89,7 +85,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${cormorant.variable} h-full`}>
+    <html lang="en" className={`${inter.variable} ${geistMono.variable} ${cormorant.variable} h-full`}>
       <body className="h-full antialiased">
         {children}
       </body>

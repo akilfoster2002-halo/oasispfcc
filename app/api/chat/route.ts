@@ -132,18 +132,46 @@ function isSafeQuery(sql: string): boolean {
 
 const TOOLS: Anthropic.Tool[] = [
   {
+    name: 'find_person',
+    description: `Find church members by name. Always use this first when a question is about a specific person. Returns all matching people with their id, full name, cell, and group — so you can confirm the right person before querying their data. If multiple matches are returned, ask the user to clarify which person they mean.`,
+    input_schema: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'The name or partial name to search for (first name, last name, or both).',
+        },
+      },
+      required: ['name'],
+    },
+  },
+  {
+    name: 'get_person_attendance',
+    description: `Get the complete, verified attendance history for a specific person by their UUID. Returns every event they attended — both services (Sunday, midweek) and cell meetings — with the event name, date, and type. Use this whenever you need to know what events someone attended, their last attendance, or whether they've attended a particular type of event. Never infer attendance patterns from a different query — always call this tool for person-specific attendance questions.`,
+    input_schema: {
+      type: 'object',
+      properties: {
+        person_id: {
+          type: 'string',
+          description: 'The UUID of the person (from find_person).',
+        },
+      },
+      required: ['person_id'],
+    },
+  },
+  {
     name: 'run_sql',
-    description: `Execute a read-only SQL SELECT query against the church database to answer any question about members, attendance, cells, groups, events, giving, or follow-ups. Always filter by church_id = '<churchId>' (will be provided). Return only what is needed — use LIMIT to avoid huge result sets. Never use INSERT, UPDATE, DELETE or any mutating statement.`,
+    description: `Execute a read-only SQL SELECT query for aggregate or analytical questions — trends, counts, group comparisons, giving summaries, lists of people meeting certain criteria. Do NOT use this for questions about a specific named person's attendance — use find_person + get_person_attendance instead. Always filter by church_id = '<churchId>'. Never use INSERT, UPDATE, DELETE or any mutating statement.`,
     input_schema: {
       type: 'object',
       properties: {
         query: {
           type: 'string',
-          description: 'A valid PostgreSQL SELECT (or WITH ... SELECT) statement. Always include WHERE church_id = \'<churchId>\' (substitute the real church ID). Use JOINs across tables as needed.',
+          description: 'A valid PostgreSQL SELECT (or WITH ... SELECT) statement.',
         },
         description: {
           type: 'string',
-          description: 'One sentence explaining what this query fetches, for display to the user.',
+          description: 'One sentence explaining what this query fetches.',
         },
       },
       required: ['query', 'description'],
@@ -298,8 +326,61 @@ export async function POST(req: Request) {
 
       const toolResults: Anthropic.ToolResultBlockParam[] = await Promise.all(
         toolBlocks.map(async (block) => {
-          if (block.name !== 'run_sql' || !admin) {
+          if (!admin) {
             return { type: 'tool_result' as const, tool_use_id: block.id, content: 'Tool unavailable.' }
+          }
+
+          // ── find_person ──────────────────────────────────────────────
+          if (block.name === 'find_person') {
+            const { name } = block.input as { name: string }
+            const terms = name.trim().split(/\s+/)
+            let query = admin
+              .from('people')
+              .select('id, first_name, last_name, cell_name, group_name, phone')
+              .eq('church_id', ctx!.churchId)
+
+            if (terms.length === 1) {
+              query = query.or(`first_name.ilike.%${terms[0]}%,last_name.ilike.%${terms[0]}%`)
+            } else {
+              query = query.or(
+                `and(first_name.ilike.%${terms[0]}%,last_name.ilike.%${terms[1]}%),` +
+                `and(first_name.ilike.%${terms[1]}%,last_name.ilike.%${terms[0]}%)`,
+              )
+            }
+
+            const { data, error } = await query.limit(10)
+            if (error) return { type: 'tool_result' as const, tool_use_id: block.id, content: `Error: ${error.message}` }
+            if (!data?.length) return { type: 'tool_result' as const, tool_use_id: block.id, content: `No people found matching "${name}". Try a different spelling.` }
+            return { type: 'tool_result' as const, tool_use_id: block.id, content: JSON.stringify(data) }
+          }
+
+          // ── get_person_attendance ────────────────────────────────────
+          if (block.name === 'get_person_attendance') {
+            const { person_id } = block.input as { person_id: string }
+            const sql = `
+              SELECT
+                e.name AS event_name,
+                e.event_date,
+                e.service_type,
+                CASE WHEN e.cell_id IS NULL THEN 'service' ELSE 'cell_meeting' END AS event_kind,
+                a.attendance_status
+              FROM attendance a
+              JOIN events e ON e.id = a.event_id
+              WHERE a.person_id = '${person_id}'
+                AND a.church_id = '${ctx!.churchId}'
+                AND a.attendance_status = 'present'
+              ORDER BY e.event_date DESC
+              LIMIT 100
+            `
+            const { data, error } = await admin.rpc('execute_readonly_sql', { sql }).single()
+            if (error) return { type: 'tool_result' as const, tool_use_id: block.id, content: `Error: ${error.message}` }
+            const result = JSON.stringify(data ?? [])
+            return { type: 'tool_result' as const, tool_use_id: block.id, content: result || '[]' }
+          }
+
+          // ── run_sql ──────────────────────────────────────────────────
+          if (block.name !== 'run_sql') {
+            return { type: 'tool_result' as const, tool_use_id: block.id, content: 'Unknown tool.' }
           }
 
           const { query } = block.input as { query: string; description: string }
@@ -315,9 +396,7 @@ export async function POST(req: Request) {
           try {
             const { data, error } = await admin.rpc('execute_readonly_sql', { sql: query }).single()
 
-            // Fallback: use raw postgres if RPC not available
             if (error?.message?.includes('execute_readonly_sql')) {
-              // Direct query via PostgREST isn't possible for arbitrary SQL, return the error
               return {
                 type: 'tool_result' as const,
                 tool_use_id: block.id,
@@ -330,7 +409,6 @@ export async function POST(req: Request) {
             }
 
             const result = JSON.stringify(data ?? [])
-            // Truncate very large results
             return {
               type: 'tool_result' as const,
               tool_use_id: block.id,

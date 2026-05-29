@@ -218,6 +218,15 @@ Rules for writing queries:
 - For counts, use COUNT(*) — don't fetch all rows
 - Use COALESCE(cell_name, 'No Cell') when grouping people by cell
 
+CRITICAL — how groups and cells work:
+- "MEGA", "YPZ", "HOM" etc. are ministry groups. A person belongs to a group via people.group_name (e.g. WHERE people.group_name ILIKE '%MEGA%')
+- Do NOT use events.group_id to find members of a group — that only finds events tagged to that group, not the people in it
+- To find all people in MEGA: WHERE people.group_name ILIKE '%MEGA%'
+- Attendance for group members includes ALL services they attended (Sunday, midweek, cell) — not just events tagged to their group
+- "Who fell off" or "who hasn't been seen" = people with high historical attendance whose MAX(event_date) is far in the past
+- Always count ALL attendance records for a person (across all event types) when assessing engagement
+- Never return "no results" without verifying the query actually reached the people table filtered by group_name
+
 Today's date is ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
 
 Format responses using markdown:

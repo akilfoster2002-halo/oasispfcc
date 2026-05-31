@@ -130,32 +130,108 @@ function isSafeQuery(sql: string): boolean {
   return !forbidden.test(normalized)
 }
 
+/* Escape single quotes for safe interpolation into SQL string literals */
+function esc(s: string): string {
+  return String(s).replace(/'/g, "''")
+}
+
+/* Clamp an integer input to a safe range */
+function clampInt(val: unknown, min: number, max: number, def: number): number {
+  const n = parseInt(String(val ?? def), 10)
+  return isNaN(n) ? def : Math.min(Math.max(n, min), max)
+}
+
+/* ─── Tool definitions ─── */
 const TOOLS: Anthropic.Tool[] = [
+  // ── Individual lookups ────────────────────────────────────────────────
   {
     name: 'find_person',
-    description: `Find church members by name. Always call this first when a question is about a specific person. Returns all matches with id, full name, cell, group, and phone. If multiple people match, ask the user to clarify before proceeding.`,
+    description: `Find church members by name. Call this first when a question names a specific person. Returns id, full name, cell, group, and phone. If multiple matches, ask the user to clarify.`,
     input_schema: {
       type: 'object',
       properties: {
-        name: { type: 'string', description: 'Name or partial name to search (first, last, or both).' },
+        name: { type: 'string', description: 'First name, last name, or both.' },
       },
       required: ['name'],
     },
   },
   {
     name: 'get_member_profile',
-    description: `Get the complete profile for one person: all attendance history (every service and cell meeting), giving summary, follow-up history, and their profile fields. Use this when you need a full picture of someone — engagement level, patterns, last seen, giving, pastoral notes. Never guess at someone's history — call this tool.`,
+    description: `Full profile for one person: all attendance history (services + cell meetings), giving, follow-ups, and profile fields. Use when you need a deep picture of an individual — engagement level, last seen, patterns, giving, pastoral notes.`,
     input_schema: {
       type: 'object',
       properties: {
-        person_id: { type: 'string', description: 'UUID of the person (from find_person).' },
+        person_id: { type: 'string', description: 'UUID from find_person.' },
       },
       required: ['person_id'],
     },
   },
+
+  // ── Cell deep-dive tools ──────────────────────────────────────────────
   {
-    name: 'get_church_snapshot',
-    description: `Get a real-time snapshot of the whole church: recent service attendance trends (last 8 weeks), cell health overview, pending follow-ups count, at-risk member count (missing 3+ weeks of cell), and top-line giving. Call this first when answering big-picture questions about the church's health, growth, or overall engagement. Gives you the context you need before diving into specifics.`,
+    name: 'get_cell_deep_dive',
+    description: `The primary cell analysis tool. Returns every member of a cell with: cell meetings attended (90d), services attended (90d), last cell date, last service date, last seen overall, and a trend flag (improving / steady / declining / gone_quiet / inactive). Use this first for any question about a cell's health or its people.`,
+    input_schema: {
+      type: 'object',
+      properties: {
+        cell_name: { type: 'string', description: 'Cell name or partial name.' },
+      },
+      required: ['cell_name'],
+    },
+  },
+  {
+    name: 'get_cell_only_members',
+    description: `Members of a cell who attended cell meetings but did NOT attend any Sunday or midweek service in the last N weeks. Useful for identifying people who are engaged in the cell but disconnected from main services.`,
+    input_schema: {
+      type: 'object',
+      properties: {
+        cell_name: { type: 'string', description: 'Cell name or partial name.' },
+        weeks: { type: 'number', description: 'Lookback window in weeks (default 4).' },
+      },
+      required: ['cell_name'],
+    },
+  },
+  {
+    name: 'get_midweek_only_members',
+    description: `Members of a cell who attended Sunday or midweek services but did NOT attend their cell meeting in the last N weeks. Identifies people showing up to big services but skipping the cell.`,
+    input_schema: {
+      type: 'object',
+      properties: {
+        cell_name: { type: 'string', description: 'Cell name or partial name.' },
+        weeks: { type: 'number', description: 'Lookback window in weeks (default 4).' },
+      },
+      required: ['cell_name'],
+    },
+  },
+  {
+    name: 'get_absent_from_both',
+    description: `Members of a cell who have not attended ANY event — neither cell meetings nor services — in the last N weeks. These are the people who have gone completely quiet.`,
+    input_schema: {
+      type: 'object',
+      properties: {
+        cell_name: { type: 'string', description: 'Cell name or partial name.' },
+        weeks: { type: 'number', description: 'Lookback window in weeks (default 4).' },
+      },
+      required: ['cell_name'],
+    },
+  },
+  {
+    name: 'get_cell_attendance_trend',
+    description: `Week-by-week headcount for a specific cell's meetings — how many attended each session over the last N meetings. Shows whether the cell is growing, shrinking, or flat.`,
+    input_schema: {
+      type: 'object',
+      properties: {
+        cell_name: { type: 'string', description: 'Cell name or partial name.' },
+        meetings: { type: 'number', description: 'Number of past meetings to include (default 10).' },
+      },
+      required: ['cell_name'],
+    },
+  },
+
+  // ── Church-wide overview ──────────────────────────────────────────────
+  {
+    name: 'get_all_cells_summary',
+    description: `All active cells ranked by recent activity: member count, meetings held in the last 6 weeks, total attendance in that period, and last meeting date. Good for a pastor overview of which cells are thriving vs struggling.`,
     input_schema: {
       type: 'object',
       properties: {},
@@ -163,12 +239,60 @@ const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
-    name: 'run_sql',
-    description: `Execute a read-only SQL SELECT for aggregate or analytical questions — trends, comparisons, ranked lists, custom criteria. Do NOT use for individual person attendance (use get_member_profile) or church-wide health (use get_church_snapshot). Always filter by church_id. No mutations.`,
+    name: 'get_service_trend',
+    description: `Last N Sunday and midweek services with headcount, first-timers, and souls won. Shows attendance trends across main services.`,
     input_schema: {
       type: 'object',
       properties: {
-        query: { type: 'string', description: 'PostgreSQL SELECT or WITH...SELECT statement.' },
+        count: { type: 'number', description: 'Number of past services to return (default 8).' },
+      },
+      required: [],
+    },
+  },
+
+  // ── Pastoral & follow-up ─────────────────────────────────────────────
+  {
+    name: 'get_pending_follow_ups',
+    description: `All pending first-timer and pastoral follow-up tasks, with name, phone, event attended, date, and any notes. Use when asked about who needs follow-up or how many first-timers are in the queue.`,
+    input_schema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number', description: 'Max results (default 50).' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'get_new_members',
+    description: `People whose first-ever attendance was within the last N days. Useful for identifying newcomers who need to be placed in a cell or followed up with.`,
+    input_schema: {
+      type: 'object',
+      properties: {
+        days: { type: 'number', description: 'Lookback window in days (default 30).' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'get_birthdays',
+    description: `Members with birthdays in a given month. Returns name, phone, cell, and birthdate. Defaults to the current month.`,
+    input_schema: {
+      type: 'object',
+      properties: {
+        month: { type: 'number', description: '1–12 month number. Defaults to current month.' },
+      },
+      required: [],
+    },
+  },
+
+  // ── Catch-all ─────────────────────────────────────────────────────────
+  {
+    name: 'run_sql',
+    description: `Execute a custom read-only SQL SELECT for anything not covered by the other tools — complex filters, comparisons, ranked lists, cross-table joins. Always filter by church_id. No mutations.`,
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'PostgreSQL SELECT or WITH…SELECT statement.' },
         description: { type: 'string', description: 'One sentence explaining what this fetches.' },
       },
       required: ['query', 'description'],
@@ -198,8 +322,7 @@ attendance — who attended each event
 
 cells — small groups
   id uuid, church_id uuid, name text, leader_name text, group_id uuid,
-  meeting_day smallint (0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat),
-  meeting_time text, location text, is_active boolean
+  meeting_day smallint (0=Sun…6=Sat), meeting_time text, location text, is_active boolean
 
 groups — ministry groupings that contain cells (e.g. MEGA, YPZ)
   id uuid, church_id uuid, name text
@@ -213,93 +336,101 @@ follow_ups — first-timer and pastoral follow-up tasks
   phone text, event_name text, event_date date, message text,
   status text ('pending' | 'sent' | 'dismissed')
 
-conversations — SMS/messaging threads
-  id uuid, church_id uuid, person_id uuid, phone text, name text,
-  status text, assigned_leader text
-
 Key relationships:
   attendance.person_id → people.id
   attendance.event_id  → events.id
   events.cell_id       → cells.id
-  events.group_id      → groups.id
-  cells.group_id       → groups.id
   people.cell_name     = cells.name (denormalized text, not a FK)
   people.group_name    = groups.name (denormalized text, not a FK)
 `
 
 const BASE_SYSTEM = `You are Aquila Agent — a knowledgeable, warm AI assistant embedded inside Aquila, a church management platform used by pastors and church administrators.
 
-You have access to the church's live database through purpose-built tools and SQL. When someone asks about attendance, members, cells, giving, events, follow-ups, or anything data-related — use the right tool immediately. Never say you don't have access to data. Be confident and direct.
+You have access to the church's live database through purpose-built tools. When someone asks about attendance, members, cells, giving, events, or follow-ups — use the right tool immediately. Never say you don't have access to data. Be confident and direct.
 
 CRITICAL — conversation context:
 - You have the full conversation history. Read it before every response.
-- If a person was already looked up in this conversation, do not search for them again — use the information already retrieved.
-- If something was already established (e.g. "Adriana Santiago is not in the system"), acknowledge it directly instead of repeating the same search.
-- When a user says "pull her up", "show me", "what about X" — they are referring to the current conversation context. Look at what was just discussed.
-- Remember what names, cells, and facts have been mentioned. Build on them rather than starting fresh each turn.
-- If the user gives you a list of names to check (like a roster), work through them systematically and keep track of who you've already found vs not found.
+- If a person or cell was already looked up, do not search again — build on what you already have.
+- When a user says "pull her up", "what about X", "show me" — look at what was just discussed.
+- If the user gives a list of names to check, work through them systematically.
 
 ${SCHEMA}
 
-Rules for writing queries:
-- Always filter WHERE church_id = '<CHURCH_ID>' (use the actual church ID provided below)
+How to use the tools:
+- Any question naming a specific person → find_person first, then get_member_profile for depth
+- Any question about a cell (health, attendance, who's slipping) → get_cell_deep_dive first
+- Who in a cell skips services? → get_cell_only_members
+- Who skips cell but comes to service? → get_midweek_only_members
+- Who has gone completely quiet? → get_absent_from_both
+- Is the cell growing or shrinking? → get_cell_attendance_trend
+- Pastor overview across all cells → get_all_cells_summary
+- Service headcounts / trends → get_service_trend
+- Follow-up queue → get_pending_follow_ups
+- New faces that need a cell → get_new_members
+- Pastoral care / birthdays → get_birthdays
+- Anything else → run_sql
+
+Rules for run_sql:
+- Always filter WHERE church_id = '<CHURCH_ID>'
 - Cell meetings: events WHERE cell_id IS NOT NULL
-- Sunday/midweek services: events WHERE cell_id IS NULL AND service_type IN ('sunday_inperson','sunday_online','midweek')
-- To find people who attended a service: JOIN attendance ON attendance.event_id = events.id AND attendance.person_id = people.id
-- To find last cell attended: SELECT DISTINCT ON (person_id) with ORDER BY event_date DESC
-- Use LIMIT (max 200 rows) unless a full count is needed
-- For counts, use COUNT(*) — don't fetch all rows
-- Use COALESCE(cell_name, 'No Cell') when grouping people by cell
+- Services: events WHERE cell_id IS NULL AND service_type IN ('sunday_inperson','sunday_online','midweek')
+- Use LIMIT (max 200) unless a full count is needed
+- Never guess — if a query returns 0 rows, say so and suggest verifying the name
 
-CRITICAL — accuracy and trust:
-- Never make absolute statements like "never attended" or "always present" without running a query that proves it with actual rows
-- If you say someone has never attended a type of event, you must have queried for that event type specifically and confirmed 0 rows — not inferred it from a different query
-- When a person's name is ambiguous (common first name), always clarify which person you found by stating their full name and cell/group before giving the answer
-- Do not add analysis, recommendations, or emotional framing on top of data you are not certain about
-- If a query returns 0 rows, say so plainly and suggest the user verify the person's name rather than concluding the data is complete
-- Run a second verification query if your first result seems surprising
-
-CRITICAL — how groups and cells work:
-- "MEGA", "YPZ", "HOM" etc. are ministry groups. A person belongs to a group via people.group_name (e.g. WHERE people.group_name ILIKE '%MEGA%')
-- Do NOT use events.group_id to find members of a group — that only finds events tagged to that group, not the people in it
-- To find all people in MEGA: WHERE people.group_name ILIKE '%MEGA%'
-- Attendance for group members includes ALL services they attended (Sunday, midweek, cell) — not just events tagged to their group
-- "Who fell off" or "who hasn't been seen" = people with high historical attendance whose MAX(event_date) is far in the past
-- Always count ALL attendance records for a person (across all event types) when assessing engagement
-- Never return "no results" without verifying the query actually reached the people table filtered by group_name
+CRITICAL — accuracy:
+- Never say "never attended" or "always present" without a query that proves it
+- When a name is ambiguous, state the full name and cell before answering
+- If a result seems surprising, run a verification query
+- 0 rows means no data found — not that the person doesn't exist
 
 Today's date is ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
 
 Format responses using markdown:
-- Use **bold** for numbers and key highlights
-- When listing specific people, ALWAYS format their name as a markdown link using their UUID: [First Last](person:UUID) — always SELECT the id column when querying individuals so you can include it
-- Use numbered or bulleted lists when presenting multiple people or items
-- Use headings (##) sparingly — only for multi-section responses
+- **bold** for numbers and key highlights
+- Name any specific person as a markdown link: [First Last](person:UUID) — always SELECT id when querying people
+- Bulleted or numbered lists for multiple people/items
+- ## headings only for multi-section responses
 - Keep responses concise, warm, and pastoral
-- Give real answers from the data — specific names, numbers, dates
-- Never say you don't have access to the data`
+- Give real answers from the data — names, numbers, dates`
 
 /* ─── Tool labels shown to the user during execution ─── */
 const TOOL_LABEL: Record<string, (input: Record<string, unknown>) => string> = {
-  find_person:        (i) => `Looking up ${(i as { name: string }).name}…`,
-  get_member_profile: ()  => `Pulling up full profile…`,
-  get_church_snapshot: ()  => `Reading church health…`,
-  run_sql:            (i) => (i as { description?: string }).description ?? 'Running query…',
+  find_person:             (i) => `Looking up ${(i as { name: string }).name}…`,
+  get_member_profile:      ()  => `Pulling up full profile…`,
+  get_cell_deep_dive:      (i) => `Deep diving into ${(i as { cell_name: string }).cell_name}…`,
+  get_cell_only_members:   (i) => `Finding cell-only members in ${(i as { cell_name: string }).cell_name}…`,
+  get_midweek_only_members:(i) => `Finding service-only members in ${(i as { cell_name: string }).cell_name}…`,
+  get_absent_from_both:    (i) => `Finding who's gone quiet in ${(i as { cell_name: string }).cell_name}…`,
+  get_cell_attendance_trend:(i) => `Loading attendance trend for ${(i as { cell_name: string }).cell_name}…`,
+  get_all_cells_summary:   ()  => `Loading all cells overview…`,
+  get_service_trend:       ()  => `Loading service attendance trends…`,
+  get_pending_follow_ups:  ()  => `Loading follow-up queue…`,
+  get_new_members:         ()  => `Finding new members…`,
+  get_birthdays:           ()  => `Checking birthdays…`,
+  run_sql:                 (i) => (i as { description?: string }).description ?? 'Running query…',
 }
 
-/* ─── Execute a single tool call and return the result ─── */
+/* ─── Execute a single tool call ─── */
 async function executeTool(
-  block:   Anthropic.ToolUseBlock,
-  admin:   ReturnType<typeof getAdminClient> | null,
-  ctx:     Awaited<ReturnType<typeof getChurchContext>>,
+  block: Anthropic.ToolUseBlock,
+  admin: ReturnType<typeof getAdminClient> | null,
+  ctx:   Awaited<ReturnType<typeof getChurchContext>>,
 ): Promise<string> {
   if (!admin || !ctx) return 'Tool unavailable.'
+  const cid = ctx.churchId
+  const db = admin
 
-  // ── find_person ───────────────────────────────────────────────────────
+  async function sql(query: string): Promise<unknown> {
+    const { data, error } = await db.rpc('execute_readonly_sql', { sql: query }).single()
+    if (error) throw new Error(error.message)
+    return data
+  }
+
+  // ── find_person ─────────────────────────────────────────────────────
   if (block.name === 'find_person') {
     const { name } = block.input as { name: string }
     const terms = name.trim().split(/\s+/)
-    let q = admin.from('people').select('id, first_name, last_name, cell_name, group_name, phone').eq('church_id', ctx.churchId)
+    let q = db.from('people').select('id, first_name, last_name, cell_name, group_name, phone').eq('church_id', cid)
     if (terms.length === 1) {
       q = q.or(`first_name.ilike.%${terms[0]}%,last_name.ilike.%${terms[0]}%`)
     } else {
@@ -307,27 +438,27 @@ async function executeTool(
     }
     const { data, error } = await q.limit(10)
     if (error) return `Error: ${error.message}`
-    if (!data?.length) return `No one found matching "${name}". Try a different spelling or use just the first name.`
+    if (!data?.length) return `No one found matching "${name}". Try a different spelling or just the first name.`
     return JSON.stringify(data)
   }
 
-  // ── get_member_profile ───────────────────────────────────────────────
+  // ── get_member_profile ──────────────────────────────────────────────
   if (block.name === 'get_member_profile') {
     const { person_id } = block.input as { person_id: string }
-    const cid = ctx.churchId
+    const pid = esc(person_id)
     const [profileRes, attRes, givingRes, fuRes] = await Promise.all([
-      admin.from('people').select('*').eq('id', person_id).single(),
-      admin.rpc('execute_readonly_sql', { sql: `
+      db.from('people').select('*').eq('id', person_id).single(),
+      sql(`
         SELECT e.name AS event_name, e.event_date, e.service_type,
           CASE WHEN e.cell_id IS NULL THEN 'service' ELSE 'cell_meeting' END AS event_kind
         FROM attendance a JOIN events e ON e.id = a.event_id
-        WHERE a.person_id = '${person_id}' AND a.church_id = '${cid}' AND a.attendance_status = 'present'
+        WHERE a.person_id = '${pid}' AND a.church_id = '${cid}' AND a.attendance_status = 'present'
         ORDER BY e.event_date DESC LIMIT 200
-      ` }).single(),
-      admin.from('giving').select('amount, fund, given_at, method').eq('person_id', person_id).eq('church_id', cid).order('given_at', { ascending: false }).limit(20),
-      admin.from('follow_ups').select('status, event_name, event_date, message').eq('person_id', person_id).eq('church_id', cid).limit(10),
+      `),
+      db.from('giving').select('amount, fund, given_at, method').eq('person_id', person_id).eq('church_id', cid).order('given_at', { ascending: false }).limit(20),
+      db.from('follow_ups').select('status, event_name, event_date, message').eq('person_id', person_id).eq('church_id', cid).limit(10),
     ])
-    const att = (attRes.data ?? []) as { event_kind: string; event_date: string }[]
+    const att = (Array.isArray(attRes) ? attRes : []) as { event_kind: string; event_date: string }[]
     return JSON.stringify({
       profile:    profileRes.data,
       attendance: { total: att.length, services: att.filter(e => e.event_kind === 'service').length, cell_meetings: att.filter(e => e.event_kind === 'cell_meeting').length, last_seen: att[0]?.event_date ?? null, history: att.slice(0, 50) },
@@ -336,30 +467,315 @@ async function executeTool(
     })
   }
 
-  // ── get_church_snapshot ───────────────────────────────────────────────
-  if (block.name === 'get_church_snapshot') {
-    const cid = ctx.churchId
-    const [svcRes, cellRes, fuRes, riskRes, giveRes] = await Promise.all([
-      admin.rpc('execute_readonly_sql', { sql: `SELECT e.name, e.event_date, e.service_type, COUNT(a.id) FILTER (WHERE a.attendance_status='present') AS present_count FROM events e LEFT JOIN attendance a ON a.event_id=e.id AND a.church_id='${cid}' WHERE e.church_id='${cid}' AND e.cell_id IS NULL AND e.event_date >= NOW()-INTERVAL '8 weeks' GROUP BY e.id ORDER BY e.event_date DESC LIMIT 16` }).single(),
-      admin.rpc('execute_readonly_sql', { sql: `SELECT c.name, c.leader_name, COUNT(a.id) FILTER (WHERE a.attendance_status='present') AS recent_attendance FROM cells c LEFT JOIN events e ON e.cell_id=c.id AND e.event_date>=NOW()-INTERVAL '6 weeks' LEFT JOIN attendance a ON a.event_id=e.id AND a.church_id='${cid}' WHERE c.church_id='${cid}' AND c.is_active=true GROUP BY c.id ORDER BY recent_attendance DESC LIMIT 20` }).single(),
-      admin.from('follow_ups').select('id', { count: 'exact', head: true }).eq('church_id', cid).eq('status', 'pending'),
-      admin.rpc('execute_readonly_sql', { sql: `SELECT COUNT(DISTINCT a.person_id) AS at_risk FROM attendance a JOIN events e ON e.id=a.event_id WHERE a.church_id='${cid}' AND e.cell_id IS NOT NULL AND a.attendance_status='present' AND a.person_id NOT IN (SELECT DISTINCT person_id FROM attendance aa JOIN events ee ON ee.id=aa.event_id WHERE aa.church_id='${cid}' AND ee.cell_id IS NOT NULL AND aa.attendance_status='present' AND ee.event_date>=NOW()-INTERVAL '21 days')` }).single(),
-      admin.rpc('execute_readonly_sql', { sql: `SELECT SUM(amount) AS total, COUNT(*) AS gifts FROM giving WHERE church_id='${cid}' AND given_at>=NOW()-INTERVAL '30 days'` }).single(),
-    ])
-    return JSON.stringify({ recent_services: svcRes.data, cell_health: cellRes.data, pending_follow_ups: fuRes.count ?? 0, at_risk_members: (riskRes.data as unknown as { at_risk: number }[])?.[0]?.at_risk ?? 0, giving_last_30_days: giveRes.data })
+  // ── get_cell_deep_dive ──────────────────────────────────────────────
+  if (block.name === 'get_cell_deep_dive') {
+    const { cell_name } = block.input as { cell_name: string }
+    const cell = esc(cell_name)
+    const data = await sql(`
+      WITH members AS (
+        SELECT id, first_name, last_name, phone, group_name, pastor
+        FROM people
+        WHERE church_id = '${cid}' AND cell_name ILIKE '%${cell}%'
+      ),
+      cell_att AS (
+        SELECT a.person_id,
+          COUNT(*) FILTER (WHERE a.attendance_status = 'present') AS cnt,
+          MAX(e.event_date) FILTER (WHERE a.attendance_status = 'present') AS last_cell
+        FROM attendance a JOIN events e ON e.id = a.event_id
+        WHERE a.church_id = '${cid}' AND e.cell_id IS NOT NULL
+          AND e.event_date >= NOW() - INTERVAL '90 days'
+          AND a.person_id IN (SELECT id FROM members)
+        GROUP BY a.person_id
+      ),
+      svc_att AS (
+        SELECT a.person_id,
+          COUNT(*) FILTER (WHERE a.attendance_status = 'present') AS cnt,
+          MAX(e.event_date) FILTER (WHERE a.attendance_status = 'present') AS last_service
+        FROM attendance a JOIN events e ON e.id = a.event_id
+        WHERE a.church_id = '${cid}' AND e.cell_id IS NULL
+          AND e.service_type IN ('sunday_inperson','sunday_online','midweek')
+          AND e.event_date >= NOW() - INTERVAL '90 days'
+          AND a.person_id IN (SELECT id FROM members)
+        GROUP BY a.person_id
+      ),
+      recent AS (
+        SELECT a.person_id, COUNT(*) FILTER (WHERE a.attendance_status = 'present') AS cnt
+        FROM attendance a JOIN events e ON e.id = a.event_id
+        WHERE a.church_id = '${cid}' AND e.cell_id IS NOT NULL
+          AND e.event_date >= NOW() - INTERVAL '45 days'
+          AND a.person_id IN (SELECT id FROM members)
+        GROUP BY a.person_id
+      ),
+      older AS (
+        SELECT a.person_id, COUNT(*) FILTER (WHERE a.attendance_status = 'present') AS cnt
+        FROM attendance a JOIN events e ON e.id = a.event_id
+        WHERE a.church_id = '${cid}' AND e.cell_id IS NOT NULL
+          AND e.event_date >= NOW() - INTERVAL '90 days'
+          AND e.event_date < NOW() - INTERVAL '45 days'
+          AND a.person_id IN (SELECT id FROM members)
+        GROUP BY a.person_id
+      )
+      SELECT
+        m.id, m.first_name, m.last_name, m.phone, m.group_name, m.pastor,
+        COALESCE(c.cnt, 0)   AS cell_meetings_90d,
+        COALESCE(s.cnt, 0)   AS services_90d,
+        c.last_cell,
+        s.last_service,
+        GREATEST(c.last_cell, s.last_service) AS last_seen,
+        CASE
+          WHEN COALESCE(r.cnt, 0) = 0 AND COALESCE(o.cnt, 0) = 0 THEN 'inactive'
+          WHEN COALESCE(r.cnt, 0) = 0 AND COALESCE(o.cnt, 0) > 0 THEN 'gone_quiet'
+          WHEN COALESCE(r.cnt, 0) > COALESCE(o.cnt, 0)           THEN 'improving'
+          WHEN COALESCE(r.cnt, 0) < COALESCE(o.cnt, 0)           THEN 'declining'
+          ELSE 'steady'
+        END AS trend
+      FROM members m
+      LEFT JOIN cell_att c  ON c.person_id = m.id
+      LEFT JOIN svc_att  s  ON s.person_id = m.id
+      LEFT JOIN recent   r  ON r.person_id = m.id
+      LEFT JOIN older    o  ON o.person_id = m.id
+      ORDER BY last_seen DESC NULLS LAST
+    `)
+    return JSON.stringify(data ?? [])
   }
 
-  // ── run_sql ───────────────────────────────────────────────────────────
+  // ── get_cell_only_members ────────────────────────────────────────────
+  if (block.name === 'get_cell_only_members') {
+    const { cell_name, weeks } = block.input as { cell_name: string; weeks?: number }
+    const cell = esc(cell_name)
+    const w = clampInt(weeks, 1, 52, 4)
+    const data = await sql(`
+      WITH members AS (
+        SELECT id, first_name, last_name, phone, group_name
+        FROM people WHERE church_id = '${cid}' AND cell_name ILIKE '%${cell}%'
+      ),
+      cell_att AS (
+        SELECT a.person_id, COUNT(*) AS cnt, MAX(e.event_date) AS last_date
+        FROM attendance a JOIN events e ON e.id = a.event_id
+        WHERE a.church_id = '${cid}' AND e.cell_id IS NOT NULL
+          AND a.attendance_status = 'present'
+          AND e.event_date >= NOW() - INTERVAL '${w} weeks'
+          AND a.person_id IN (SELECT id FROM members)
+        GROUP BY a.person_id
+      ),
+      svc_att AS (
+        SELECT DISTINCT a.person_id
+        FROM attendance a JOIN events e ON e.id = a.event_id
+        WHERE a.church_id = '${cid}' AND e.cell_id IS NULL
+          AND e.service_type IN ('sunday_inperson','sunday_online','midweek')
+          AND a.attendance_status = 'present'
+          AND e.event_date >= NOW() - INTERVAL '${w} weeks'
+          AND a.person_id IN (SELECT id FROM members)
+      )
+      SELECT m.id, m.first_name, m.last_name, m.phone, m.group_name,
+        c.cnt AS cell_meetings_attended, c.last_date AS last_cell
+      FROM members m
+      JOIN cell_att c ON c.person_id = m.id
+      WHERE m.id NOT IN (SELECT person_id FROM svc_att)
+      ORDER BY c.last_date DESC NULLS LAST
+    `)
+    return JSON.stringify(data ?? [])
+  }
+
+  // ── get_midweek_only_members ─────────────────────────────────────────
+  if (block.name === 'get_midweek_only_members') {
+    const { cell_name, weeks } = block.input as { cell_name: string; weeks?: number }
+    const cell = esc(cell_name)
+    const w = clampInt(weeks, 1, 52, 4)
+    const data = await sql(`
+      WITH members AS (
+        SELECT id, first_name, last_name, phone, group_name
+        FROM people WHERE church_id = '${cid}' AND cell_name ILIKE '%${cell}%'
+      ),
+      svc_att AS (
+        SELECT a.person_id, COUNT(*) AS cnt, MAX(e.event_date) AS last_date
+        FROM attendance a JOIN events e ON e.id = a.event_id
+        WHERE a.church_id = '${cid}' AND e.cell_id IS NULL
+          AND e.service_type IN ('sunday_inperson','sunday_online','midweek')
+          AND a.attendance_status = 'present'
+          AND e.event_date >= NOW() - INTERVAL '${w} weeks'
+          AND a.person_id IN (SELECT id FROM members)
+        GROUP BY a.person_id
+      ),
+      cell_att AS (
+        SELECT DISTINCT a.person_id
+        FROM attendance a JOIN events e ON e.id = a.event_id
+        WHERE a.church_id = '${cid}' AND e.cell_id IS NOT NULL
+          AND a.attendance_status = 'present'
+          AND e.event_date >= NOW() - INTERVAL '${w} weeks'
+          AND a.person_id IN (SELECT id FROM members)
+      )
+      SELECT m.id, m.first_name, m.last_name, m.phone, m.group_name,
+        s.cnt AS services_attended, s.last_date AS last_service
+      FROM members m
+      JOIN svc_att s ON s.person_id = m.id
+      WHERE m.id NOT IN (SELECT person_id FROM cell_att)
+      ORDER BY s.last_date DESC NULLS LAST
+    `)
+    return JSON.stringify(data ?? [])
+  }
+
+  // ── get_absent_from_both ─────────────────────────────────────────────
+  if (block.name === 'get_absent_from_both') {
+    const { cell_name, weeks } = block.input as { cell_name: string; weeks?: number }
+    const cell = esc(cell_name)
+    const w = clampInt(weeks, 1, 52, 4)
+    const data = await sql(`
+      WITH members AS (
+        SELECT id, first_name, last_name, phone, group_name
+        FROM people WHERE church_id = '${cid}' AND cell_name ILIKE '%${cell}%'
+      ),
+      recent_any AS (
+        SELECT DISTINCT a.person_id
+        FROM attendance a JOIN events e ON e.id = a.event_id
+        WHERE a.church_id = '${cid}' AND a.attendance_status = 'present'
+          AND e.event_date >= NOW() - INTERVAL '${w} weeks'
+          AND a.person_id IN (SELECT id FROM members)
+      ),
+      last_seen AS (
+        SELECT a.person_id, MAX(e.event_date) AS last_seen_ever
+        FROM attendance a JOIN events e ON e.id = a.event_id
+        WHERE a.church_id = '${cid}' AND a.attendance_status = 'present'
+          AND a.person_id IN (SELECT id FROM members)
+        GROUP BY a.person_id
+      )
+      SELECT m.id, m.first_name, m.last_name, m.phone, m.group_name,
+        l.last_seen_ever
+      FROM members m
+      LEFT JOIN recent_any r ON r.person_id = m.id
+      LEFT JOIN last_seen  l ON l.person_id = m.id
+      WHERE r.person_id IS NULL
+      ORDER BY l.last_seen_ever DESC NULLS LAST
+    `)
+    return JSON.stringify(data ?? [])
+  }
+
+  // ── get_cell_attendance_trend ────────────────────────────────────────
+  if (block.name === 'get_cell_attendance_trend') {
+    const { cell_name, meetings } = block.input as { cell_name: string; meetings?: number }
+    const cell = esc(cell_name)
+    const m = clampInt(meetings, 1, 52, 10)
+    const data = await sql(`
+      SELECT e.name, e.event_date,
+        COUNT(*) FILTER (WHERE a.attendance_status = 'present') AS present,
+        COUNT(*) FILTER (WHERE a.attendance_status = 'absent')  AS absent
+      FROM events e
+      LEFT JOIN attendance a ON a.event_id = e.id AND a.church_id = '${cid}'
+      WHERE e.church_id = '${cid}'
+        AND e.cell_id = (
+          SELECT id FROM cells
+          WHERE church_id = '${cid}' AND name ILIKE '%${cell}%'
+          ORDER BY is_active DESC LIMIT 1
+        )
+      GROUP BY e.id, e.name, e.event_date
+      ORDER BY e.event_date DESC
+      LIMIT ${m}
+    `)
+    return JSON.stringify(data ?? [])
+  }
+
+  // ── get_all_cells_summary ────────────────────────────────────────────
+  if (block.name === 'get_all_cells_summary') {
+    const data = await sql(`
+      SELECT c.name, c.leader_name,
+        COUNT(DISTINCT p.id) AS total_members,
+        COUNT(*)        FILTER (WHERE e.event_date >= NOW() - INTERVAL '6 weeks' AND a.attendance_status = 'present') AS recent_attendance,
+        COUNT(DISTINCT e.id) FILTER (WHERE e.event_date >= NOW() - INTERVAL '6 weeks')                               AS recent_meetings,
+        MAX(e.event_date) AS last_meeting
+      FROM cells c
+      LEFT JOIN people p ON p.cell_name = c.name AND p.church_id = '${cid}'
+      LEFT JOIN events e ON e.cell_id = c.id AND e.church_id = '${cid}'
+      LEFT JOIN attendance a ON a.event_id = e.id AND a.church_id = '${cid}'
+      WHERE c.church_id = '${cid}' AND c.is_active = true
+      GROUP BY c.id, c.name, c.leader_name
+      ORDER BY recent_attendance DESC
+    `)
+    return JSON.stringify(data ?? [])
+  }
+
+  // ── get_service_trend ────────────────────────────────────────────────
+  if (block.name === 'get_service_trend') {
+    const { count } = block.input as { count?: number }
+    const n = clampInt(count, 1, 52, 8)
+    const data = await sql(`
+      SELECT e.name, e.event_date, e.service_type,
+        COUNT(*) FILTER (WHERE a.attendance_status = 'present') AS present,
+        e.first_timers, e.soul_won
+      FROM events e
+      LEFT JOIN attendance a ON a.event_id = e.id AND a.church_id = '${cid}'
+      WHERE e.church_id = '${cid}' AND e.cell_id IS NULL
+        AND e.service_type IN ('sunday_inperson','sunday_online','midweek')
+      GROUP BY e.id, e.name, e.event_date, e.service_type, e.first_timers, e.soul_won
+      ORDER BY e.event_date DESC
+      LIMIT ${n}
+    `)
+    return JSON.stringify(data ?? [])
+  }
+
+  // ── get_pending_follow_ups ───────────────────────────────────────────
+  if (block.name === 'get_pending_follow_ups') {
+    const { limit } = block.input as { limit?: number }
+    const n = clampInt(limit, 1, 200, 50)
+    const data = await sql(`
+      SELECT fu.id, fu.person_name, fu.phone, fu.event_name, fu.event_date,
+        fu.message, fu.status, p.id AS person_id, p.cell_name
+      FROM follow_ups fu
+      LEFT JOIN people p ON p.id = fu.person_id AND p.church_id = '${cid}'
+      WHERE fu.church_id = '${cid}' AND fu.status = 'pending'
+      ORDER BY fu.event_date DESC
+      LIMIT ${n}
+    `)
+    return JSON.stringify(data ?? [])
+  }
+
+  // ── get_new_members ──────────────────────────────────────────────────
+  if (block.name === 'get_new_members') {
+    const { days } = block.input as { days?: number }
+    const d = clampInt(days, 1, 365, 30)
+    const data = await sql(`
+      WITH first_att AS (
+        SELECT a.person_id, MIN(e.event_date) AS first_attendance
+        FROM attendance a JOIN events e ON e.id = a.event_id
+        WHERE a.church_id = '${cid}' AND a.attendance_status = 'present'
+        GROUP BY a.person_id
+        HAVING MIN(e.event_date) >= NOW() - INTERVAL '${d} days'
+      )
+      SELECT p.id, p.first_name, p.last_name, p.phone, p.cell_name,
+        p.group_name, p.who_invited, p.joined_oasis,
+        fa.first_attendance
+      FROM people p
+      JOIN first_att fa ON fa.person_id = p.id
+      WHERE p.church_id = '${cid}'
+      ORDER BY fa.first_attendance DESC
+    `)
+    return JSON.stringify(data ?? [])
+  }
+
+  // ── get_birthdays ────────────────────────────────────────────────────
+  if (block.name === 'get_birthdays') {
+    const { month } = block.input as { month?: number }
+    const m = clampInt(month, 1, 12, new Date().getMonth() + 1)
+    const data = await sql(`
+      SELECT id, first_name, last_name, phone, cell_name, group_name, birthdate
+      FROM people
+      WHERE church_id = '${cid}'
+        AND birthdate IS NOT NULL
+        AND EXTRACT(MONTH FROM birthdate) = ${m}
+      ORDER BY EXTRACT(DAY FROM birthdate)
+    `)
+    return JSON.stringify(data ?? [])
+  }
+
+  // ── run_sql ──────────────────────────────────────────────────────────
   if (block.name === 'run_sql') {
     const { query } = block.input as { query: string }
     if (!isSafeQuery(query)) return 'Error: only SELECT queries are permitted.'
     try {
-      const { data, error } = await admin.rpc('execute_readonly_sql', { sql: query }).single()
-      if (error) return `Query error: ${error.message}`
+      const data = await sql(query)
       const result = JSON.stringify(data ?? [])
       return result.length > 12000 ? result.slice(0, 12000) + '\n[...truncated]' : result
     } catch (err) {
-      return `Unexpected error: ${err instanceof Error ? err.message : String(err)}`
+      return `Query error: ${err instanceof Error ? err.message : String(err)}`
     }
   }
 
@@ -385,7 +801,6 @@ export async function POST(req: Request) {
         )
       }
       if (check.isPaid === false) {
-        // fire-and-forget increment for free plans
         incrementUsage(ctx.churchId).catch(() => {})
       }
     }
@@ -414,7 +829,6 @@ export async function POST(req: Request) {
           let iterations = 0
 
           while (iterations < 15) {
-            // Stream this turn — extended thinking reasons before responding
             const apiStream = anthropic.messages.stream({
               model:      'claude-sonnet-4-6',
               max_tokens: 16000,
@@ -425,31 +839,26 @@ export async function POST(req: Request) {
               messages:   msgs,
             })
 
-            // Send text deltas to the client as they arrive
-            // (thinking deltas are not emitted by .on('text'))
             apiStream.on('text', (delta) => send('text', { delta }))
 
             const finalMsg = await apiStream.finalMessage()
 
             if (finalMsg.stop_reason !== 'tool_use') break
 
-            // ── Tool calls ─────────────────────────────────────────────
             const toolBlocks = finalMsg.content.filter(
               (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use',
             )
 
-            // Notify the client what we're doing
             for (const block of toolBlocks) {
               const label = TOOL_LABEL[block.name]?.(block.input as Record<string, unknown>) ?? `${block.name}…`
               send('tool', { label })
             }
 
-            // Execute all tools (preserve thinking blocks in history)
             const toolResults: Anthropic.ToolResultBlockParam[] = await Promise.all(
               toolBlocks.map(async (block) => ({
                 type:        'tool_result' as const,
                 tool_use_id: block.id,
-                content:     await executeTool(block, admin, ctx),
+                content:     await executeTool(block, admin, ctx).catch(e => `Error: ${e instanceof Error ? e.message : String(e)}`),
               })),
             )
 
@@ -474,9 +883,9 @@ export async function POST(req: Request) {
 
     return new Response(sseStream, {
       headers: {
-        'Content-Type':  'text/event-stream',
-        'Cache-Control': 'no-cache, no-transform',
-        'Connection':    'keep-alive',
+        'Content-Type':      'text/event-stream',
+        'Cache-Control':     'no-cache, no-transform',
+        'Connection':        'keep-alive',
         'X-Accel-Buffering': 'no',
       },
     })

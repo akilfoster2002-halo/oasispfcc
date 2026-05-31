@@ -285,7 +285,7 @@ function MessageBubble({ message }: { message: Message }) {
   )
 }
 
-function TypingIndicator() {
+function TypingIndicator({ label }: { label?: string | null }) {
   return (
     <div className="flex gap-2.5">
       <div
@@ -304,15 +304,19 @@ function TypingIndicator() {
           border: '0.5px solid var(--aq-border)',
         }}
       >
-        <div className="flex gap-1 items-center h-4">
-          {[0, 1, 2].map(i => (
-            <span
-              key={i}
-              className="w-1.5 h-1.5 rounded-full animate-bounce"
-              style={{ backgroundColor: 'rgba(200,169,107,0.60)', animationDelay: `${i * 0.15}s` }}
-            />
-          ))}
-        </div>
+        {label ? (
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--aq-text-muted)', fontStyle: 'italic' }}>{label}</p>
+        ) : (
+          <div className="flex gap-1 items-center h-4">
+            {[0, 1, 2].map(i => (
+              <span
+                key={i}
+                className="w-1.5 h-1.5 rounded-full animate-bounce"
+                style={{ backgroundColor: 'rgba(200,169,107,0.60)', animationDelay: `${i * 0.15}s` }}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -329,6 +333,8 @@ export default function ChatPage() {
   const [loadingMsgs, setLoadingMsgs]         = useState(false)
   const [showDrawer, setShowDrawer]           = useState(false)
   const [firstName, setFirstName]             = useState<string | null>(null)
+  const [toolLabel, setToolLabel]             = useState<string | null>(null)
+  const [streamingText, setStreamingText]     = useState('')
   const userIdRef = useRef<string | null>(null)
   const bottomRef  = useRef<HTMLDivElement>(null)
   const inputRef   = useRef<HTMLTextAreaElement>(null)
@@ -369,7 +375,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, loading])
+  }, [messages, loading, streamingText])
 
   const newChat = () => {
     setActiveSessionId(null)
@@ -426,27 +432,76 @@ export default function ChatPage() {
       await supabase.from('chat_messages').insert({ session_id: sessionId, role: 'user', content: text.trim() })
     }
 
+    setToolLabel(null)
+    setStreamingText('')
+
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: updated }),
       })
-      const rawText = await res.text()
-      let data: { reply?: string; error?: string; limit?: number; used?: number; resetAt?: string }
-      try {
-        data = JSON.parse(rawText)
-      } catch {
-        console.error('[chat] non-JSON response:', res.status, rawText.slice(0, 200))
-        throw new Error(`Server returned ${res.status}: ${rawText.slice(0, 80)}`)
+
+      // Non-stream error responses (e.g. 429 daily limit)
+      if (!res.body || res.headers.get('Content-Type')?.includes('application/json')) {
+        const data = await res.json() as { reply?: string; error?: string; limit?: number; used?: number; resetAt?: string }
+        let reply: string
+        if (data.error === 'daily_limit_reached') {
+          reply = `You've used all ${data.limit} messages for today. Your limit resets at midnight. Upgrade your plan for unlimited access → /${slug}/pricing`
+        } else {
+          reply = data.error ? `Sorry, something went wrong: ${data.error}` : (data.reply ?? 'No response.')
+        }
+        setMessages(prev => [...prev, { role: 'assistant', content: reply }])
+        if (sessionId) {
+          await supabase.from('chat_messages').insert({ session_id: sessionId, role: 'assistant', content: reply })
+          await supabase.from('chat_sessions').update({ updated_at: new Date().toISOString() }).eq('id', sessionId)
+          loadSessions()
+        }
+        return
       }
-      let reply: string
-      if (data.error === 'daily_limit_reached') {
-        reply = `You've used all ${data.limit} messages for today. Your limit resets at midnight. Upgrade your plan for unlimited access → /${slug}/pricing`
-      } else {
-        reply = data.error ? `Sorry, something went wrong: ${data.error}` : (data.reply ?? 'No response.')
+
+      // SSE stream
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let accumulated = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+
+        const chunks = buffer.split('\n\n')
+        buffer = chunks.pop() ?? ''
+
+        for (const chunk of chunks) {
+          let event = ''
+          let dataStr = ''
+          for (const line of chunk.split('\n')) {
+            if (line.startsWith('event: ')) event = line.slice(7).trim()
+            else if (line.startsWith('data: ')) dataStr = line.slice(6)
+          }
+          if (!dataStr) continue
+          try {
+            const parsed = JSON.parse(dataStr) as Record<string, unknown>
+            if (event === 'tool') {
+              setToolLabel((parsed.label as string) ?? null)
+            } else if (event === 'text') {
+              accumulated += (parsed.delta as string) ?? ''
+              setStreamingText(accumulated)
+              setToolLabel(null)
+            } else if (event === 'error') {
+              accumulated = `Error: ${(parsed.message as string) ?? 'Unknown error'}`
+              setStreamingText(accumulated)
+            }
+          } catch { /* ignore malformed chunks */ }
+        }
       }
+
+      const reply = accumulated || 'No response.'
       setMessages(prev => [...prev, { role: 'assistant', content: reply }])
+      setStreamingText('')
+      setToolLabel(null)
 
       if (sessionId) {
         await supabase.from('chat_messages').insert({ session_id: sessionId, role: 'assistant', content: reply })
@@ -459,6 +514,8 @@ export default function ChatPage() {
       setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${msg}` }])
     } finally {
       setLoading(false)
+      setStreamingText('')
+      setToolLabel(null)
       setTimeout(() => inputRef.current?.focus(), 50)
     }
   }
@@ -740,7 +797,10 @@ export default function ChatPage() {
           ) : (
             messages.map((m, i) => <MessageBubble key={i} message={m} />)
           )}
-          {loading && <TypingIndicator />}
+          {loading && streamingText
+            ? <MessageBubble message={{ role: 'assistant', content: streamingText }} />
+            : loading && <TypingIndicator label={toolLabel} />
+          }
           <div ref={bottomRef} />
         </div>
 

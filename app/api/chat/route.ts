@@ -229,7 +229,15 @@ Key relationships:
 
 const BASE_SYSTEM = `You are Aquila Agent — a knowledgeable, warm AI assistant embedded inside Aquila, a church management platform used by pastors and church administrators.
 
-You have access to the church's live database through a single SQL tool. When someone asks about attendance, members, cells, giving, events, follow-ups, or anything data-related — write a SQL query to look it up immediately. Never say you don't have access to data. Be confident and direct.
+You have access to the church's live database through purpose-built tools and SQL. When someone asks about attendance, members, cells, giving, events, follow-ups, or anything data-related — use the right tool immediately. Never say you don't have access to data. Be confident and direct.
+
+CRITICAL — conversation context:
+- You have the full conversation history. Read it before every response.
+- If a person was already looked up in this conversation, do not search for them again — use the information already retrieved.
+- If something was already established (e.g. "Adriana Santiago is not in the system"), acknowledge it directly instead of repeating the same search.
+- When a user says "pull her up", "show me", "what about X" — they are referring to the current conversation context. Look at what was just discussed.
+- Remember what names, cells, and facts have been mentioned. Build on them rather than starting fresh each turn.
+- If the user gives you a list of names to check (like a roster), work through them systematically and keep track of who you've already found vs not found.
 
 ${SCHEMA}
 
@@ -271,19 +279,103 @@ Format responses using markdown:
 - Give real answers from the data — specific names, numbers, dates
 - Never say you don't have access to the data`
 
+/* ─── Tool labels shown to the user during execution ─── */
+const TOOL_LABEL: Record<string, (input: Record<string, unknown>) => string> = {
+  find_person:        (i) => `Looking up ${(i as { name: string }).name}…`,
+  get_member_profile: ()  => `Pulling up full profile…`,
+  get_church_snapshot: ()  => `Reading church health…`,
+  run_sql:            (i) => (i as { description?: string }).description ?? 'Running query…',
+}
+
+/* ─── Execute a single tool call and return the result ─── */
+async function executeTool(
+  block:   Anthropic.ToolUseBlock,
+  admin:   ReturnType<typeof getAdminClient> | null,
+  ctx:     Awaited<ReturnType<typeof getChurchContext>>,
+): Promise<string> {
+  if (!admin || !ctx) return 'Tool unavailable.'
+
+  // ── find_person ───────────────────────────────────────────────────────
+  if (block.name === 'find_person') {
+    const { name } = block.input as { name: string }
+    const terms = name.trim().split(/\s+/)
+    let q = admin.from('people').select('id, first_name, last_name, cell_name, group_name, phone').eq('church_id', ctx.churchId)
+    if (terms.length === 1) {
+      q = q.or(`first_name.ilike.%${terms[0]}%,last_name.ilike.%${terms[0]}%`)
+    } else {
+      q = q.or(`and(first_name.ilike.%${terms[0]}%,last_name.ilike.%${terms[1]}%),and(first_name.ilike.%${terms[1]}%,last_name.ilike.%${terms[0]}%)`)
+    }
+    const { data, error } = await q.limit(10)
+    if (error) return `Error: ${error.message}`
+    if (!data?.length) return `No one found matching "${name}". Try a different spelling or use just the first name.`
+    return JSON.stringify(data)
+  }
+
+  // ── get_member_profile ───────────────────────────────────────────────
+  if (block.name === 'get_member_profile') {
+    const { person_id } = block.input as { person_id: string }
+    const cid = ctx.churchId
+    const [profileRes, attRes, givingRes, fuRes] = await Promise.all([
+      admin.from('people').select('*').eq('id', person_id).single(),
+      admin.rpc('execute_readonly_sql', { sql: `
+        SELECT e.name AS event_name, e.event_date, e.service_type,
+          CASE WHEN e.cell_id IS NULL THEN 'service' ELSE 'cell_meeting' END AS event_kind
+        FROM attendance a JOIN events e ON e.id = a.event_id
+        WHERE a.person_id = '${person_id}' AND a.church_id = '${cid}' AND a.attendance_status = 'present'
+        ORDER BY e.event_date DESC LIMIT 200
+      ` }).single(),
+      admin.from('giving').select('amount, fund, given_at, method').eq('person_id', person_id).eq('church_id', cid).order('given_at', { ascending: false }).limit(20),
+      admin.from('follow_ups').select('status, event_name, event_date, message').eq('person_id', person_id).eq('church_id', cid).limit(10),
+    ])
+    const att = (attRes.data ?? []) as { event_kind: string; event_date: string }[]
+    return JSON.stringify({
+      profile:    profileRes.data,
+      attendance: { total: att.length, services: att.filter(e => e.event_kind === 'service').length, cell_meetings: att.filter(e => e.event_kind === 'cell_meeting').length, last_seen: att[0]?.event_date ?? null, history: att.slice(0, 50) },
+      giving:     givingRes.data ?? [],
+      follow_ups: fuRes.data ?? [],
+    })
+  }
+
+  // ── get_church_snapshot ───────────────────────────────────────────────
+  if (block.name === 'get_church_snapshot') {
+    const cid = ctx.churchId
+    const [svcRes, cellRes, fuRes, riskRes, giveRes] = await Promise.all([
+      admin.rpc('execute_readonly_sql', { sql: `SELECT e.name, e.event_date, e.service_type, COUNT(a.id) FILTER (WHERE a.attendance_status='present') AS present_count FROM events e LEFT JOIN attendance a ON a.event_id=e.id AND a.church_id='${cid}' WHERE e.church_id='${cid}' AND e.cell_id IS NULL AND e.event_date >= NOW()-INTERVAL '8 weeks' GROUP BY e.id ORDER BY e.event_date DESC LIMIT 16` }).single(),
+      admin.rpc('execute_readonly_sql', { sql: `SELECT c.name, c.leader_name, COUNT(a.id) FILTER (WHERE a.attendance_status='present') AS recent_attendance FROM cells c LEFT JOIN events e ON e.cell_id=c.id AND e.event_date>=NOW()-INTERVAL '6 weeks' LEFT JOIN attendance a ON a.event_id=e.id AND a.church_id='${cid}' WHERE c.church_id='${cid}' AND c.is_active=true GROUP BY c.id ORDER BY recent_attendance DESC LIMIT 20` }).single(),
+      admin.from('follow_ups').select('id', { count: 'exact', head: true }).eq('church_id', cid).eq('status', 'pending'),
+      admin.rpc('execute_readonly_sql', { sql: `SELECT COUNT(DISTINCT a.person_id) AS at_risk FROM attendance a JOIN events e ON e.id=a.event_id WHERE a.church_id='${cid}' AND e.cell_id IS NOT NULL AND a.attendance_status='present' AND a.person_id NOT IN (SELECT DISTINCT person_id FROM attendance aa JOIN events ee ON ee.id=aa.event_id WHERE aa.church_id='${cid}' AND ee.cell_id IS NOT NULL AND aa.attendance_status='present' AND ee.event_date>=NOW()-INTERVAL '21 days')` }).single(),
+      admin.rpc('execute_readonly_sql', { sql: `SELECT SUM(amount) AS total, COUNT(*) AS gifts FROM giving WHERE church_id='${cid}' AND given_at>=NOW()-INTERVAL '30 days'` }).single(),
+    ])
+    return JSON.stringify({ recent_services: svcRes.data, cell_health: cellRes.data, pending_follow_ups: fuRes.count ?? 0, at_risk_members: (riskRes.data as unknown as { at_risk: number }[])?.[0]?.at_risk ?? 0, giving_last_30_days: giveRes.data })
+  }
+
+  // ── run_sql ───────────────────────────────────────────────────────────
+  if (block.name === 'run_sql') {
+    const { query } = block.input as { query: string }
+    if (!isSafeQuery(query)) return 'Error: only SELECT queries are permitted.'
+    try {
+      const { data, error } = await admin.rpc('execute_readonly_sql', { sql: query }).single()
+      if (error) return `Query error: ${error.message}`
+      const result = JSON.stringify(data ?? [])
+      return result.length > 12000 ? result.slice(0, 12000) + '\n[...truncated]' : result
+    } catch (err) {
+      return `Unexpected error: ${err instanceof Error ? err.message : String(err)}`
+    }
+  }
+
+  return 'Unknown tool.'
+}
+
+/* ─── Main POST handler — SSE streaming with extended thinking ─── */
 export async function POST(req: Request) {
   try {
     const { messages } = await req.json() as {
       messages: { role: 'user' | 'assistant'; content: string }[]
     }
-
-    if (!messages?.length) {
-      return Response.json({ error: 'No messages provided' }, { status: 400 })
-    }
+    if (!messages?.length) return Response.json({ error: 'No messages provided' }, { status: 400 })
 
     const ctx = await getChurchContext()
 
-    let isPaidPlan = false
     if (ctx) {
       const check = await checkAndIncrementUsage(ctx.churchId)
       if (!check.allowed) {
@@ -292,7 +384,10 @@ export async function POST(req: Request) {
           { status: 429 },
         )
       }
-      isPaidPlan = check.isPaid
+      if (check.isPaid === false) {
+        // fire-and-forget increment for free plans
+        incrementUsage(ctx.churchId).catch(() => {})
+      }
     }
 
     const systemPrompt = ctx
@@ -303,220 +398,90 @@ export async function POST(req: Request) {
       : BASE_SYSTEM
 
     const anthropic = getAnthropic()
-    const tools = ctx ? TOOLS : []
-    const admin = ctx ? getAdminClient() : null
+    const tools    = ctx ? TOOLS : []
+    const admin    = ctx ? getAdminClient() : null
+    const encoder  = new TextEncoder()
 
     let msgs: Anthropic.MessageParam[] = messages.map(m => ({ role: m.role, content: m.content }))
 
-    let response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
-      system: systemPrompt,
-      tools,
-      messages: msgs,
+    const sseStream = new ReadableStream({
+      async start(controller) {
+        function send(event: string, data: unknown) {
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
+        }
+
+        try {
+          let iterations = 0
+
+          while (iterations < 15) {
+            // Stream this turn — extended thinking reasons before responding
+            const apiStream = anthropic.messages.stream({
+              model:      'claude-sonnet-4-6',
+              max_tokens: 16000,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              thinking:   { type: 'enabled', budget_tokens: 10000 } as any,
+              system:     systemPrompt,
+              tools:      tools as Anthropic.Tool[],
+              messages:   msgs,
+            })
+
+            // Send text deltas to the client as they arrive
+            // (thinking deltas are not emitted by .on('text'))
+            apiStream.on('text', (delta) => send('text', { delta }))
+
+            const finalMsg = await apiStream.finalMessage()
+
+            if (finalMsg.stop_reason !== 'tool_use') break
+
+            // ── Tool calls ─────────────────────────────────────────────
+            const toolBlocks = finalMsg.content.filter(
+              (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use',
+            )
+
+            // Notify the client what we're doing
+            for (const block of toolBlocks) {
+              const label = TOOL_LABEL[block.name]?.(block.input as Record<string, unknown>) ?? `${block.name}…`
+              send('tool', { label })
+            }
+
+            // Execute all tools (preserve thinking blocks in history)
+            const toolResults: Anthropic.ToolResultBlockParam[] = await Promise.all(
+              toolBlocks.map(async (block) => ({
+                type:        'tool_result' as const,
+                tool_use_id: block.id,
+                content:     await executeTool(block, admin, ctx),
+              })),
+            )
+
+            msgs = [
+              ...msgs,
+              { role: 'assistant', content: finalMsg.content },
+              { role: 'user',      content: toolResults },
+            ]
+
+            iterations++
+          }
+
+          send('done', {})
+          controller.close()
+        } catch (err) {
+          console.error('[chat stream]', err)
+          send('error', { message: err instanceof Error ? err.message : 'Unknown error' })
+          controller.close()
+        }
+      },
     })
 
-    let iterations = 0
-    while (response.stop_reason === 'tool_use' && iterations < 15) {
-      iterations++
-      const toolBlocks = response.content.filter((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
-
-      const toolResults: Anthropic.ToolResultBlockParam[] = await Promise.all(
-        toolBlocks.map(async (block) => {
-          if (!admin) {
-            return { type: 'tool_result' as const, tool_use_id: block.id, content: 'Tool unavailable.' }
-          }
-
-          // ── find_person ──────────────────────────────────────────────
-          if (block.name === 'find_person') {
-            const { name } = block.input as { name: string }
-            const terms = name.trim().split(/\s+/)
-            let query = admin
-              .from('people')
-              .select('id, first_name, last_name, cell_name, group_name, phone')
-              .eq('church_id', ctx!.churchId)
-
-            if (terms.length === 1) {
-              query = query.or(`first_name.ilike.%${terms[0]}%,last_name.ilike.%${terms[0]}%`)
-            } else {
-              query = query.or(
-                `and(first_name.ilike.%${terms[0]}%,last_name.ilike.%${terms[1]}%),` +
-                `and(first_name.ilike.%${terms[1]}%,last_name.ilike.%${terms[0]}%)`,
-              )
-            }
-
-            const { data, error } = await query.limit(10)
-            if (error) return { type: 'tool_result' as const, tool_use_id: block.id, content: `Error: ${error.message}` }
-            if (!data?.length) return { type: 'tool_result' as const, tool_use_id: block.id, content: `No people found matching "${name}". Try a different spelling.` }
-            return { type: 'tool_result' as const, tool_use_id: block.id, content: JSON.stringify(data) }
-          }
-
-          // ── get_member_profile ──────────────────────────────────────
-          if (block.name === 'get_member_profile') {
-            const { person_id } = block.input as { person_id: string }
-            const cid = ctx!.churchId
-
-            const [profileRes, attendanceRes, givingRes, followUpsRes] = await Promise.all([
-              admin.from('people').select('*').eq('id', person_id).single(),
-              admin.rpc('execute_readonly_sql', {
-                sql: `
-                  SELECT e.name AS event_name, e.event_date, e.service_type,
-                    CASE WHEN e.cell_id IS NULL THEN 'service' ELSE 'cell_meeting' END AS event_kind
-                  FROM attendance a
-                  JOIN events e ON e.id = a.event_id
-                  WHERE a.person_id = '${person_id}' AND a.church_id = '${cid}'
-                    AND a.attendance_status = 'present'
-                  ORDER BY e.event_date DESC LIMIT 200
-                `
-              }).single(),
-              admin.from('giving').select('amount, fund, given_at, method')
-                .eq('person_id', person_id).eq('church_id', cid).order('given_at', { ascending: false }).limit(20),
-              admin.from('follow_ups').select('status, event_name, event_date, message')
-                .eq('person_id', person_id).eq('church_id', cid).order('event_date', { ascending: false }).limit(10),
-            ])
-
-            const attendance = (attendanceRes.data ?? []) as unknown[]
-            const totalAttendance = attendance.length
-            const services = (attendance as { event_kind: string }[]).filter(e => e.event_kind === 'service').length
-            const cells = (attendance as { event_kind: string }[]).filter(e => e.event_kind === 'cell_meeting').length
-            const lastSeen = (attendance as { event_date: string }[])[0]?.event_date ?? null
-
-            const result = {
-              profile: profileRes.data,
-              attendance: { total: totalAttendance, services, cell_meetings: cells, last_seen: lastSeen, history: attendance.slice(0, 50) },
-              giving: givingRes.data ?? [],
-              follow_ups: followUpsRes.data ?? [],
-            }
-            return { type: 'tool_result' as const, tool_use_id: block.id, content: JSON.stringify(result) }
-          }
-
-          // ── get_church_snapshot ──────────────────────────────────────
-          if (block.name === 'get_church_snapshot') {
-            const cid = ctx!.churchId
-            const [
-              recentServicesRes, cellHealthRes, followUpRes, atRiskRes, givingRes,
-            ] = await Promise.all([
-              admin.rpc('execute_readonly_sql', {
-                sql: `
-                  SELECT e.name, e.event_date, e.service_type,
-                    COUNT(a.id) FILTER (WHERE a.attendance_status = 'present') AS present_count
-                  FROM events e
-                  LEFT JOIN attendance a ON a.event_id = e.id AND a.church_id = '${cid}'
-                  WHERE e.church_id = '${cid}' AND e.cell_id IS NULL
-                    AND e.event_date >= NOW() - INTERVAL '8 weeks'
-                  GROUP BY e.id, e.name, e.event_date, e.service_type
-                  ORDER BY e.event_date DESC LIMIT 16
-                `
-              }).single(),
-              admin.rpc('execute_readonly_sql', {
-                sql: `
-                  SELECT c.name, c.leader_name,
-                    COUNT(a.id) FILTER (WHERE a.attendance_status = 'present') AS recent_attendance,
-                    COUNT(DISTINCT e.id) AS recent_meetings
-                  FROM cells c
-                  LEFT JOIN events e ON e.cell_id = c.id AND e.event_date >= NOW() - INTERVAL '6 weeks'
-                  LEFT JOIN attendance a ON a.event_id = e.id AND a.church_id = '${cid}'
-                  WHERE c.church_id = '${cid}' AND c.is_active = true
-                  GROUP BY c.id, c.name, c.leader_name
-                  ORDER BY recent_attendance DESC LIMIT 20
-                `
-              }).single(),
-              admin.from('follow_ups').select('id', { count: 'exact', head: true }).eq('church_id', cid).eq('status', 'pending'),
-              admin.rpc('execute_readonly_sql', {
-                sql: `
-                  SELECT COUNT(DISTINCT a.person_id) AS at_risk
-                  FROM attendance a JOIN events e ON e.id = a.event_id
-                  WHERE a.church_id = '${cid}' AND e.cell_id IS NOT NULL AND a.attendance_status = 'present'
-                    AND a.person_id NOT IN (
-                      SELECT DISTINCT person_id FROM attendance aa JOIN events ee ON ee.id = aa.event_id
-                      WHERE aa.church_id = '${cid}' AND ee.cell_id IS NOT NULL
-                        AND aa.attendance_status = 'present' AND ee.event_date >= NOW() - INTERVAL '21 days'
-                    )
-                `
-              }).single(),
-              admin.rpc('execute_readonly_sql', {
-                sql: `SELECT SUM(amount) AS total, COUNT(*) AS gifts FROM giving WHERE church_id = '${cid}' AND given_at >= NOW() - INTERVAL '30 days'`
-              }).single(),
-            ])
-
-            const snapshot = {
-              recent_services: recentServicesRes.data,
-              cell_health: cellHealthRes.data,
-              pending_follow_ups: followUpRes.count ?? 0,
-              at_risk_members: (atRiskRes.data as unknown as { at_risk: number }[])?.[0]?.at_risk ?? 0,
-              giving_last_30_days: givingRes.data,
-            }
-            return { type: 'tool_result' as const, tool_use_id: block.id, content: JSON.stringify(snapshot) }
-          }
-
-          // ── run_sql ──────────────────────────────────────────────────
-          if (block.name !== 'run_sql') {
-            return { type: 'tool_result' as const, tool_use_id: block.id, content: 'Unknown tool.' }
-          }
-
-          const { query } = block.input as { query: string; description: string }
-
-          if (!isSafeQuery(query)) {
-            return {
-              type: 'tool_result' as const,
-              tool_use_id: block.id,
-              content: 'Error: only SELECT queries are permitted.',
-            }
-          }
-
-          try {
-            const { data, error } = await admin.rpc('execute_readonly_sql', { sql: query }).single()
-
-            if (error?.message?.includes('execute_readonly_sql')) {
-              return {
-                type: 'tool_result' as const,
-                tool_use_id: block.id,
-                content: `Query error: ${error.message}. Try a simpler query or use the table-based approach.`,
-              }
-            }
-
-            if (error) {
-              return { type: 'tool_result' as const, tool_use_id: block.id, content: `Query error: ${error.message}` }
-            }
-
-            const result = JSON.stringify(data ?? [])
-            return {
-              type: 'tool_result' as const,
-              tool_use_id: block.id,
-              content: result.length > 12000 ? result.slice(0, 12000) + '\n[...truncated]' : result,
-            }
-          } catch (err) {
-            return {
-              type: 'tool_result' as const,
-              tool_use_id: block.id,
-              content: `Unexpected error: ${err instanceof Error ? err.message : String(err)}`,
-            }
-          }
-        }),
-      )
-
-      msgs = [...msgs, { role: 'assistant', content: response.content }, { role: 'user', content: toolResults }]
-
-      response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
-        system: systemPrompt,
-        tools,
-        messages: msgs,
-      })
-    }
-
-    const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === 'text')
-    const reply = textBlock?.text ?? 'Sorry, I could not generate a response.'
-
-    if (ctx && !isPaidPlan) incrementUsage(ctx.churchId).catch(() => {})
-
-    return Response.json({ reply })
+    return new Response(sseStream, {
+      headers: {
+        'Content-Type':  'text/event-stream',
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection':    'keep-alive',
+        'X-Accel-Buffering': 'no',
+      },
+    })
   } catch (err) {
     console.error('[chat]', err)
-    return Response.json(
-      { error: err instanceof Error ? err.message : 'Unknown error' },
-      { status: 500 },
-    )
+    return Response.json({ error: err instanceof Error ? err.message : 'Unknown error' }, { status: 500 })
   }
 }

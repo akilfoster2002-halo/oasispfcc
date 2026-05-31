@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
-import { Plus, FileText, Lock, Pencil, Trash2, ChevronRight } from 'lucide-react'
+import { Plus, FileText, Lock, Pencil, Trash2, ChevronRight, CaseSensitive } from 'lucide-react'
 
 interface Form {
   id: string
@@ -27,11 +27,14 @@ export default function FormsPage() {
   const router = useRouter()
   const slug = params?.slug as string
 
-  const [forms, setForms] = useState<Form[]>([])
+  const [forms, setForms]       = useState<Form[]>([])
   const [churchId, setChurchId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading]   = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameVal, setRenameVal]   = useState('')
+  const renameRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -69,6 +72,29 @@ export default function FormsPage() {
     setForms(prev => prev.filter(f => f.id !== form.id))
     setDeleting(null)
   }
+
+  const startRename = (form: Form, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setRenamingId(form.id)
+    setRenameVal(form.name)
+    setTimeout(() => { renameRef.current?.select() }, 30)
+  }
+
+  const commitRename = async () => {
+    if (!renamingId) return
+    const trimmed = renameVal.trim()
+    if (trimmed && trimmed !== forms.find(f => f.id === renamingId)?.name) {
+      await fetch(`/api/forms/${renamingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed }),
+      })
+      setForms(prev => prev.map(f => f.id === renamingId ? { ...f, name: trimmed } : f))
+    }
+    setRenamingId(null)
+  }
+
+  const cancelRename = () => setRenamingId(null)
 
   const cardStyle: React.CSSProperties = {
     background: 'linear-gradient(145deg, rgba(255,255,255,0.052) 0%, rgba(255,255,255,0.018) 100%)',
@@ -140,16 +166,34 @@ export default function FormsPage() {
 
               {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <p style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.88)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {form.name}
-                  </p>
-                  {form.is_preset && (
-                    <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 99, background: 'rgba(201,168,76,0.12)', color: '#C9A84C', border: '1px solid rgba(201,168,76,0.20)', flexShrink: 0, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                      Preset
-                    </span>
-                  )}
-                </div>
+                {renamingId === form.id ? (
+                  <input
+                    ref={renameRef}
+                    value={renameVal}
+                    onChange={e => setRenameVal(e.target.value)}
+                    onBlur={commitRename}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commitRename() } if (e.key === 'Escape') cancelRename() }}
+                    onClick={e => e.stopPropagation()}
+                    style={{
+                      fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.88)',
+                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(201,168,76,0.45)',
+                      borderRadius: 7, padding: '3px 8px', outline: 'none', width: '100%',
+                      boxShadow: '0 0 0 3px rgba(201,168,76,0.10)',
+                    }}
+                    autoFocus
+                  />
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <p style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.88)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {form.name}
+                    </p>
+                    {form.is_preset && (
+                      <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 99, background: 'rgba(201,168,76,0.12)', color: '#C9A84C', border: '1px solid rgba(201,168,76,0.20)', flexShrink: 0, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                        Preset
+                      </span>
+                    )}
+                  </div>
+                )}
                 <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: '3px 0 0' }}>
                   {form.fields.length} field{form.fields.length !== 1 ? 's' : ''}
                   {form.description ? ` · ${form.description}` : ''}
@@ -158,6 +202,21 @@ export default function FormsPage() {
 
               {/* Actions */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                <button
+                  onClick={e => startRename(form, e)}
+                  title="Rename"
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 30, height: 30, borderRadius: 8,
+                    background: 'none', border: '1px solid rgba(255,255,255,0.07)',
+                    color: 'rgba(255,255,255,0.28)', cursor: 'pointer',
+                    transition: 'background 0.12s ease, color 0.12s ease, border-color 0.12s ease',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(201,168,76,0.10)'; e.currentTarget.style.color = '#C9A84C'; e.currentTarget.style.borderColor = 'rgba(201,168,76,0.22)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'rgba(255,255,255,0.28)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
+                >
+                  <CaseSensitive style={{ width: 13, height: 13 }} />
+                </button>
                 <Link
                   href={`/${slug}/forms/${form.id}`}
                   style={{

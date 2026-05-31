@@ -25,10 +25,7 @@ const CORE_NAV = [
 ]
 
 const TOOLS_NAV = [
-  { path: 'forms',     label: 'Forms',     icon: FileText },
-  { path: 'reports',   label: 'Analytics', icon: BarChart3 },
-  { path: 'giving',    label: 'Giving',    icon: Heart },
-  { path: 'messaging', label: 'Messaging', icon: MessageSquare },
+  { path: 'forms', label: 'Forms', icon: FileText },
 ]
 
 const ADMIN_NAV = [

@@ -1,12 +1,12 @@
 'use client'
 
-import { use, useEffect, useMemo, useState, useRef, Suspense } from 'react'
+import { use, useEffect, useMemo, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { CheckCircle2, ChevronDown, Send } from 'lucide-react'
+import { CheckCircle2, ChevronDown, Send, ImageIcon, X } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type FieldType = 'text' | 'number' | 'textarea' | 'radio'
+type FieldType = 'text' | 'number' | 'textarea' | 'radio' | 'photo'
 
 interface FormField {
   id: string
@@ -42,25 +42,16 @@ function fmtDate(d: string) {
 // ─── Shared styles ────────────────────────────────────────────────────────────
 
 const inputStyle: React.CSSProperties = {
-  width: '100%',
-  background: 'rgba(255,255,255,0.032)',
-  border: '1px solid rgba(255,255,255,0.080)',
-  color: 'rgba(255,255,255,0.88)',
-  borderRadius: 12,
-  padding: '10px 14px',
-  fontSize: 14,
-  outline: 'none',
+  width: '100%', background: 'rgba(255,255,255,0.032)', border: '1px solid rgba(255,255,255,0.080)',
+  color: 'rgba(255,255,255,0.88)', borderRadius: 12, padding: '10px 14px', fontSize: 14, outline: 'none',
   transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
 }
 
 const cardStyle: React.CSSProperties = {
   background: 'linear-gradient(145deg, rgba(255,255,255,0.052) 0%, rgba(255,255,255,0.018) 100%)',
-  backdropFilter: 'blur(32px) saturate(180%)',
-  WebkitBackdropFilter: 'blur(32px) saturate(180%)',
-  border: '1px solid rgba(255,255,255,0.065)',
-  borderRadius: 20,
-  boxShadow: '0 1px 0 rgba(255,255,255,0.07) inset, 0 16px 48px rgba(0,0,0,0.35)',
-  padding: 24,
+  backdropFilter: 'blur(32px) saturate(180%)', WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+  border: '1px solid rgba(255,255,255,0.065)', borderRadius: 20,
+  boxShadow: '0 1px 0 rgba(255,255,255,0.07) inset, 0 16px 48px rgba(0,0,0,0.35)', padding: 24,
 }
 
 function focusIn(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
@@ -72,21 +63,75 @@ function focusOut(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | H
   e.currentTarget.style.boxShadow = 'none'
 }
 
-// ─── Inner component (uses useSearchParams so needs Suspense) ────────────────
+// ─── Photo field ──────────────────────────────────────────────────────────────
+
+function PhotoField({
+  fieldId, label, required,
+  file, onFile,
+}: {
+  fieldId: string
+  label: string
+  required: boolean
+  file: File | null
+  onFile: (f: File | null) => void
+}) {
+  const preview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file])
+
+  return (
+    <div>
+      {preview ? (
+        <div style={{ position: 'relative', display: 'inline-block' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={preview} alt="preview" style={{ maxWidth: '100%', maxHeight: 240, borderRadius: 12, border: '1px solid rgba(255,255,255,0.10)', display: 'block', objectFit: 'cover' }} />
+          <button
+            type="button"
+            onClick={() => onFile(null)}
+            style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.65)', border: 'none', cursor: 'pointer', color: '#fff' }}
+          >
+            <X style={{ width: 14, height: 14 }} />
+          </button>
+          <p style={{ margin: '8px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.40)' }}>{file?.name}</p>
+        </div>
+      ) : (
+        <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '28px 20px', borderRadius: 14, border: '1.5px dashed rgba(255,255,255,0.12)', cursor: 'pointer', transition: 'border-color 0.15s ease, background 0.15s ease' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.35)'; e.currentTarget.style.background = 'rgba(201,168,76,0.04)' }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.background = 'none' }}
+        >
+          <div style={{ width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)' }}>
+            <ImageIcon style={{ width: 20, height: 20, color: 'rgba(255,255,255,0.40)' }} />
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.60)' }}>Tap to upload a photo</p>
+            <p style={{ margin: '3px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.28)' }}>JPEG, PNG, WEBP — max 10 MB</p>
+          </div>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/gif"
+            style={{ display: 'none' }}
+            onChange={e => { const f = e.target.files?.[0]; onFile(f ?? null); e.target.value = '' }}
+          />
+        </label>
+      )}
+    </div>
+  )
+}
+
+// ─── Inner component (needs Suspense for useSearchParams) ─────────────────────
 
 function PublicFormInner({ formId }: { formId: string }) {
-  const searchParams = useSearchParams()
+  const searchParams       = useSearchParams()
   const preselectedEventId = searchParams.get('event')
 
-  const [pageData, setPageData] = useState<PageData | null>(null)
-  const [formDef, setFormDef] = useState<FormField[]>([])
+  const [pageData, setPageData]             = useState<PageData | null>(null)
+  const [formDef, setFormDef]               = useState<FormField[]>([])
   const [selectedEventId, setSelectedEventId] = useState<string>(preselectedEventId ?? '')
-  const [churchId, setChurchId] = useState<string | null>(null)
-  const [values, setValues] = useState<Record<string, string | number>>({})
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [churchId, setChurchId]             = useState<string | null>(null)
+  const [values, setValues]                 = useState<Record<string, string | number>>({})
+  const [photoFiles, setPhotoFiles]         = useState<Record<string, File | null>>({})
+  const [loading, setLoading]               = useState(true)
+  const [saving, setSaving]                 = useState(false)
+  const [submitted, setSubmitted]           = useState(false)
+  const [error, setError]                   = useState<string | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -101,7 +146,7 @@ function PublicFormInner({ formId }: { formId: string }) {
       setChurchId(form.church_id)
       const init: Record<string, string | number> = {}
       for (const f of form.fields ?? []) {
-        init[f.id] = f.type === 'number' ? 0 : ''
+        if (f.type !== 'photo') init[f.id] = f.type === 'number' ? 0 : ''
       }
       setValues(init)
       setLoading(false)
@@ -109,12 +154,12 @@ function PublicFormInner({ formId }: { formId: string }) {
     load()
   }, [formId])
 
-  const setValue = (fieldId: string, val: string | number) =>
-    setValues(prev => ({ ...prev, [fieldId]: val }))
+  const setValue   = (id: string, val: string | number) => setValues(prev => ({ ...prev, [id]: val }))
+  const setPhoto   = (id: string, f: File | null) => setPhotoFiles(prev => ({ ...prev, [id]: f }))
 
   const selectedEvent = useMemo(
     () => pageData?.events.find(e => e.id === selectedEventId) ?? null,
-    [pageData, selectedEventId]
+    [pageData, selectedEventId],
   )
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,12 +167,12 @@ function PublicFormInner({ formId }: { formId: string }) {
     if (!selectedEventId) { setError('Please select an event.'); return }
 
     for (const field of formDef) {
-      if (field.required) {
+      if (!field.required) continue
+      if (field.type === 'photo') {
+        if (!photoFiles[field.id]) { setError(`"${field.label}" requires a photo.`); return }
+      } else {
         const v = values[field.id]
-        if (v === '' || v === null || v === undefined) {
-          setError(`"${field.label}" is required.`)
-          return
-        }
+        if (v === '' || v === null || v === undefined) { setError(`"${field.label}" is required.`); return }
       }
     }
 
@@ -136,7 +181,26 @@ function PublicFormInner({ formId }: { formId: string }) {
 
     if (!churchId) { setError('Form data not loaded. Please refresh.'); setSaving(false); return }
 
-    const submittedBy = (values['leader_name'] as string) || undefined
+    // Upload photos first
+    const resolvedValues = { ...values }
+    for (const [fieldId, file] of Object.entries(photoFiles)) {
+      if (!file) continue
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('formId', formId)
+      fd.append('churchId', churchId)
+      const uploadRes = await fetch('/api/upload/form-photo', { method: 'POST', body: fd })
+      if (!uploadRes.ok) {
+        const d = await uploadRes.json()
+        setError(d.error ?? 'Photo upload failed. Please try again.')
+        setSaving(false)
+        return
+      }
+      const { url } = await uploadRes.json()
+      resolvedValues[fieldId] = url
+    }
+
+    const submittedBy = (resolvedValues['leader_name'] as string) || undefined
 
     const res = await fetch(`/api/events/${selectedEventId}/responses`, {
       method: 'POST',
@@ -145,13 +209,13 @@ function PublicFormInner({ formId }: { formId: string }) {
         form_id: formId,
         church_id: churchId,
         submitted_by: submittedBy,
-        responses: values,
+        responses: resolvedValues,
       }),
     })
 
     if (!res.ok) {
       const d = await res.json()
-      setError(d.error ?? 'Failed to submit')
+      setError(d.error ?? 'Failed to submit.')
       setSaving(false)
       return
     }
@@ -179,11 +243,7 @@ function PublicFormInner({ formId }: { formId: string }) {
   if (submitted) {
     return (
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '80px 16px', textAlign: 'center' }}>
-        <div style={{
-          width: 72, height: 72, borderRadius: '50%', margin: '0 auto 24px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.25)',
-        }}>
+        <div style={{ width: 72, height: 72, borderRadius: '50%', margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.25)' }}>
           <CheckCircle2 style={{ width: 34, height: 34, color: '#34d399' }} />
         </div>
         <h2 className="text-display" style={{ marginBottom: 12 }}>Report Submitted</h2>
@@ -192,20 +252,17 @@ function PublicFormInner({ formId }: { formId: string }) {
           Thank you!
         </p>
         {selectedEvent && (
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.30)', marginTop: 8 }}>
-            {fmtDate(selectedEvent.event_date)}
-          </p>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.30)', marginTop: 8 }}>{fmtDate(selectedEvent.event_date)}</p>
         )}
         <button
           onClick={() => {
             setSubmitted(false)
-            setValues(Object.fromEntries(formDef.map(f => [f.id, f.type === 'number' ? 0 : ''])))
+            const init: Record<string, string | number> = {}
+            for (const f of formDef) { if (f.type !== 'photo') init[f.id] = f.type === 'number' ? 0 : '' }
+            setValues(init)
+            setPhotoFiles({})
           }}
-          style={{
-            marginTop: 32, padding: '10px 24px', borderRadius: 12, fontSize: 13, fontWeight: 500,
-            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)',
-            color: 'rgba(255,255,255,0.60)', cursor: 'pointer',
-          }}
+          style={{ marginTop: 32, padding: '10px 24px', borderRadius: 12, fontSize: 13, fontWeight: 500, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.60)', cursor: 'pointer' }}
         >
           Submit Another
         </button>
@@ -238,29 +295,16 @@ function PublicFormInner({ formId }: { formId: string }) {
             Which event is this report for? <span style={{ color: '#f87171' }}>*</span>
           </label>
           {preselectedEventId && selectedEvent ? (
-            <div style={{
-              padding: '10px 14px', borderRadius: 12, fontSize: 14,
-              background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.20)',
-              color: 'rgba(255,255,255,0.80)',
-            }}>
+            <div style={{ padding: '10px 14px', borderRadius: 12, fontSize: 14, background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.20)', color: 'rgba(255,255,255,0.80)' }}>
               <span style={{ fontWeight: 500 }}>{selectedEvent.name}</span>
               <span style={{ color: 'rgba(255,255,255,0.40)', marginLeft: 8 }}>{fmtDate(selectedEvent.event_date)}</span>
             </div>
           ) : (
             <div style={{ position: 'relative' }}>
-              <select
-                value={selectedEventId}
-                onChange={e => setSelectedEventId(e.target.value)}
-                required
-                style={{ ...inputStyle, paddingRight: 36, colorScheme: 'dark', appearance: 'none' }}
-                onFocus={focusIn}
-                onBlur={focusOut}
-              >
+              <select value={selectedEventId} onChange={e => setSelectedEventId(e.target.value)} required style={{ ...inputStyle, paddingRight: 36, colorScheme: 'dark', appearance: 'none' }} onFocus={focusIn} onBlur={focusOut}>
                 <option value="">Select an event…</option>
                 {pageData.events.map(ev => (
-                  <option key={ev.id} value={ev.id}>
-                    {ev.name} — {fmtDate(ev.event_date)}
-                  </option>
+                  <option key={ev.id} value={ev.id}>{ev.name} — {fmtDate(ev.event_date)}</option>
                 ))}
               </select>
               <ChevronDown style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: 'rgba(255,255,255,0.35)', pointerEvents: 'none' }} />
@@ -277,57 +321,19 @@ function PublicFormInner({ formId }: { formId: string }) {
             </label>
 
             {field.type === 'text' && (
-              <input
-                type="text"
-                value={values[field.id] as string ?? ''}
-                onChange={e => setValue(field.id, e.target.value)}
-                placeholder={field.placeholder}
-                required={field.required}
-                style={inputStyle}
-                onFocus={focusIn}
-                onBlur={focusOut}
-              />
+              <input type="text" value={values[field.id] as string ?? ''} onChange={e => setValue(field.id, e.target.value)} placeholder={field.placeholder} required={field.required} style={inputStyle} onFocus={focusIn} onBlur={focusOut} />
             )}
 
             {field.type === 'number' && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button
-                  type="button"
-                  onClick={() => setValue(field.id, Math.max(0, (values[field.id] as number ?? 0) - 1))}
-                  style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.65)', cursor: 'pointer', fontSize: 22, fontWeight: 300, lineHeight: 1 }}
-                >
-                  −
-                </button>
-                <input
-                  type="number"
-                  min={0}
-                  value={values[field.id] as number ?? 0}
-                  onChange={e => setValue(field.id, Math.max(0, parseInt(e.target.value) || 0))}
-                  style={{ ...inputStyle, textAlign: 'center', width: 80, flex: 'none' }}
-                  onFocus={focusIn}
-                  onBlur={focusOut}
-                />
-                <button
-                  type="button"
-                  onClick={() => setValue(field.id, (values[field.id] as number ?? 0) + 1)}
-                  style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.65)', cursor: 'pointer', fontSize: 22, fontWeight: 300, lineHeight: 1 }}
-                >
-                  +
-                </button>
+                <button type="button" onClick={() => setValue(field.id, Math.max(0, (values[field.id] as number ?? 0) - 1))} style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.65)', cursor: 'pointer', fontSize: 22, fontWeight: 300, lineHeight: 1 }}>−</button>
+                <input type="number" min={0} value={values[field.id] as number ?? 0} onChange={e => setValue(field.id, Math.max(0, parseInt(e.target.value) || 0))} style={{ ...inputStyle, textAlign: 'center', width: 80, flex: 'none' }} onFocus={focusIn} onBlur={focusOut} />
+                <button type="button" onClick={() => setValue(field.id, (values[field.id] as number ?? 0) + 1)} style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.65)', cursor: 'pointer', fontSize: 22, fontWeight: 300, lineHeight: 1 }}>+</button>
               </div>
             )}
 
             {field.type === 'textarea' && (
-              <textarea
-                value={values[field.id] as string ?? ''}
-                onChange={e => setValue(field.id, e.target.value)}
-                placeholder={field.placeholder}
-                rows={4}
-                required={field.required}
-                style={{ ...inputStyle, resize: 'vertical', minHeight: 100 }}
-                onFocus={focusIn}
-                onBlur={focusOut}
-              />
+              <textarea value={values[field.id] as string ?? ''} onChange={e => setValue(field.id, e.target.value)} placeholder={field.placeholder} rows={4} required={field.required} style={{ ...inputStyle, resize: 'vertical', minHeight: 100 }} onFocus={focusIn} onBlur={focusOut} />
             )}
 
             {field.type === 'radio' && (
@@ -335,23 +341,22 @@ function PublicFormInner({ formId }: { formId: string }) {
                 {(field.options ?? []).map(opt => {
                   const active = values[field.id] === opt
                   return (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => setValue(field.id, opt)}
-                      style={{
-                        padding: '8px 20px', borderRadius: 10, fontSize: 13, fontWeight: 500,
-                        border: `1px solid ${active ? 'rgba(201,168,76,0.55)' : 'rgba(255,255,255,0.10)'}`,
-                        background: active ? 'rgba(201,168,76,0.14)' : 'rgba(255,255,255,0.04)',
-                        color: active ? '#C9A84C' : 'rgba(255,255,255,0.55)',
-                        cursor: 'pointer', transition: 'all 0.12s ease',
-                      }}
-                    >
+                    <button key={opt} type="button" onClick={() => setValue(field.id, opt)} style={{ padding: '8px 20px', borderRadius: 10, fontSize: 13, fontWeight: 500, border: `1px solid ${active ? 'rgba(201,168,76,0.55)' : 'rgba(255,255,255,0.10)'}`, background: active ? 'rgba(201,168,76,0.14)' : 'rgba(255,255,255,0.04)', color: active ? '#C9A84C' : 'rgba(255,255,255,0.55)', cursor: 'pointer', transition: 'all 0.12s ease' }}>
                       {opt}
                     </button>
                   )
                 })}
               </div>
+            )}
+
+            {field.type === 'photo' && (
+              <PhotoField
+                fieldId={field.id}
+                label={field.label}
+                required={field.required}
+                file={photoFiles[field.id] ?? null}
+                onFile={f => setPhoto(field.id, f)}
+              />
             )}
           </div>
         ))}
@@ -360,11 +365,7 @@ function PublicFormInner({ formId }: { formId: string }) {
           type="submit"
           disabled={saving || !selectedEventId}
           className="btn-primary"
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '14px 0', borderRadius: 14, fontSize: 15, fontWeight: 600,
-            marginTop: 8,
-          }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px 0', borderRadius: 14, fontSize: 15, fontWeight: 600, marginTop: 8 }}
         >
           <Send style={{ width: 15, height: 15 }} />
           {saving ? 'Submitting…' : 'Submit Report'}
